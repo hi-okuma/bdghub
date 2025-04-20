@@ -11,8 +11,56 @@ const db = getFirestore();
 const region = defineString("MY_FUNCTION_REGION", {default: "asia-northeast1"});
 
 exports.createRoom = onRequest({region: region}, async (req, res) => {
+  // CORSヘッダー設定とプリフライトリクエスト処理
+  res.set("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") {
+    res.set("Access-Control-Allow-Methods", "POST");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).send({
+      success: false,
+      error: "method-not-allowed",
+      message: "不正なリクエストです。",
+    });
+    return;
+  }
+
   const {nickname} = req.body;
-  const roomId = generateRoomId();
+  if (!nickname) {
+    res.status(400).send({
+      success: false,
+      error: "invalid-argument",
+      message: "部屋作成にはニックネームが必要です。",
+    });
+    return;
+  }
+
+  // 部屋IDの作成＆重複チェック
+  let roomId = generateRoomId();
+  let isUnique = false;
+  let attempts = 0;
+  while (!isUnique && attempts < 10) {
+    const roomDoc = await db.collection("rooms").doc(roomId).get();
+    if (!roomDoc.exists) {
+      isUnique = true;
+    } else {
+      roomId = generateRoomId();
+      attempts++;
+    }
+  }
+  if (!isUnique) {
+    res.status(429).send({
+      success: false,
+      error: "resource-exhausted",
+      message: "部屋作成に失敗しました。",
+    });
+    return;
+  }
+
   const playerId = generatePlayerId();
 
   const roomData = {
