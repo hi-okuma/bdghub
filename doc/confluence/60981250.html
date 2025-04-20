@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ボードゲームハブ(仮) : 3.Functions エラーレスポンス</title>
+        <link rel="stylesheet" href="styles/site.css" type="text/css" />
+        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+
+    <body class="theme-default aui-theme-default">
+        <div id="page">
+            <div id="main" class="aui-page-panel">
+                <div id="main-header">
+                    <div id="breadcrumb-section">
+                        <ol id="breadcrumbs">
+                            <li class="first">
+                                <span><a href="index.html">ボードゲームハブ(仮)</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59408651.html">ボードゲームハブ(仮) Home</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506689.html">1.開発</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506796.html">0000.本体</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59605011.html">2.設計</a></span>
+                            </li>
+                                                </ol>
+                    </div>
+                    <h1 id="title-heading" class="pagetitle">
+                                                <span id="title-text">
+                            ボードゲームハブ(仮) : 3.Functions エラーレスポンス
+                        </span>
+                    </h1>
+                </div>
+
+                <div id="content" class="view">
+                    <div class="page-metadata">
+                            
+        
+    
+        
+    
+        
+        
+            Created by <span class='author'> 大熊浩也</span>, last modified on 4月 20, 2025
+                        </div>
+                    <div id="main-content" class="wiki-content group">
+                    <h2 id="id-3.Functionsエラーレスポンス-プレイヤー追加">プレイヤー追加</h2><div class="table-wrap"><table data-table-width="1800" data-layout="center" data-local-id="a6c169b6-2cdc-44d2-9b70-e670c49ec86a" class="confluenceTable"><colgroup><col style="width: 282.0px;"/><col style="width: 437.0px;"/><col style="width: 235.0px;"/><col style="width: 484.0px;"/><col style="width: 360.0px;"/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>エラーコード</strong></p></th><th class="confluenceTh"><p><strong>メッセージ</strong></p></th><th class="confluenceTh"><p><strong>HTTPコード</strong></p></th><th class="confluenceTh"><p><strong>発生条件</strong></p></th><th class="confluenceTh"><p><strong>クライアント挙動</strong></p></th></tr><tr><td class="confluenceTd"><p><code>room_full</code></p></td><td class="confluenceTd"><p>部屋が満員です。</p></td><td class="confluenceTd"><p>200 (success: false)</p></td><td class="confluenceTd"><p>部屋の現在の人数が最大人数に達している</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>in_progress</code></p></td><td class="confluenceTd"><p>この部屋はすでにゲームが開始されています。</p></td><td class="confluenceTd"><p>200 (success: false)</p></td><td class="confluenceTd"><p>部屋のステータスが &quot;in_progress”</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>closed</code></p></td><td class="confluenceTd"><p>この部屋はすでに閉じられています。</p></td><td class="confluenceTd"><p>200 (success: false)</p></td><td class="confluenceTd"><p>部屋のステータスが”closed”</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>duplicate_nickname</code></p></td><td class="confluenceTd"><p>このニックネームは既に使われています。</p></td><td class="confluenceTd"><p>200 (success: false)</p></td><td class="confluenceTd"><p>部屋に同じニックネームのプレイヤーが存在する</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>invalid-argument</code></p></td><td class="confluenceTd"><p>リクエストパラメータが不正です。</p></td><td class="confluenceTd"><p>400</p></td><td class="confluenceTd"><p>room_idやnicknameが未指定または不正な形式</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>not-found</code></p></td><td class="confluenceTd"><p>指定された部屋が見つかりません。</p></td><td class="confluenceTd"><p>404</p></td><td class="confluenceTd"><p>指定されたroom_idのドキュメントが存在しない</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>resource-exhausted</code></p></td><td class="confluenceTd"><p>サーバーリソースが上限に達しています。</p></td><td class="confluenceTd"><p>429</p></td><td class="confluenceTd"><p>クォータ超過やレート制限に達した場合</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>internal</code></p></td><td class="confluenceTd"><p>サーバーエラーが発生しました。</p></td><td class="confluenceTd"><p>500</p></td><td class="confluenceTd"><p>サーバー側での予期しないエラー</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>unavailable</code></p></td><td class="confluenceTd"><p>サービスが一時的に利用できません</p></td><td class="confluenceTd"><p>503</p></td><td class="confluenceTd"><p>サービス中断中</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr></tbody></table></div>
+                    </div>
+
+                    
+                                                      
+                </div>             </div> 
+            <div id="footer" role="contentinfo">
+                <section class="footer-body">
+                    <p>Document generated by Confluence on 4月 20, 2025 13:35</p>
+                    <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
+                </section>
+            </div>
+        </div>     </body>
+</html>
