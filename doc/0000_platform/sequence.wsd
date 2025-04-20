@@ -1,0 +1,59 @@
+@startuml
+
+actor HostPlayer
+actor Participant
+
+participant APIgateway_Functions
+participant Firestore
+
+== ゲーム開始準備 ==
+
+group 部屋の作成
+HostPlayer -> APIgateway_Functions: 部屋ドキュメント作成リクエスト
+APIgateway_Functions -> Firestore: 全てのroom_idを取得
+APIgateway_Functions <-- Firestore: 返却
+loop 存在しないroom_idが生成できるまで
+APIgateway_Functions -> APIgateway_Functions: room_id生成と重複チェック
+end
+APIgateway_Functions -> APIgateway_Functions: player_id生成
+APIgateway_Functions -> Firestore: 部屋ドキュメント作成リクエスト(room_id, player_id)
+Firestore -> Firestore: 部屋ドキュメント生成
+APIgateway_Functions <-- Firestore: 完了レスポンス（room_id）
+HostPlayer <-- APIgateway_Functions: 完了レスポンス（room_id, player_idなど）
+HostPlayer -> HostPlayer: 参加URLを生成しゲーム選択画面表示
+HostPlayer -> Participant: URLを参加者に共有
+end
+
+group 部屋に参加
+    Participant -> APIgateway_Functions: プレイヤー追加リクエスト
+alt 部屋のステータスが"accepting"　かつ　部屋が満員でない
+    APIgateway_Functions -> Firestore: プレイヤー追加リクエスト
+    Firestore -> Firestore: プレイヤードキュメント生成
+    APIgateway_Functions <-- Firestore: 完了レスポンス
+    Participant <-- APIgateway_Functions: 完了レスポンス
+    Participant -> Participant: ゲーム選択画面表示
+    HostPlayer <- Firestore: 同部屋のプレイヤー追加を検知
+    Participant <- Firestore: 同部屋のプレイヤー追加を検知
+    HostPlayer -> HostPlayer: 再描画
+    Participant -> Participant: 他プレイヤーが追加された場合は再描画
+else エラー時
+    Participant <-- APIgateway_Functions: エラーレスポンス
+end
+end
+
+group 部屋を退出
+    HostPlayer -> APIgateway_Functions: 退出リクエスト
+    Participant -> APIgateway_Functions: 退出リクエスト
+    APIgateway_Functions -> APIgateway_Functions: ホストかどうかのチェック
+    APIgateway_Functions -> Firestore:　退出リクエスト（ホストなら切り替え処理も）
+    Firestore -> Firestore: プレイヤー削除（ホストなら切り替え処理も）
+    APIgateway_Functions <-- Firestore: 完了レスポンス
+    HostPlayer <-- APIgateway_Functions: 完了レスポンス
+    Participant <-- APIgateway_Functions: 完了レスポンス
+    HostPlayer <-- Firestore: 同部屋のプレイヤー削除を検知
+    Participant <-- Firestore: 同部屋のプレイヤー削除を検知
+    HostPlayer -> HostPlayer: 自身が退出した場合はTOPへ、そうでない場合は再描画
+    Participant -> Participant: 自身が退出した場合はTOPへ、そうでない場合は再描画
+end
+
+@enduml
