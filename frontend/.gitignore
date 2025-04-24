@@ -160,5 +160,5 @@ app.*.symbols
 .gclient_previous_custom_vars
 .gclient_previous_sync_commits
 
-# firebase
-firebase_options.dart
+# flutter_dotenv
+*.env

@@ -68,6 +68,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "flutter_dotenv",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/flutter_dotenv-5.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "flutter_lints",
       "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/flutter_lints-3.0.2",
       "packageUri": "lib/",
@@ -206,7 +212,7 @@
       "languageVersion": "3.4"
     }
   ],
-  "generated": "2025-04-23T16:42:15.989779Z",
+  "generated": "2025-04-24T16:48:09.296479Z",
   "generator": "pub",
   "generatorVersion": "3.4.4",
   "flutterRoot": "file:///Users/daichikitada/development/flutter",
