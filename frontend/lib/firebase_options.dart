@@ -54,11 +54,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyD5xM_2J0p7l8pDnOsiWJKoz-ClIbjER3w',
-    appId: '1:857550594016:web:0d3644947e6f4ccee45585',
+    appId: '1:857550594016:web:6dd7d3a0c2da1082e45585',
     messagingSenderId: '857550594016',
     projectId: 'bdghub-dev',
     authDomain: 'bdghub-dev.firebaseapp.com',
     storageBucket: 'bdghub-dev.firebasestorage.app',
-    measurementId: 'G-DDZM2SZ1E9',
+    measurementId: 'G-80WZF1CEM6',
   );
+
 }
