@@ -7,6 +7,8 @@ participant APIgateway_Functions
 participant Firestore
 
 == ゲーム開始準備 ==
+HostPlayer -> Firestore: メンテ状態確認
+HostPlayer <-- Firestore: 返却
 
 group 部屋の作成
 HostPlayer -> APIgateway_Functions: 部屋ドキュメント作成リクエスト
@@ -23,6 +25,9 @@ HostPlayer <-- APIgateway_Functions: 完了レスポンス（room_id, player_id�
 HostPlayer -> HostPlayer: 参加URLを生成しゲーム選択画面表示
 HostPlayer -> Participant: URLを参加者に共有
 end
+
+Participant -> Firestore: メンテ状態確認
+Participant <-- Firestore: 返却
 
 group 部屋に参加
     Participant -> APIgateway_Functions: プレイヤー追加リクエスト

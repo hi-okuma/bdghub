@@ -3,7 +3,7 @@ const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {sendSuccess, sendError} = require("../../utils/responseHandler");
 const {generatePlayerId} = require("../../utils/idGenerator");
-const {MAX_ROOM_PLAYERS} = require("../../config/environment");
+const {DEFAULT_MAX_ROOM_PLAYERS} = require("../../config/environment");
 
 /**
  * 部屋参加リクエストを処理するハンドラー
@@ -24,6 +24,16 @@ async function joinRoomHandler(req, res) {
   }
 
   try {
+    let maxRoomPlayers = DEFAULT_MAX_ROOM_PLAYERS;
+    try {
+      const serviceConfigDoc = await db.collection("serviceConfig").doc("global").get();
+      if (serviceConfigDoc.exists) {
+        maxRoomPlayers = serviceConfigDoc.data().maxPlayersPerRoom || DEFAULT_MAX_ROOM_PLAYERS;
+      }
+    } catch (configError) {
+      logger.warn("serviceConfig取得エラー、デフォルト値を使用します", {error: configError.message});
+    }
+
     const roomDoc = await db.collection("rooms").doc(roomId).get();
     if (!roomDoc.exists) {
       return sendError(
@@ -36,6 +46,17 @@ async function joinRoomHandler(req, res) {
     }
 
     const roomData = roomDoc.data();
+    const roomRef = db.collection("rooms").doc(roomId);
+
+    if (roomData.status === "full" && roomData.players.length < maxRoomPlayers) {
+      logger.info(`部屋ID=${roomId} はfullですが、最大人数が引き上げられたためacceptingに戻します。`);
+      await roomRef.update({
+        status: "accepting",
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      // ステータスを更新したので、roomDataを最新の状態に更新
+      roomData.status = "accepting";
+    }
 
     if (roomData.status !== "accepting") {
       return handleInvalidRoomStatus(res, roomData.status);
@@ -51,7 +72,29 @@ async function joinRoomHandler(req, res) {
       );
     }
 
-    const willBeFull = roomData.players.length + 1 >= MAX_ROOM_PLAYERS;
+    if (roomData.players.length >= maxRoomPlayers) {
+      if (roomData.status === "accepting") {
+        try {
+          await roomRef.update({
+            status: "full",
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+          logger.info(`部屋が満員になったためステータスを更新: roomId=${roomId}`);
+        } catch (updateError) {
+          logger.error(`満員時のステータス更新に失敗: roomId=${roomId}`, {error: updateError});
+        }
+      }
+
+      return sendError(
+          res,
+          "RoomFull",
+          "部屋が満員です。",
+          200,
+          {roomId},
+      );
+    }
+
+    const willBeFull = roomData.players.length + 1 >= maxRoomPlayers;
 
     const playerId = generatePlayerId();
     await addPlayerToRoom(roomId, playerId, nickname, willBeFull);
