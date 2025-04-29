@@ -82,9 +82,21 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
         );
       } else {
         // エラー時の処理
-        setState(() {
-          _errorMessage = 'エラーが発生しました: ${response.statusCode}';
-        });
+        try {
+          // レスポンスボディをJSONとしてパース
+          final Map<String, dynamic> errorData = jsonDecode(response.body);
+          // messageキーの値があれば表示、なければ全体のレスポンスを表示
+          setState(() {
+            _errorMessage = errorData.containsKey('message')
+                ? '${errorData['message']}'
+                : response.body;
+          });
+        } catch (e) {
+          // JSONパースに失敗した場合は元のレスポンスボディをそのまま表示
+          setState(() {
+            _errorMessage = response.body;
+          });
+        }
       }
     } catch (e) {
       // 例外発生時の処理
