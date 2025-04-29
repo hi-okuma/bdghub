@@ -4,11 +4,8 @@ import '../components/GameListWidget.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
-  
-  const TopPage({
-    super.key,
-    this.roomId
-  });
+
+  const TopPage({super.key, this.roomId});
 
   @override
   State<TopPage> createState() => _TopPageState();
@@ -77,7 +74,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    
     // TabControllerの初期化
     _tabController = TabController(length: tabs.length, vsync: this);
 
@@ -114,8 +110,8 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         // SingleChildScrollViewでラップして、キーボード表示時に自動スクロールするようにする
         return Dialog(
           // ダイアログを上部に表示するためのinsetPaddingを設定
-          insetPadding: const EdgeInsets.only(
-              top: 80, left: 20, right: 20, bottom: 20),
+          insetPadding:
+              const EdgeInsets.only(top: 80, left: 20, right: 20, bottom: 20),
           child: SingleChildScrollView(
             // 部屋参加モード（isJoiningRoom = true）、URLから部屋IDを渡す
             child: RegisterProfilePage(
@@ -212,7 +208,8 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _showJoinRoomDialog(widget.roomId ?? ''),
+                        onPressed: () =>
+                            _showJoinRoomDialog(widget.roomId ?? ''),
                         child: const Text('部屋参加'),
                       ),
                     ),
