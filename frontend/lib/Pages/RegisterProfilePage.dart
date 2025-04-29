@@ -5,10 +5,12 @@ import 'SelectGamePage.dart';
 
 class RegisterProfilePage extends StatefulWidget {
   final bool isJoiningRoom;
+  final String? initialRoomId;
   
   const RegisterProfilePage({
     super.key, 
-    this.isJoiningRoom = false
+    this.isJoiningRoom = false,
+    this.initialRoomId
   });
 
   @override
@@ -20,6 +22,15 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
   final TextEditingController _roomIdController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // 初期部屋IDがある場合は設定
+    if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
+      _roomIdController.text = widget.initialRoomId!;
+    }
+  }
 
   // 入力値のバリデーション
   bool _validateNickname(String value) {
@@ -229,6 +240,8 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           if (widget.isJoiningRoom)
             TextField(
               controller: _roomIdController,
+              // 初期部屋IDがある場合は入力欄を非活性化
+              enabled: widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: '部屋コードを入力',
