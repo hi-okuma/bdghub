@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../components/GameListWidget.dart';
 
 class SelectGamePage extends StatefulWidget {
   final String roomId;
+  final String myNickname;
 
   const SelectGamePage({
     Key? key,
     required this.roomId,
+    required this.myNickname,
   }) : super(key: key);
 
   @override
@@ -163,8 +167,69 @@ class _SelectGamePageState extends State<SelectGamePage>
   }
 
   // 退出処理
-  void _leaveRoom() {
-    // 実際の退出処理はここに実装
+  void _leaveRoom() async {
+    try {
+      final Uri apiUrl;
+      final Map<String, dynamic> requestBody;
+
+      apiUrl = Uri.parse(
+          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
+      requestBody = {
+        'nickname': widget.myNickname,
+        'roomId': widget.roomId,
+      };
+
+      // APIリクエスト
+      final response = await http.post(
+        apiUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      // レスポンスの処理
+      if (response.statusCode == 200) {
+        // 成功時の処理
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        if (!mounted) return;
+
+        // 成功メッセージを表示
+        String successMessage = '部屋: ${widget.roomId} を退出しました';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+      } else {
+        // エラー時の処理
+        try {
+          // レスポンスボディをJSONとしてパース
+          final Map<String, dynamic> errorData = jsonDecode(response.body);
+          // messageキーの値があれば表示、なければ全体のレスポンスを表示
+          setState(() {
+            _errorMessage = errorData.containsKey('message')
+                ? '${errorData['message']}'
+                : response.body;
+          });
+        } catch (e) {
+          // JSONパースに失敗した場合は元のレスポンスボディをそのまま表示
+          setState(() {
+            _errorMessage = response.body;
+          });
+        }
+      }
+    } catch (e) {
+      // 例外発生時の処理
+      setState(() {
+        _errorMessage = '通信エラー: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+
     Navigator.of(context).pop(); // TOP画面に戻る
   }
 
