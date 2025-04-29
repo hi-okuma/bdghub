@@ -6,12 +6,9 @@ import 'SelectGamePage.dart';
 class RegisterProfilePage extends StatefulWidget {
   final bool isJoiningRoom;
   final String? initialRoomId;
-  
-  const RegisterProfilePage({
-    super.key, 
-    this.isJoiningRoom = false,
-    this.initialRoomId
-  });
+
+  const RegisterProfilePage(
+      {super.key, this.isJoiningRoom = false, this.initialRoomId});
 
   @override
   State<RegisterProfilePage> createState() => _RegisterProfilePageState();
@@ -91,7 +88,7 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
     try {
       final Uri apiUrl;
       final Map<String, dynamic> requestBody;
-      
+
       if (widget.isJoiningRoom) {
         // 部屋参加モードの場合
         apiUrl = Uri.parse(
@@ -118,8 +115,8 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
       if (response.statusCode == 200) {
         // 成功時の処理
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final String roomId = widget.isJoiningRoom 
-            ? _roomIdController.text 
+        final String roomId = widget.isJoiningRoom
+            ? _roomIdController.text
             : responseData['roomId'];
 
         if (!mounted) return;
@@ -132,15 +129,15 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           MaterialPageRoute(
             builder: (context) => SelectGamePage(
               roomId: roomId,
+              myNickname: _nicknameController.text,
             ),
           ),
         );
 
         // 成功メッセージを表示
-        final String successMessage = widget.isJoiningRoom 
-            ? '部屋に参加しました' 
-            : '部屋が作成されました';
-        
+        final String successMessage =
+            widget.isJoiningRoom ? '部屋に参加しました' : '部屋が作成されました';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage)),
         );
@@ -241,7 +238,8 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
             TextField(
               controller: _roomIdController,
               // 初期部屋IDがある場合は入力欄を非活性化
-              enabled: widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
+              enabled:
+                  widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 labelText: '部屋コードを入力',
