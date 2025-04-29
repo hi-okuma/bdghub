@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'RegisterProfilePage.dart';
-import 'components/GameListWidget.dart';
+import '../components/GameListWidget.dart';
 
 class TopPage extends StatefulWidget {
   const TopPage({super.key});
@@ -115,7 +115,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
           .toList();
     }
   }
-  
+
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
     // ゲーム詳細画面への遷移（ダミー）
@@ -163,12 +163,14 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                             barrierDismissible: false,
                             builder: (BuildContext context) {
                               // SingleChildScrollViewでラップして、キーボード表示時に自動スクロールするようにする
-                              return Dialog(
+                              return const Dialog(
                                 // ダイアログを上部に表示するためのinsetPaddingを設定
-                                insetPadding: const EdgeInsets.only(
+                                insetPadding: EdgeInsets.only(
                                     top: 80, left: 20, right: 20, bottom: 20),
-                                child: const SingleChildScrollView(
-                                  child: RegisterProfilePage(),
+                                child: SingleChildScrollView(
+                                  // 部屋作成モード（isJoiningRoom = false）
+                                  child:
+                                      RegisterProfilePage(isJoiningRoom: false),
                                 ),
                               );
                             },
@@ -180,7 +182,26 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            // barrierDismissibleをfalseに設定して、ダイアログ外タップで閉じないようにする
+                            barrierDismissible: false,
+                            builder: (BuildContext context) {
+                              // SingleChildScrollViewでラップして、キーボード表示時に自動スクロールするようにする
+                              return const Dialog(
+                                // ダイアログを上部に表示するためのinsetPaddingを設定
+                                insetPadding: EdgeInsets.only(
+                                    top: 80, left: 20, right: 20, bottom: 20),
+                                child: SingleChildScrollView(
+                                  // 部屋参加モード（isJoiningRoom = true）
+                                  child:
+                                      RegisterProfilePage(isJoiningRoom: true),
+                                ),
+                              );
+                            },
+                          );
+                        },
                         child: const Text('部屋参加'),
                       ),
                     ),
