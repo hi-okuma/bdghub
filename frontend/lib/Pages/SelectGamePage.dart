@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'components/GameListWidget.dart';
+import '../components/GameListWidget.dart';
 
 class SelectGamePage extends StatefulWidget {
   final String roomId;
-  final String playerId;
 
   const SelectGamePage({
     Key? key,
     required this.roomId,
-    required this.playerId,
   }) : super(key: key);
 
   @override
@@ -114,7 +112,7 @@ class _SelectGamePageState extends State<SelectGamePage>
     // 実際の退出処理はここに実装
     Navigator.of(context).pop(); // TOP画面に戻る
   }
-  
+
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
     // ゲーム詳細画面への遷移
