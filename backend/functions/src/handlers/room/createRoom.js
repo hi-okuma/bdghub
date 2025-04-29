@@ -2,7 +2,7 @@ const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {sendSuccess, sendError} = require("../../utils/responseHandler");
-const {generateRoomId, generatePlayerId} = require("../../utils/idGenerator");
+const {generateRoomId} = require("../../utils/idGenerator");
 
 /**
  * 部屋作成リクエストを処理するハンドラー
@@ -33,15 +33,14 @@ async function createRoomHandler(req, res) {
       );
     }
 
-    const playerId = generatePlayerId();
-    const roomData = createRoomData(nickname, playerId);
+    const roomData = createRoomData(nickname);
 
     await db.collection("rooms").doc(roomId).set(roomData);
-    logger.info(`部屋作成成功: ${roomId}`, {playerId, nickname});
+    logger.info(`部屋作成成功: ${roomId}`, {nickname});
 
     return sendSuccess(res, {
       roomId: roomId,
-      playerId: playerId,
+      nickname: nickname,
     });
   } catch (error) {
     return sendError(
@@ -80,19 +79,13 @@ async function generateUniqueRoomId() {
 /**
  * 部屋データオブジェクトを作成する
  * @param {string} nickname - プレイヤーのニックネーム
- * @param {string} playerId - プレイヤーID
  * @return {object} 作成された部屋データオブジェクト
  */
-function createRoomData(nickname, playerId) {
+function createRoomData(nickname) {
   return {
     status: "accepting",
-    players: [
-      {
-        playerId: playerId,
-        nickname: nickname,
-      },
-    ],
-    hostPlayer: playerId,
+    players: [nickname],
+    hostPlayer: nickname,
     currentGame: null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),

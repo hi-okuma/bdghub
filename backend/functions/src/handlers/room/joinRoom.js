@@ -2,7 +2,6 @@ const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {sendSuccess, sendError} = require("../../utils/responseHandler");
-const {generatePlayerId} = require("../../utils/idGenerator");
 const {DEFAULT_MAX_ROOM_PLAYERS} = require("../../config/environment");
 
 /**
@@ -54,7 +53,6 @@ async function joinRoomHandler(req, res) {
         status: "accepting",
         updatedAt: FieldValue.serverTimestamp(),
       });
-      // ステータスを更新したので、roomDataを最新の状態に更新
       roomData.status = "accepting";
     }
 
@@ -95,18 +93,16 @@ async function joinRoomHandler(req, res) {
     }
 
     const willBeFull = roomData.players.length + 1 >= maxRoomPlayers;
+    await addPlayerToRoom(roomId, nickname, willBeFull);
 
-    const playerId = generatePlayerId();
-    await addPlayerToRoom(roomId, playerId, nickname, willBeFull);
-
-    logger.info(`プレイヤー参加成功: ${playerId} to room ${roomId}`, {
+    logger.info(`プレイヤー参加成功: ${nickname} to room ${roomId}`, {
       nickname,
       willBeFull,
     });
 
     return sendSuccess(res, {
       roomId: roomId,
-      playerId: playerId,
+      nickname: nickname,
     });
   } catch (error) {
     return sendError(
@@ -160,25 +156,19 @@ function handleInvalidRoomStatus(res, status) {
  * @return {boolean} 重複している場合はtrue、そうでない場合はfalse
  */
 function isNicknameDuplicate(roomData, nickname) {
-  return roomData.players.some((player) => player.nickname === nickname);
+  return roomData.players.includes(nickname);
 }
 
 /**
  * プレイヤーを部屋に追加する
  * @param {string} roomId - 部屋ID
- * @param {string} playerId - プレイヤーID
  * @param {string} nickname - ニックネーム
  * @param {boolean} willBeFull - 部屋が満員になるかどうか
  * @return {Promise} 更新処理のPromise
  */
-async function addPlayerToRoom(roomId, playerId, nickname, willBeFull) {
-  const playerData = {
-    playerId: playerId,
-    nickname: nickname,
-  };
-
+async function addPlayerToRoom(roomId, nickname, willBeFull) {
   return db.collection("rooms").doc(roomId).update({
-    players: FieldValue.arrayUnion(playerData),
+    players: FieldValue.arrayUnion(nickname), // 文字列をそのまま追加
     status: willBeFull ? "full" : "accepting",
     updatedAt: FieldValue.serverTimestamp(),
   });
