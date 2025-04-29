@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'RegisterProfilePage.dart';
+import 'components/GameListWidget.dart';
 
 class TopPage extends StatefulWidget {
   const TopPage({super.key});
@@ -19,21 +20,46 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
 
   // ダミーのゲームリスト
   final List<Map<String, dynamic>> _gameList = [
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'タクティカルバトル', 'genre': GameGenre.tactics, 'players': '2-4人'},
-    {'title': 'カードマスター', 'genre': GameGenre.card, 'players': '2-6人'},
-    {'title': 'コープアドベンチャー', 'genre': GameGenre.cooperation, 'players': '3-5人'},
-    {'title': 'タクティカルカード', 'genre': GameGenre.tactics, 'players': '2人'},
-    {'title': '協力型カードゲーム', 'genre': GameGenre.cooperation, 'players': '2-4人'},
+    {
+      'title': 'タクティカルバトル',
+      'genre': GameGenre.tactics,
+      'category': '戦略',
+      'players': '2-4人',
+      'time': '30-60分',
+      'description': '資源を集めて拠点を建築し、対戦相手を打ち負かす戦略ゲーム',
+    },
+    {
+      'title': 'カードマスター',
+      'genre': GameGenre.card,
+      'category': 'カード',
+      'players': '2-6人',
+      'time': '20-40分',
+      'description': '手札を駆使して相手よりも多くのポイントを獲得するカードゲーム',
+    },
+    {
+      'title': 'コープアドベンチャー',
+      'genre': GameGenre.cooperation,
+      'category': '協力',
+      'players': '3-5人',
+      'time': '45-90分',
+      'description': 'プレイヤー全員で協力して、迫り来る危機から脱出を目指す',
+    },
+    {
+      'title': 'タクティカルカード',
+      'genre': GameGenre.tactics,
+      'category': '戦略',
+      'players': '2人',
+      'time': '15-30分',
+      'description': '2人で対戦する戦略的なカードゲーム。シンプルなルールで奥深い戦略性',
+    },
+    {
+      'title': '協力型カードゲーム',
+      'genre': GameGenre.cooperation,
+      'category': '協力',
+      'players': '2-4人',
+      'time': '30-45分',
+      'description': 'チームで協力してミッションをクリアするカードゲーム',
+    },
   ];
 
   final List<Tab> tabs = const <Tab>[
@@ -88,6 +114,14 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
           .where((game) => _selectedGenre.contains(game['genre']))
           .toList();
     }
+  }
+  
+  // ゲーム選択時の処理
+  void _onGameSelected(Map<String, dynamic> game) {
+    // ゲーム詳細画面への遷移（ダミー）
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${game["title"]}が選択されました')),
+    );
   }
 
   @override
@@ -197,49 +231,36 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
               ),
               children: [
                 // 全てのゲーム
-                _buildGameList(_gameList),
+                GameListWidget(
+                  games: _gameList,
+                  onGameSelected: _onGameSelected,
+                ),
                 // 戦略ゲーム
-                _buildGameList(_gameList
-                    .where((game) => game['genre'] == GameGenre.tactics)
-                    .toList()),
+                GameListWidget(
+                  games: _gameList
+                      .where((game) => game['genre'] == GameGenre.tactics)
+                      .toList(),
+                  onGameSelected: _onGameSelected,
+                ),
                 // カードゲーム
-                _buildGameList(_gameList
-                    .where((game) => game['genre'] == GameGenre.card)
-                    .toList()),
+                GameListWidget(
+                  games: _gameList
+                      .where((game) => game['genre'] == GameGenre.card)
+                      .toList(),
+                  onGameSelected: _onGameSelected,
+                ),
                 // 協力ゲーム
-                _buildGameList(_gameList
-                    .where((game) => game['genre'] == GameGenre.cooperation)
-                    .toList()),
+                GameListWidget(
+                  games: _gameList
+                      .where((game) => game['genre'] == GameGenre.cooperation)
+                      .toList(),
+                  onGameSelected: _onGameSelected,
+                ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  // ゲームリスト表示用のウィジェットを作成
-  Widget _buildGameList(List<Map<String, dynamic>> games) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: games.length,
-      itemBuilder: (context, index) {
-        final game = games[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          child: ListTile(
-            title: Text(game['title']),
-            subtitle: Text('プレイ人数: ${game["players"]}'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              // ゲーム詳細画面への遷移（ダミー）
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${game["title"]}が選択されました')),
-              );
-            },
-          ),
-        );
-      },
     );
   }
 }

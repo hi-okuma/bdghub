@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'SelectGamePage.dart';
 
 class RegisterProfilePage extends StatefulWidget {
   const RegisterProfilePage({super.key});
@@ -74,8 +75,25 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
       // レスポンスの処理
       if (response.statusCode == 200) {
         // 成功時の処理
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final String roomId = responseData['roomId'];
+        final String playerId = responseData['playerId'];
+
         if (!mounted) return;
+
+        // ダイアログを閉じる
         Navigator.of(context).pop();
+
+        // ゲーム選択画面に遷移する
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SelectGamePage(
+              roomId: roomId,
+              playerId: playerId,
+            ),
+          ),
+        );
+
         // 成功メッセージを表示
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('部屋が作成されました')),
