@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'RegisterProfilePage.dart';
 import '../components/GameListWidget.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
-
-  const TopPage({super.key, this.roomId});
+  
+  const TopPage({
+    super.key,
+    this.roomId
+  });
 
   @override
   State<TopPage> createState() => _TopPageState();
@@ -15,16 +17,8 @@ class TopPage extends StatefulWidget {
 enum GameGenre { all, tactics, card, cooperation }
 
 class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
+  // TabControllerを追加
   late TabController _tabController;
-
-  // プレイヤーデータのローディング状態
-  bool _isLoading = true;
-  // エラーメッセージ
-  String? _errorMessage;
-  // メンテナンス状態
-  bool _isMaintenance = false;
-  // メンテナンスメッセージ
-  String _maintenanceMessage = '';
 
   // 選択されているジャンル
   Set<GameGenre> _selectedGenre = {GameGenre.all};
@@ -83,7 +77,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
+    
     // TabControllerの初期化
     _tabController = TabController(length: tabs.length, vsync: this);
 
@@ -108,8 +102,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         });
       }
     });
-    // Firestoreからメンテナンス情報を一度だけ取得
-    _fetchGlobalConfig();
   }
 
   // 部屋参加用のダイアログを表示
@@ -122,8 +114,8 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         // SingleChildScrollViewでラップして、キーボード表示時に自動スクロールするようにする
         return Dialog(
           // ダイアログを上部に表示するためのinsetPaddingを設定
-          insetPadding:
-              const EdgeInsets.only(top: 80, left: 20, right: 20, bottom: 20),
+          insetPadding: const EdgeInsets.only(
+              top: 80, left: 20, right: 20, bottom: 20),
           child: SingleChildScrollView(
             // 部屋参加モード（isJoiningRoom = true）、URLから部屋IDを渡す
             child: RegisterProfilePage(
@@ -134,54 +126,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         );
       },
     );
-  }
-
-  // Firestoreからグローバル設定（メンテナンス情報など）を一度だけ取得するメソッド
-  Future<void> _fetchGlobalConfig() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('serviceConfig')
-          .doc('global')
-          .get(); // ここを .get() に変更
-
-      if (snapshot.exists && snapshot.data() != null) {
-        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-        if (data.containsKey('maintenance')) {
-          Map<String, dynamic> globalConfig = data['maintenance'];
-          setState(() {
-            // isMaintenanceとmaintenanceMessageを取得。nullの場合も考慮
-            _isMaintenance = globalConfig['isMaintenance'] ?? false;
-            _maintenanceMessage = globalConfig['maintenanceMessage'] ?? '';
-            _isLoading = false; // データ取得完了
-          });
-        } else {
-          // 'maintenance'フィールドがない場合
-          setState(() {
-            _isMaintenance = false;
-            _maintenanceMessage = '';
-            _isLoading = false; // データ取得完了
-          });
-        }
-      } else {
-        // ドキュメントが存在しない場合
-        setState(() {
-          _isMaintenance = false;
-          _maintenanceMessage = '';
-          _isLoading = false; // データ取得完了
-        });
-      }
-    } catch (error) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'データの取得中にエラーが発生しました';
-        print('Firestoreエラー: $error');
-      });
-    }
   }
 
   @override
@@ -212,47 +156,22 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    Widget bodyContent;
-
-    if (_isLoading) {
-      // ローディング中の表示
-      bodyContent = const Center(child: CircularProgressIndicator());
-    } else if (_errorMessage != null) {
-      // エラー発生時の表示
-      bodyContent = Center(child: Text('エラー: $_errorMessage'));
-    } else if (_isMaintenance) {
-      // メンテナンス中の表示
-      // 画面全体を覆うメンテナンスメッセージ表示
-      bodyContent = Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.build_circle, size: 80, color: Colors.orange),
-              const SizedBox(height: 20),
-              const Text(
-                'メンテナンス中です',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                _maintenanceMessage.isNotEmpty
-                    ? _maintenanceMessage
-                    : '現在、システムメンテナンスのためサービスを一時停止しております。',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-              ),
-              // 必要に応じて、メンテナンス終了予定時刻などを追加
-              // const SizedBox(height: 20),
-              // const Text('終了予定時刻: 2024年XX月YY日 ZZ時', style: TextStyle(fontSize: 14)),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ボードゲームハブ'),
+        actions: [
+          // 右上にベルアイコン（お知らせ）を追加
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('お知らせはありません')),
+              );
+            },
           ),
-        ),
-      );
-    } else {
-      // 通常のUI表示
-      bodyContent = Column(
+        ],
+      ),
+      body: Column(
         children: [
           // 固定ヘッダー部分
           Container(
@@ -293,8 +212,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () =>
-                            _showJoinRoomDialog(widget.roomId ?? ''),
+                        onPressed: () => _showJoinRoomDialog(widget.roomId ?? ''),
                         child: const Text('部屋参加'),
                       ),
                     ),
@@ -374,28 +292,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
             ),
           ),
         ],
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('ボードゲームハブ'),
-        actions: [
-          // 右上にベルアイコン（お知らせ）を追加
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // メンテナンス中は通知を表示しないなどの制御を追加することも可能
-              if (!_isMaintenance) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('お知らせはありません')),
-                );
-              }
-            },
-          ),
-        ],
       ),
-      body: bodyContent, // ここで表示するコンテンツを切り替え
     );
   }
 }
