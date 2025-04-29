@@ -15,7 +15,7 @@ Future<void> main() async {
   );
 
   // URLから部屋IDを取得
-  final String? roomId = _getRoomIdFromUrl();
+  final String? roomId = 'roomId';
 
   runApp(MyApp(roomId: roomId));
 }

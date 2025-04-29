@@ -74,6 +74,14 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+
+    // URLパラメータに部屋IDがある場合は自動的に部屋参加モードを開く
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.roomId != null && widget.roomId!.isNotEmpty) {
+        _showJoinRoomDialog(widget.roomId!);
+      }
+    });
+
     // TabControllerの初期化
     _tabController = TabController(length: tabs.length, vsync: this);
 
