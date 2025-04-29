@@ -257,9 +257,9 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
                 child: const Text('キャンセル'),
               ),
               // 作成または参加ボタン
-              ElevatedButton(
+              TextButton(
                 onPressed: _isLoading ? null : _createRoom,
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16.0, vertical: 10.0),
                 ),
