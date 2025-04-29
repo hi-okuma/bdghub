@@ -1,4 +1,3 @@
-const crypto = require("crypto");
 const {ROOM_ID_LENGTH} = require("../config/environment");
 
 /**
@@ -16,15 +15,6 @@ function generateRoomId(length = ROOM_ID_LENGTH) {
   return result;
 }
 
-/**
- * UUIDを使用してプレイヤーIDを生成する
- * @return {string} 生成されたプレイヤーID
- */
-function generatePlayerId() {
-  return crypto.randomUUID();
-}
-
 module.exports = {
   generateRoomId,
-  generatePlayerId,
 };

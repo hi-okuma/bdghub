@@ -1,0 +1,88 @@
+@startuml
+
+actor Me
+actor Otherplayers
+
+participant APIgateway_Functions
+participant Firestore
+
+== ゲーム開始準備 ==
+APIgateway_Functions -> Firestore: 開始リクエスト
+Firestore -> Firestore: currentGame生成＆roomStatusをaccepting/full→inProgress
+Me <- Firestore: roomStatus更新検知（accepting/full→inProgress）
+Otherplayers <- Firestore: roomStatus更新検知（accepting/full→inProgress）
+Me -> Firestore: currentGame取得
+Otherplayers -> Firestore: currentGame取得
+Me <-- Firestore: 返す
+Otherplayers <-- Firestore: 返す
+Me -> Me: プレイヤー一覧画面表示
+Otherplayers -> Otherplayers: プレイヤー一覧画面表示
+Me -> Me: 「ゲーム開始」押下
+Me -> APIgateway_Functions: ゲーム開始リクエスト
+Me -> Me: 他のプレイヤーの開始待ち
+APIgateway_Functions -> Firestore: リクエスト
+Firestore -> Firestore: isReadyをtrueに
+loop 全員が開始準備できるまで
+Otherplayers -> Otherplayers: 「ゲーム開始」押下
+Otherplayers -> APIgateway_Functions: ゲーム開始リクエスト
+Otherplayers -> Otherplayers: 他のプレイヤーの開始待ち
+APIgateway_Functions -> Firestore: リクエスト
+Firestore -> Firestore: isReadyをtrueに
+end
+APIgateway_Functions <- Firestore: 全員のisReady=trueを検知
+APIgateway_Functions -> Firestore: 開始準備リクエスト
+Firestore -> Firestore: ゲーム開始準備(gameStatus:waiting→accepting等)
+Me <- Firestore: currentGameの更新検知（gameStatus:waiting→accepting）
+Otherplayers <- Firestore: currentGameの更新検知（gameStatus:waiting→accepting）
+Me -> Me: カウントダウン開始
+Otherplayers -> Otherplayers: カウントダウン開始
+
+== ゲーム中 ==
+Me -> Me: 手札画面表示
+Otherplayers -> Otherplayers: 手札画面表示
+Me -> APIgateway_Functions: あるある提出
+APIgateway_Functions -> Firestore: リクエスト
+Firestore -> Firestore: 判定準備（gameStatus:accepting→judging等）
+Me <- Firestore: currentGameの更新検知（gameStatus:accepting→judging）
+Otherplayers <- Firestore: currentGameの更新検知（gameStatus:accepting→judging）
+Me -> Me: 判定ダイアログ表示
+Otherplayers -> Otherplayers: 判定ダイアログ表示
+loop 提出したプレイヤー以外の全員が判定するまで
+Otherplayers -> APIgateway_Functions: 判定入力
+APIgateway_Functions -> Firestore: リクエスト
+Firestore -> Firestore: voteの更新
+Me <- Firestore: currentGameの更新検知（vote）
+Otherplayers <- Firestore: currentGameの更新検知（vote）
+Me -> Me: 判定状況をリアルタイム反映
+Otherplayers -> Otherplayers: 判定状況をリアルタイム反映
+end
+APIgateway_Functions <- Firestore: 全員の判定完了を検知
+APIgateway_Functions -> Firestore: 判定終了リクエスト
+alt 「あるある」が過半数の場合
+Firestore -> Firestore: 手札を減らす
+end
+alt 手札0でない場合
+Firestore -> Firestore: 判定終了（gameStatus:judging→accepting等）
+Me <- Firestore: currentGameの更新検知（gameStatus:judging→accepting）
+Otherplayers <- Firestore: currentGameの更新検知（gameStatus:judging→accepting）
+Me -> Me: 手札画面表示
+Otherplayers -> Otherplayers: 手札画面表示
+else 手札が0の場合
+Firestore -> Firestore: 終了処理（gameStatus:judging→waiting等）
+Me <- Firestore: currentGameの更新検知（gameStatus:judging→waiting）
+Otherplayers <- Firestore: currentGameの更新検知（gameStatus:judging→waiting）
+Me -> Me: プレイヤー一覧画面表示
+Otherplayers -> Otherplayers: プレイヤー一覧画面表示
+end
+
+== ゲーム終了 ==
+Me -> Me: 「ゲーム終了」押下
+Me -> APIgateway_Functions: 終了リクエスト
+APIgateway_Functions -> Firestore: 終了リクエスト
+Firestore -> Firestore: currentGameをnullに＆roomStatusをinProgress→accepting/full
+Me <- Firestore: roomStatus更新検知（inProgress→accepting/full）
+Otherplayers <- Firestore: roomStatus更新検知（inProgress→accepting/full）
+Me -> Me: ゲーム選択画面表示
+Otherplayers -> Otherplayers: ゲーム選択画面表示
+
+@enduml
