@@ -1,0 +1,28 @@
+# Flutter/Dart特有のファイル
+/frontend/.dart_tool/
+/frontend/.flutter-plugins
+/frontend/.flutter-plugins-dependencies
+/frontend/build/
+/frontend/.metadata
+/frontend/.packages
+/frontend/*.iml
+
+# Android Studio/IntelliJのファイル
+**/.idea/
+**/*.iml
+**/*.iws
+**/.ipr
+**/out/
+**/gen/
+
+# VSCodeの設定
+**/.vscode/
+
+# Macの特有ファイル
+**/.DS_Store
+
+# Firebaseのキャッシュファイル
+**/.firebase/
+
+# ビルドディレクトリ
+**/build/
