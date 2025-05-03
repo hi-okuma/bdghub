@@ -5,6 +5,7 @@ const {checkMaintenance} = require("./src/middleware/maintenanceCheck");
 const {createRoomHandler} = require("./src/handlers/room/createRoom");
 const {joinRoomHandler} = require("./src/handlers/room/joinRoom");
 const {leaveRoomHandler} = require("./src/handlers/room/leaveRoom");
+const {startGameHandler} = require("./src/handlers/games/management/startGame");
 
 exports.createRoom = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
@@ -22,4 +23,10 @@ exports.leaveRoom = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
   if (await checkMaintenance(req, res)) return;
   await leaveRoomHandler(req, res);
+});
+
+exports.startGame = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await startGameHandler(req, res);
 });
