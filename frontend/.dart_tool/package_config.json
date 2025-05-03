@@ -26,6 +26,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "charcode",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/charcode-1.4.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "clock",
       "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/clock-1.1.1",
       "packageUri": "lib/",
@@ -54,6 +60,12 @@
       "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/collection-1.18.0",
       "packageUri": "lib/",
       "languageVersion": "2.18"
+    },
+    {
+      "name": "csslib",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/csslib-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
     },
     {
       "name": "cupertino_icons",
@@ -112,6 +124,12 @@
     {
       "name": "flutter_web_plugins",
       "rootUri": "file:///Users/okuma/development/flutter/packages/flutter_web_plugins",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "html",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/html-0.15.6",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -230,6 +248,18 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "universal_html",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/universal_html-2.2.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "universal_io",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/universal_io-2.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
       "name": "vector_math",
       "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/vector_math-2.1.4",
       "packageUri": "lib/",
@@ -254,7 +284,7 @@
       "languageVersion": "3.4"
     }
   ],
-  "generated": "2025-04-29T06:23:11.381207Z",
+  "generated": "2025-04-29T07:23:20.854653Z",
   "generator": "pub",
   "generatorVersion": "3.5.1",
   "flutterRoot": "file:///Users/okuma/development/flutter",

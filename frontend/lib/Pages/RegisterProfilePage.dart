@@ -4,7 +4,11 @@ import 'package:http/http.dart' as http;
 import 'SelectGamePage.dart';
 
 class RegisterProfilePage extends StatefulWidget {
-  const RegisterProfilePage({super.key});
+  final bool isJoiningRoom;
+  final String? initialRoomId;
+
+  const RegisterProfilePage(
+      {super.key, this.isJoiningRoom = false, this.initialRoomId});
 
   @override
   State<RegisterProfilePage> createState() => _RegisterProfilePageState();
@@ -12,8 +16,18 @@ class RegisterProfilePage extends StatefulWidget {
 
 class _RegisterProfilePageState extends State<RegisterProfilePage> {
   final TextEditingController _nicknameController = TextEditingController();
+  final TextEditingController _roomIdController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // 初期部屋IDがある場合は設定
+    if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
+      _roomIdController.text = widget.initialRoomId!;
+    }
+  }
 
   // 入力値のバリデーション
   bool _validateNickname(String value) {
@@ -58,26 +72,52 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
       return;
     }
 
+    // 部屋参加モードの場合は部屋コードの入力チェック
+    if (widget.isJoiningRoom && _roomIdController.text.isEmpty) {
+      setState(() {
+        _errorMessage = '部屋コードを入力してください';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      final Uri apiUrl;
+      final Map<String, dynamic> requestBody;
+
+      if (widget.isJoiningRoom) {
+        // 部屋参加モードの場合
+        apiUrl = Uri.parse(
+            'https://asia-northeast1-bdghub-dev.cloudfunctions.net/joinRoom');
+        requestBody = {
+          'nickname': _nicknameController.text,
+          'roomId': _roomIdController.text
+        };
+      } else {
+        // 部屋作成モードの場合
+        apiUrl = Uri.parse(
+            'https://asia-northeast1-bdghub-dev.cloudfunctions.net/createRoom');
+        requestBody = {'nickname': _nicknameController.text};
+      }
+
       // APIリクエスト
       final response = await http.post(
-        Uri.parse(
-            'https://asia-northeast1-bdghub-dev.cloudfunctions.net/createRoom'),
+        apiUrl,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'nickname': _nicknameController.text}),
+        body: jsonEncode(requestBody),
       );
 
       // レスポンスの処理
       if (response.statusCode == 200) {
         // 成功時の処理
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final String roomId = responseData['roomId'];
-        final String playerId = responseData['playerId'];
+        final String roomId = widget.isJoiningRoom
+            ? _roomIdController.text
+            : responseData['roomId'];
 
         if (!mounted) return;
 
@@ -89,14 +129,17 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           MaterialPageRoute(
             builder: (context) => SelectGamePage(
               roomId: roomId,
-              playerId: playerId,
+              myNickname: _nicknameController.text,
             ),
           ),
         );
 
         // 成功メッセージを表示
+        final String successMessage =
+            widget.isJoiningRoom ? '部屋に参加しました' : '部屋が作成されました';
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('部屋が作成されました')),
+          SnackBar(content: Text(successMessage)),
         );
       } else {
         // エラー時の処理
@@ -133,6 +176,7 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
   @override
   void dispose() {
     _nicknameController.dispose();
+    _roomIdController.dispose();
     super.dispose();
   }
 
@@ -189,6 +233,19 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
+          const SizedBox(height: 10),
+          if (widget.isJoiningRoom)
+            TextField(
+              controller: _roomIdController,
+              // 初期部屋IDがある場合は入力欄を非活性化
+              enabled:
+                  widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: '部屋コードを入力',
+                hintText: 'abcdefg1234',
+              ),
+            ),
           const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -199,10 +256,10 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
                 },
                 child: const Text('キャンセル'),
               ),
-              // 作成ボタン
-              ElevatedButton(
+              // 作成または参加ボタン
+              TextButton(
                 onPressed: _isLoading ? null : _createRoom,
-                style: ElevatedButton.styleFrom(
+                style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16.0, vertical: 10.0),
                 ),
@@ -212,7 +269,7 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('部屋を作成する'),
+                    : Text(widget.isJoiningRoom ? '部屋に参加する' : '部屋を作成する'),
               ),
             ],
           ),

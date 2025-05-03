@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'components/GameListWidget.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../components/GameListWidget.dart';
 
 class SelectGamePage extends StatefulWidget {
   final String roomId;
-  final String playerId;
+  final String myNickname;
 
   const SelectGamePage({
     Key? key,
     required this.roomId,
-    required this.playerId,
+    required this.myNickname,
   }) : super(key: key);
 
   @override
@@ -19,13 +23,14 @@ class SelectGamePage extends StatefulWidget {
 class _SelectGamePageState extends State<SelectGamePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // ダミーのプレイヤーリスト
-  final List<Map<String, dynamic>> _players = [
-    {'nickname': 'くま（ホスト）', 'isHost': true},
-    {'nickname': 'まんだ', 'isHost': false},
-    {'nickname': 'うつ', 'isHost': false},
-    {'nickname': 'にわ', 'isHost': false},
-  ];
+  // プレイヤーリスト
+  List<Map<String, dynamic>> _players = [];
+  // Firestoreリスナー用
+  StreamSubscription? _playersSubscription;
+  // プレイヤーデータのローディング状態
+  bool _isLoading = true;
+  // エラーメッセージ
+  String? _errorMessage;
 
   // ダミーのゲームリスト
   final List<Map<String, dynamic>> _gameList = [
@@ -57,10 +62,62 @@ class _SelectGamePageState extends State<SelectGamePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    // Firestoreからプレイヤーデータを取得
+    _subscribeToPlayers();
+  }
+
+  // Firestoreからプレイヤーデータを取得するメソッド
+  void _subscribeToPlayers() {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    _playersSubscription = FirebaseFirestore.instance
+        .collection('rooms')
+        .doc(widget.roomId)
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && snapshot.data()!.containsKey('players')) {
+        List<dynamic> playersData = snapshot.get('players');
+
+        setState(() {
+          _isLoading = false;
+          // プレイヤーデータをマッピング
+          _players = List.generate(playersData.length, (index) {
+            // プレイヤーデータが文字列の場合
+            if (playersData[index] is String) {
+              return {
+                'nickname': playersData[index],
+                'isHost': index == 0, // インデックス0がホスト
+              };
+            }
+            // そのほかの場合（念のため）
+            return {
+              'nickname': playersData[index].toString(),
+              'isHost': index == 0,
+            };
+          });
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _players = []; // データがない場合は空リスト
+        });
+      }
+    }, onError: (error) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'データの取得中にエラーが発生しました';
+        print('Firestoreエラー: $error');
+      });
+    });
   }
 
   @override
   void dispose() {
+    // リスナーを解除
+    _playersSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -110,11 +167,72 @@ class _SelectGamePageState extends State<SelectGamePage>
   }
 
   // 退出処理
-  void _leaveRoom() {
-    // 実際の退出処理はここに実装
+  void _leaveRoom() async {
+    try {
+      final Uri apiUrl;
+      final Map<String, dynamic> requestBody;
+
+      apiUrl = Uri.parse(
+          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
+      requestBody = {
+        'nickname': widget.myNickname,
+        'roomId': widget.roomId,
+      };
+
+      // APIリクエスト
+      final response = await http.post(
+        apiUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      // レスポンスの処理
+      if (response.statusCode == 200) {
+        // 成功時の処理
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        if (!mounted) return;
+
+        // 成功メッセージを表示
+        String successMessage = '部屋: ${widget.roomId} を退出しました';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage)),
+        );
+      } else {
+        // エラー時の処理
+        try {
+          // レスポンスボディをJSONとしてパース
+          final Map<String, dynamic> errorData = jsonDecode(response.body);
+          // messageキーの値があれば表示、なければ全体のレスポンスを表示
+          setState(() {
+            _errorMessage = errorData.containsKey('message')
+                ? '${errorData['message']}'
+                : response.body;
+          });
+        } catch (e) {
+          // JSONパースに失敗した場合は元のレスポンスボディをそのまま表示
+          setState(() {
+            _errorMessage = response.body;
+          });
+        }
+      }
+    } catch (e) {
+      // 例外発生時の処理
+      setState(() {
+        _errorMessage = '通信エラー: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+
     Navigator.of(context).pop(); // TOP画面に戻る
   }
-  
+
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
     // ゲーム詳細画面への遷移
@@ -194,28 +312,41 @@ class _SelectGamePageState extends State<SelectGamePage>
                   ),
                 ),
                 const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _players.map((player) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                              color: player['isHost']
-                                  ? Colors.amber[100]
-                                  : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(4.0)),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 4.0, horizontal: 8.0),
-                            child: Center(child: Text(player['nickname'])),
+                if (_isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (_errorMessage != null)
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  )
+                else if (_players.isEmpty)
+                  const Text('参加者がいません')
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _players.map((player) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                                color: player['isHost']
+                                    ? Colors.amber[100]
+                                    : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(4.0)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 4.0, horizontal: 8.0),
+                              child: Center(
+                                  child: player['isHost']
+                                      ? Text('${player['nickname']}（ホスト）')
+                                      : Text(player['nickname'])),
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                )
+                        );
+                      }).toList(),
+                    ),
+                  )
               ],
             ),
           ),

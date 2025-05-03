@@ -35,13 +35,14 @@ class GameListWidget extends StatelessWidget {
                 children: [
                   // サムネイル
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.casino, size: 40, color: Colors.grey),
+                    child:
+                        const Icon(Icons.casino, size: 40, color: Colors.grey),
                   ),
                   const SizedBox(width: 12),
                   // ゲーム情報

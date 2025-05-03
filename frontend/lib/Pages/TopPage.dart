@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'RegisterProfilePage.dart';
-import 'components/GameListWidget.dart';
+import '../components/GameListWidget.dart';
 
 class TopPage extends StatefulWidget {
-  const TopPage({super.key});
+  final String? roomId;
+
+  const TopPage({super.key, this.roomId});
 
   @override
   State<TopPage> createState() => _TopPageState();
@@ -72,6 +74,14 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+
+    // URLパラメータに部屋IDがある場合は自動的に部屋参加モードを開く
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.roomId != null && widget.roomId!.isNotEmpty) {
+        _showJoinRoomDialog(widget.roomId!);
+      }
+    });
+
     // TabControllerの初期化
     _tabController = TabController(length: tabs.length, vsync: this);
 
@@ -98,6 +108,30 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     });
   }
 
+  // 部屋参加用のダイアログを表示
+  void _showJoinRoomDialog(String roomId) {
+    showDialog(
+      context: context,
+      // barrierDismissibleをfalseに設定して、ダイアログ外タップで閉じないようにする
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        // SingleChildScrollViewでラップして、キーボード表示時に自動スクロールするようにする
+        return Dialog(
+          // ダイアログを上部に表示するためのinsetPaddingを設定
+          insetPadding:
+              const EdgeInsets.only(top: 80, left: 20, right: 20, bottom: 20),
+          child: SingleChildScrollView(
+            // 部屋参加モード（isJoiningRoom = true）、URLから部屋IDを渡す
+            child: RegisterProfilePage(
+              isJoiningRoom: true,
+              initialRoomId: roomId,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     // TabControllerの破棄
@@ -115,7 +149,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
           .toList();
     }
   }
-  
+
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
     // ゲーム詳細画面への遷移（ダミー）
@@ -163,12 +197,14 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                             barrierDismissible: false,
                             builder: (BuildContext context) {
                               // SingleChildScrollViewでラップして、キーボード表示時に自動スクロールするようにする
-                              return Dialog(
+                              return const Dialog(
                                 // ダイアログを上部に表示するためのinsetPaddingを設定
-                                insetPadding: const EdgeInsets.only(
+                                insetPadding: EdgeInsets.only(
                                     top: 80, left: 20, right: 20, bottom: 20),
-                                child: const SingleChildScrollView(
-                                  child: RegisterProfilePage(),
+                                child: SingleChildScrollView(
+                                  // 部屋作成モード（isJoiningRoom = false）
+                                  child:
+                                      RegisterProfilePage(isJoiningRoom: false),
                                 ),
                               );
                             },
@@ -180,7 +216,8 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () =>
+                            _showJoinRoomDialog(widget.roomId ?? ''),
                         child: const Text('部屋参加'),
                       ),
                     ),
