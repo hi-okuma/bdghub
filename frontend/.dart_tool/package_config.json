@@ -27,7 +27,7 @@
     },
     {
       "name": "charcode",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/charcode-1.4.0",
+      "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/charcode-1.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
@@ -63,7 +63,7 @@
     },
     {
       "name": "csslib",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/csslib-1.0.2",
+      "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/csslib-1.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.1"
     },
@@ -129,7 +129,7 @@
     },
     {
       "name": "html",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/html-0.15.6",
+      "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/html-0.15.6",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -249,13 +249,13 @@
     },
     {
       "name": "universal_html",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/universal_html-2.2.4",
+      "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/universal_html-2.2.4",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
     {
       "name": "universal_io",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/universal_io-2.2.2",
+      "rootUri": "file:///Users/okuma/.pub-cache/hosted/pub.dev/universal_io-2.2.2",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -284,7 +284,7 @@
       "languageVersion": "3.4"
     }
   ],
-  "generated": "2025-04-29T07:23:20.854653Z",
+  "generated": "2025-05-03T02:25:35.131352Z",
   "generator": "pub",
   "generatorVersion": "3.5.1",
   "flutterRoot": "file:///Users/okuma/development/flutter",
