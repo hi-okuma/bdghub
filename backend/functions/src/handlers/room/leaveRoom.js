@@ -51,7 +51,7 @@ async function leaveRoomHandler(req, res) {
     await updateRoomWithTransaction(roomRef, nickname);
 
     logger.info(`プレイヤー退出成功: ${nickname} from room ${roomId}`);
-    return sendSuccess(res, {}, "部屋から退出しました。");
+    return sendSuccess(res, {});
   } catch (error) {
     return sendError(
         res,

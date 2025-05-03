@@ -86,7 +86,6 @@ function createRoomData(nickname) {
     status: "accepting",
     players: [nickname],
     hostPlayer: nickname,
-    currentGame: null,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
