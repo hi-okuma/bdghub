@@ -1,0 +1,76 @@
+@startuml
+
+actor Me
+actor Otherplayers
+
+participant APIgateway_Functions
+participant Firestore
+
+== 〜タイトル画面表示 ==
+APIgateway_Functions -> Firestore: 開始リクエスト
+Firestore -> Firestore: roomStatus変更＆currentGame生成
+Me <- Firestore: roomStatusがinProgressになったことを検知
+Otherplayers <- Firestore: roomStatusがinProgressになったことを検知
+Me -> Firestore: currentGameをリクエスト
+Otherplayers -> Firestore: currentGameをリクエスト
+Me <-- Firestore: 返却
+Otherplayers <-- Firestore: 返却
+Me -> Me: タイトル画面表示
+Otherplayers -> Otherplayers: タイトル画面表示
+
+== 〜準備完了 ==
+Me -> Me: 「準備完了」押下（押下後、非活性）
+Me -> APIgateway_Functions: 準備完了リクエスト
+APIgateway_Functions -> Firestore: isReadyをtrueに
+Firestore -> Firestore: isReady更新 (false → true)
+
+Otherplayers -> Otherplayers: 「準備完了」押下
+Otherplayers -> APIgateway_Functions: 準備完了リクエスト
+
+alt 準備完了していないプレイヤーが存在する場合
+APIgateway_Functions -> Firestore: isReadyをtrueに
+Firestore -> Firestore: isReady更新 (false → true)
+else 全員が準備完了している場合
+APIgateway_Functions -> Firestore: ゲーム開始リクエスト
+Firestore -> Firestore: gameStatus (waiting → playing)
+end
+
+Me <- Firestore: gameStatusがplayingになったことを検知
+Otherplayers <- Firestore: gameStatusがplayingになったことを検知
+Me -> Me: ゲーム画面表示
+Otherplayers -> Otherplayers: ゲーム画面表示
+
+== ゲーム中 ==
+Me -> Me: 申告ボタン押下
+Me -> APIgateway_Functions: 申告リクエスト
+APIgateway_Functions -> Firestore: isAlive更新をfalseに
+Firestore -> Firestore: isAlive更新 (true -> false)
+Me <- Firestore: isAliveの変更を検知
+Otherplayers <- Firestore: isAliveの変更を検知
+Me -> Me: 再描画
+Otherplayers -> Otherplayers: 再描画
+
+Otherplayers -> Otherplayers: 申告ボタン押下
+Otherplayers -> APIgateway_Functions: 申告リクエスト
+
+alt 申告していないプレイヤー数が２人以上の場合
+APIgateway_Functions -> Firestore: isAlive更新をfalseに
+Firestore -> Firestore: isAlive更新 (true -> false)
+Me <- Firestore: isAliveの変更を検知
+Otherplayers <- Firestore: isAliveの変更を検知
+Me -> Me: 再描画
+Otherplayers -> Otherplayers: 再描画
+else 申告していないプレイヤー数が１人の場合
+APIgateway_Functions -> Firestore: 終了＆次ゲーム準備リクエスト
+Firestore -> Firestore: gameStatus更新 (playing → waiting)や初期化など
+Me <- Firestore: gameStatusの更新(playing→waiting)を検知
+Otherplayers <- Firestore: gameStatusの更新(playing→waiting)を検知
+Me -> Firestore: currentGameをリクエスト
+Otherplayers -> Firestore: currentGameをリクエスト
+Me <-- Firestore: 返却
+Otherplayers <-- Firestore: 返却
+Me -> Me: 結果発表画面表示
+Otherplayers -> Otherplayers: 結果発表画面表示
+end
+
+@enduml

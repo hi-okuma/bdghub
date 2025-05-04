@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ボドゲハブ(仮) : 0001.UIデザイン</title>
+        <link rel="stylesheet" href="styles/site.css" type="text/css" />
+        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+
+    <body class="theme-default aui-theme-default">
+        <div id="page">
+            <div id="main" class="aui-page-panel">
+                <div id="main-header">
+                    <div id="breadcrumb-section">
+                        <ol id="breadcrumbs">
+                            <li class="first">
+                                <span><a href="index.html">ボドゲハブ(仮)</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59408651.html">ボードゲームハブ(仮) Home</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506689.html">1.開発</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="67731523.html">0001.NGワード</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="67829809.html">0001.要件定義</a></span>
+                            </li>
+                                                </ol>
+                    </div>
+                    <h1 id="title-heading" class="pagetitle">
+                                                <span id="title-text">
+                            ボドゲハブ(仮) : 0001.UIデザイン
+                        </span>
+                    </h1>
+                </div>
+
+                <div id="content" class="view">
+                    <div class="page-metadata">
+                            
+        
+    
+        
+    
+        
+        
+            Created by <span class='author'> 大熊浩也</span> on 5月 04, 2025
+                        </div>
+                    <div id="main-content" class="wiki-content group">
+                    <span class="confluence-embedded-file-wrapper image-center-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-center" alt="image-20250503-142732.png" width="632" loading="lazy" src="attachments/68026370/67862607.png?width=632" data-image-src="attachments/68026370/67862607.png" data-height="770" data-width="1178" data-unresolved-comment-count="0" data-linked-resource-id="67862607" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="image-20250503-142732.png" data-base-url="https://hiokumatech.atlassian.net/wiki" data-linked-resource-content-type="image/png" data-linked-resource-container-id="68026370" data-linked-resource-container-version="1" data-media-id="26de2a25-63b8-4c83-99f1-d95228bfa9e6" data-media-type="file"></span><div class="table-wrap"><table data-table-width="1800" data-layout="align-start" data-local-id="4732b199-5a98-49e4-a88d-edec31d9a878" class="confluenceTable"><colgroup><col style="width: 66.0px;"/><col style="width: 196.0px;"/><col style="width: 477.0px;"/><col style="width: 201.0px;"/><col style="width: 360.0px;"/><col style="width: 314.0px;"/><col style="width: 174.0px;"/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>No.</strong></p></th><th class="confluenceTh"><p><strong>要素名</strong></p></th><th class="confluenceTh"><p><strong>表示制御</strong></p></th><th class="confluenceTh"><p><strong>ソート順</strong></p></th><th class="confluenceTh"><p><strong>動作制御</strong></p></th><th class="confluenceTh"><p><strong>遷移先</strong></p></th><th class="confluenceTh"><p><strong>備考</strong></p></th></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p>1</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>準備完了ボタン</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>初期状態は「準備完了」を表示。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性のグレー表示とする。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ー</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>画面遷移</p><p>※他プレイヤーが未押下なら画面遷移せずボタンを非活性に。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲーム画面</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>2</p></td><td class="confluenceTd"><p>ゲーム終了ボタン</p></td><td class="confluenceTd"><p>ホストプレイヤーにのみ表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>同じ部屋のプレイヤー全員に対して画面遷移</p></td><td class="confluenceTd"><p>ゲーム選択画面<br/>（ホストプレイヤーによってゲームが終了された旨のダイアログを表示）</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p>3</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>プレイヤーカード</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>自分以外のプレイヤーのニックネームとそれぞれに割り当てられたNGワードを表示。</p><p>画面から見切れる場合、縦スクロール可能となる。また、縦スクロールが可能なことが認識できるよう、申告ボタンとの境目はグラデーション透過させる。<a href="https://qiita.com/Rui010/items/8e942c5b2001cd1632be" class="external-link" rel="nofollow">（参考サイト）</a></p><p>申告ボタンを押下した場合、そのプレイヤーのカードをグレー表示する。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>playersのリスト順</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ー</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ー</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>4</p></td><td class="confluenceTd"><p>申告ボタン</p></td><td class="confluenceTd"><p>初期状態は「NGワードを言ってしまった！」を表示。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性のグレー表示とする。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他プレイヤー2人以上未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>結果発表画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>5</p></td><td class="confluenceTd"><p>勝者のニックネーム</p></td><td class="confluenceTd"><p>最後まで申告ボタンが押されなかった勝者のニックネームを表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>6</p></td><td class="confluenceTd"><p>勝者のNGワード</p></td><td class="confluenceTd"><p>最後まで申告ボタンが押されなかった勝者に割り当てられたNGワードを表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>7</p></td><td class="confluenceTd"><p>タイトルに戻るボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p></td><td class="confluenceTd"><p>タイトル画面</p></td><td class="confluenceTd"><p>ー</p></td></tr></tbody></table></div>
+                    </div>
+
+                                        <div class="pageSection group">
+                        <div class="pageSectionHeader">
+                            <h2 id="attachments" class="pageSectionTitle">Attachments:</h2>
+                        </div>
+
+                        <div class="greybox" align="left">
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/68026370/68026379.png">image-20250420-021411.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/68026370/68026382.png">スクリーンショット 2025-04-19 15.34.45.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/68026370/68026385.png">スクリーンショット 2025-04-19 15.34.25.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/68026370/67862607.png">image-20250503-142732.png</a> (image/png)
+                                <br/>
+                                                    </div>
+                    </div>
+                    
+                                                      
+                </div>             </div> 
+            <div id="footer" role="contentinfo">
+                <section class="footer-body">
+                    <p>Document generated by Confluence on 5月 04, 2025 16:23</p>
+                    <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
+                </section>
+            </div>
+        </div>     </body>
+</html>
