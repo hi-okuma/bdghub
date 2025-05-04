@@ -73,26 +73,20 @@ async function startGameHandler(req, res) {
         throw new Error(`TooManyPlayers:${gameData.maxPlayers}:${roomData.players.length}`);
       }
 
-      const schemaQuery = await transaction.get(gameRef.collection("schema"));
-
-      if (schemaQuery.empty) {
-        throw new Error("SchemaNotFound");
+      let gameInitializer;
+      try {
+        gameInitializer = require(`../../games/${gameId}/init.js`);
+      } catch (error) {
+        throw new Error(`InitializerNotFound:${gameId}`);
       }
+
+      const currentGameData = await gameInitializer.createCurrentGame(roomData.players, gameData);
 
       const gameInfo = {
         title: gameData.title,
         startedAt: FieldValue.serverTimestamp(),
+        ...currentGameData,
       };
-
-      schemaQuery.docs.forEach((doc) => {
-        const schemaData = doc.data();
-
-        if (doc.id === "players") {
-          gameInfo.players = createPlayersArray(roomData.players);
-        } else {
-          gameInfo[doc.id] = schemaData;
-        }
-      });
 
       transaction.update(roomRef, {
         status: "inProgress",
@@ -129,18 +123,12 @@ async function startGameHandler(req, res) {
       return sendError(res, "NotFound", "指定された部屋が見つかりません。", 404, {roomId});
     } else if (errorMessage.includes("GameNotFound")) {
       return sendError(res, "GameNotFound", "指定されたゲームが見つかりません。", 404, {gameId});
-    } else if (errorMessage.includes("SchemaNotFound")) {
-      return sendError(res, "SchemaNotFound", "ゲームを開始できませんでした。", 500, {gameId});
+    } else if (errorMessage.includes("InitializerNotFound")) {
+      return sendError(res, "InitializerNotFound", "ゲームを開始できませんでした。", 500, {gameId});
     } else if (errorMessage.includes("Unpublished")) {
       return sendError(res, "Unpublished", "このゲームは公開されていません。", 403, {gameId});
     } else if (errorMessage.includes("NotReleased")) {
-      return sendError(
-          res,
-          "NotReleased",
-          `このゲームは公開されていません。`,
-          403,
-          {gameId},
-      );
+      return sendError(res, "NotReleased", "このゲームは公開されていません。", 403, {gameId});
     } else if (errorMessage.includes("InsufficientPlayers")) {
       const parts = errorMessage.split(":");
       const required = parts[1] || "?";
@@ -195,21 +183,6 @@ async function startGameHandler(req, res) {
         {error: errorMessage},
     );
   }
-}
-
-/**
- * プレイヤー配列を作成する
- * @param {Array} playerNicknames - ニックネームの配列
- * @return {Array} プレイヤーオブジェクトの配列
- */
-function createPlayersArray(playerNicknames) {
-  return playerNicknames.map((nickname) => {
-    return {
-      nickname: nickname,
-      isReady: false,
-      score: 0,
-    };
-  });
 }
 
 /**
