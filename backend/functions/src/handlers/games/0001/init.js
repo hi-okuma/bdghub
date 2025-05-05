@@ -23,12 +23,12 @@ async function createCurrentGame(players, gameData) {
     isReady: false,
     ngWord: [shuffledWords[index % shuffledWords.length]],
     isAlive: true,
+    point: 0,
   }));
 
   return {
     gameStatus: "waiting",
     players: playerData,
-    winner: null,
   };
 }
 

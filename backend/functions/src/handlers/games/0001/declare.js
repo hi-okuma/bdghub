@@ -52,10 +52,16 @@ async function declareHandler(req, res) {
 
       if (alivePlayersCount === 1) {
         const winner = updatedPlayers.find((player) => player.isAlive);
-        updateData.winner = {
-          nickname: winner.nickname,
-          ngWord: winner.ngWord,
-        };
+        updateData.players = updatedPlayers.map(player => {
+          if (player.nickname === winner.nickname) {
+            return {
+              ...player,
+              point: (player.point || 0) + 1
+            };
+          }
+          return player;
+        });
+        
         updateData.gameStatus = "waiting";
 
         const ngWordsDoc = await transaction.get(
@@ -71,11 +77,12 @@ async function declareHandler(req, res) {
         const ngWordsList = ngWordsDoc.data().words;
         const shuffledWords = shuffleArray(ngWordsList);
 
-        updateData.players = updatedPlayers.map((player, index) => ({
+        updateData.players = updateData.players.map((player, index) => ({
           nickname: player.nickname,
           isReady: false,
           ngWord: [shuffledWords[index % shuffledWords.length]],
           isAlive: true,
+          point: player.point || 0,
         }));
       }
 
