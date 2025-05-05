@@ -7,7 +7,6 @@ const {db} = require("../../../config/firebase");
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players, gameData) {
-  // NGワードリストを取得
   const ngWordsDoc = await db.collection("games").doc("0001")
       .collection("assets")
       .doc("ngWords")
