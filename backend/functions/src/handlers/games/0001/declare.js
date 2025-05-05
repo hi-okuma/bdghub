@@ -52,16 +52,16 @@ async function declareHandler(req, res) {
 
       if (alivePlayersCount === 1) {
         const winner = updatedPlayers.find((player) => player.isAlive);
-        updateData.players = updatedPlayers.map(player => {
+        updateData.players = updatedPlayers.map((player) => {
           if (player.nickname === winner.nickname) {
             return {
               ...player,
-              point: (player.point || 0) + 1
+              point: (player.point || 0) + 1,
             };
           }
           return player;
         });
-        
+
         updateData.gameStatus = "waiting";
 
         const ngWordsDoc = await transaction.get(
