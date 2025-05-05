@@ -45,10 +45,30 @@
     
         
         
-            Created by <span class='author'> 大熊浩也</span> on 5月 04, 2025
+            Created by <span class='author'> 大熊浩也</span>, last modified on 5月 05, 2025
                         </div>
                     <div id="main-content" class="wiki-content group">
-                    
+                    <h2 id="id-0001.API仕様-ゲーム開始準備完了（/setReady）">ゲーム開始準備完了（/setReady）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
+  &quot;roomId&quot;: &lt;指定した部屋のroomId&gt;,
+  &quot;nickname&quot;: &lt;プレイヤーのニックネーム&gt;,
+}</pre>
+</div></div><p>レスポンス（成功時）</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;&quot;,
+}</pre>
+</div></div><div class="table-wrap"><table data-table-width="1800" data-layout="center" data-local-id="c929ef00-654d-4111-acd7-a85f82d4c6f9" class="confluenceTable"><colgroup><col style="width: 282.0px;"/><col style="width: 437.0px;"/><col style="width: 235.0px;"/><col style="width: 484.0px;"/><col style="width: 360.0px;"/></colgroup><tbody><tr><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>エラーコード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>メッセージ</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p><strong>HTTP</strong>コード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>発生条件</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>クライアント挙動</p></th></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>InvalidArgument</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>不正なリクエストです。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>400</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>room_idやplayer_idが未指定または不正な形式</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>InvalidGameStatus</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>400</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>gameStatusがwaitingでない</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>GameNotFound</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>404</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>currentGameが存在しない</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>Internal</code>※</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>サーバーエラーが発生しました。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>500</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>サーバー側での予期しないエラー</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>Maintenance</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>現在メンテナンス中です。しばらくお待ちください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>503</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>メンテナンス中</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr></tbody></table></div><p /><h2 id="id-0001.API仕様-申告処理（/declare）">申告処理（/declare）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
+  &quot;roomId&quot;: &lt;指定した部屋のroomId&gt;,
+  &quot;nickname&quot;: &lt;プレイヤーのニックネーム&gt;,
+}</pre>
+</div></div><p>レスポンス（成功時）</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;&quot;,
+}</pre>
+</div></div><div class="table-wrap"><table data-table-width="1800" data-layout="center" data-local-id="00bb1c99-0db5-484e-8e3f-9d0ee490e4b2" class="confluenceTable"><colgroup><col style="width: 282.0px;"/><col style="width: 437.0px;"/><col style="width: 235.0px;"/><col style="width: 484.0px;"/><col style="width: 360.0px;"/></colgroup><tbody><tr><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>エラーコード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>メッセージ</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p><strong>HTTP</strong>コード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>発生条件</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>クライアント挙動</p></th></tr><tr><td class="confluenceTd"><p><code>InvalidArgument</code></p></td><td class="confluenceTd"><p>不正なリクエストです。</p></td><td class="confluenceTd"><p>400</p></td><td class="confluenceTd"><p>room_idやplayer_idが未指定または不正な形式</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>InvalidGameStatus</code></p></td><td class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td class="confluenceTd"><p>400</p></td><td class="confluenceTd"><p>gameStatusがplayingでない</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>GameNotFound</code></p></td><td class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td class="confluenceTd"><p>404</p></td><td class="confluenceTd"><p>currentGameが存在しない</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>Internal</code>※</p></td><td class="confluenceTd"><p>サーバーエラーが発生しました。</p></td><td class="confluenceTd"><p>500</p></td><td class="confluenceTd"><p>サーバー側での予期しないエラー</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>Maintenance</code></p></td><td class="confluenceTd"><p>現在メンテナンス中です。しばらくお待ちください。</p></td><td class="confluenceTd"><p>503</p></td><td class="confluenceTd"><p>メンテナンス中</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr></tbody></table></div>
                     </div>
 
                     
@@ -56,7 +76,7 @@
                 </div>             </div> 
             <div id="footer" role="contentinfo">
                 <section class="footer-body">
-                    <p>Document generated by Confluence on 5月 04, 2025 16:23</p>
+                    <p>Document generated by Confluence on 5月 05, 2025 18:34</p>
                     <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
                 </section>
             </div>

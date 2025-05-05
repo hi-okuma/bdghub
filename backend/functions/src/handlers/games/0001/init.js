@@ -7,7 +7,6 @@ const {db} = require("../../../config/firebase");
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players, gameData) {
-  // NGワードリストを取得
   const ngWordsDoc = await db.collection("games").doc("0001")
       .collection("assets")
       .doc("ngWords")
@@ -24,12 +23,12 @@ async function createCurrentGame(players, gameData) {
     isReady: false,
     ngWord: [shuffledWords[index % shuffledWords.length]],
     isAlive: true,
+    point: 0,
   }));
 
   return {
     gameStatus: "waiting",
     players: playerData,
-    winner: null,
   };
 }
 

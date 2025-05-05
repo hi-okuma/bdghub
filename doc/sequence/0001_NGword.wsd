@@ -19,7 +19,7 @@ Me -> Me: タイトル画面表示
 Otherplayers -> Otherplayers: タイトル画面表示
 
 == 〜準備完了 ==
-Me -> Me: 「準備完了」押下（押下後、非活性）
+Me -> Me: 「準備完了」押下\n押下後は非活性に
 Me -> APIgateway_Functions: 準備完了リクエスト
 APIgateway_Functions -> Firestore: isReadyをtrueに
 Firestore -> Firestore: isReady更新 (false → true)
@@ -62,7 +62,7 @@ Me -> Me: 再描画
 Otherplayers -> Otherplayers: 再描画
 else 申告していないプレイヤー数が１人の場合
 APIgateway_Functions -> Firestore: 終了＆次ゲーム準備リクエスト
-Firestore -> Firestore: gameStatus更新 (playing → waiting)や初期化など
+Firestore -> Firestore: gameStatus更新 (playing → waiting)\n次ゲームに向けた初期化
 Me <- Firestore: gameStatusの更新(playing→waiting)を検知
 Otherplayers <- Firestore: gameStatusの更新(playing→waiting)を検知
 Me -> Firestore: currentGameをリクエスト
