@@ -58,6 +58,7 @@ Future<List<Map<String, dynamic>>> fetchGamesFromFirestore() async {
         parsedGames.add({
           'id': gameId, // ソート用にIDを追加
           'title': data['title'] ?? '',
+          'thumbnailUrl': data['thumbnailUrl'] ?? '',
           'genre': genres, // 複数ジャンルをリストとして保存
           'genreName': genreNames, // ジャンル名をリストとして保存
           'category': genreNames.isNotEmpty
