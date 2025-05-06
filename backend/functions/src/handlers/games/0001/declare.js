@@ -1,4 +1,3 @@
-// backend/functions/src/handlers/games/0001/declare.js
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {sendSuccess, sendError} = require("../../../utils/responseHandler");
@@ -8,7 +7,7 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} req - リクエストオブジェクト
  * @param {object} res - レスポンスオブジェクト
  */
-async function declareHandler(req, res) {
+async function declare0001Handler(req, res) {
   const {roomId, nickname} = req.body;
 
   if (!roomId || !nickname) {
@@ -138,5 +137,5 @@ function shuffleArray(array) {
 }
 
 module.exports = {
-  declareHandler,
+  declare0001Handler,
 };
