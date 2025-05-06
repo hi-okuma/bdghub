@@ -58,22 +58,11 @@ class GameListWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[100],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            game['category'],
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[800],
-                            ),
-                          ),
+                        // ジャンル名をChipとして複数表示
+                        Wrap(
+                          spacing: 4, // チップ間の水平スペース
+                          runSpacing: 4, // 行間のスペース
+                          children: _buildGenreChips(game),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -85,9 +74,9 @@ class GameListWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          game['description'],
+                          game['overview'],
                           style: const TextStyle(fontSize: 14),
-                          maxLines: 2,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
@@ -105,6 +94,47 @@ class GameListWidget extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  // ジャンル名からチップを生成するメソッド
+  List<Widget> _buildGenreChips(Map<String, dynamic> game) {
+    // genreNameがリストの場合
+    if (game['genreName'] is List) {
+      List<String> genreNames = List<String>.from(game['genreName']);
+      
+      // リストが空の場合は「すべて」を表示
+      if (genreNames.isEmpty) {
+        return [_buildSingleChip('すべて')];
+      }
+      
+      // 各ジャンル名に対応するチップを生成
+      return genreNames.map((name) => _buildSingleChip(name)).toList();
+    }
+    
+    // 互換性のため、文字列の場合も処理
+    String genreName = (game['genreName'] ?? 'すべて').toString();
+    return [_buildSingleChip(genreName)];
+  }
+  
+  // 単一のチップを生成するヘルパーメソッド
+  Widget _buildSingleChip(String name) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.blue[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        name,
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.blue[800],
+        ),
+      ),
     );
   }
 }
