@@ -60,7 +60,9 @@ Future<List<Map<String, dynamic>>> fetchGamesFromFirestore() async {
           'title': data['title'] ?? '',
           'genre': genres, // 複数ジャンルをリストとして保存
           'genreName': genreNames, // ジャンル名をリストとして保存
-          'category': genreNames.isNotEmpty ? genreNames[0] : 'すべて', // SelectGamePage用の互換性維持
+          'category': genreNames.isNotEmpty
+              ? genreNames[0]
+              : 'すべて', // SelectGamePage用の互換性維持
           'players': '${data['minPlayers'] ?? ''}-${data['maxPlayers'] ?? ''}人',
           'time': '${data['duration'] ?? ''}分',
           'overview': data['overview'] ?? '',
@@ -157,7 +159,8 @@ List<Map<String, dynamic>> getDummyGames() {
 }
 
 // 特定のジャンルでゲームをフィルタリングする
-List<Map<String, dynamic>> filterGamesByGenre(List<Map<String, dynamic>> games, Set<GameGenre> selectedGenre) {
+List<Map<String, dynamic>> filterGamesByGenre(
+    List<Map<String, dynamic>> games, Set<GameGenre> selectedGenre) {
   if (selectedGenre.contains(GameGenre.all)) {
     return games;
   } else {

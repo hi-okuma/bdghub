@@ -2,7 +2,6 @@ import 'RegisterProfilePage.dart';
 import '../components/GameListWidget.dart';
 import 'package:bodogehub/Util/Util.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
@@ -13,10 +12,7 @@ class TopPage extends StatefulWidget {
   State<TopPage> createState() => _TopPageState();
 }
 
-enum GameGenre { all, popular, card, cooperation }
-
 class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Map<String, dynamic>> games = [];
   bool isLoading = true;
   String selectedFilter = 'すべて';
@@ -24,14 +20,14 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   // TabControllerを追加
   late TabController _tabController;
 
-  // 選択されているジャンル
-  Set<GameGenre> _selectedGenre = {GameGenre.all};
-
   // ゲームリスト（Firestoreから取得）
   List<Map<String, dynamic>> _gameList = [];
 
-  // データ読み込み中フラグ
-  bool _isLoading = true;
+  // ゲームデータのローディング状態
+  bool _isGameLoading = true;
+
+  // 選択されているジャンル
+  Set<GameGenre> _selectedGenre = {GameGenre.all};
 
   final List<Tab> tabs = const <Tab>[
     Tab(text: '全て'),
@@ -39,164 +35,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     Tab(text: 'カード'),
     Tab(text: '協力'),
   ];
-
-  // Firestoreからゲームデータを取得するメソッド
-  Future<void> _fetchGamesFromFirestore() async {
-    try {
-      // gamesコレクションの全ドキュメントを取得
-      final snapshot = await _firestore
-          .collection('games')
-          .where('isPublished', isEqualTo: true) // 公開されているゲームのみ取得
-          .get();
-
-      if (snapshot.docs.isNotEmpty) {
-        final List<Map<String, dynamic>> parsedGames = [];
-        final List<String> tagsList = [];
-
-        // 各ドキュメントからデータを抽出
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final gameId = doc.id;
-
-          // tagsからジャンル情報を取得（複数登録可能）
-          List<GameGenre> genres = [GameGenre.all];
-          List<String> genreNames = ['すべて'];
-
-          if (data['tags'] != null && data['tags'] is List) {
-            final tags = List<dynamic>.from(data['tags']);
-            genres = []; // 初期値をリセット
-            genreNames = []; // 初期値をリセット
-
-            // tagsからジャンルを判定する（複数登録可能）
-            // NOTE: タグIDとジャンルのマッピングは実際のデータに合わせて修正する
-            if (tags.contains('定番')) {
-              genres.add(GameGenre.popular);
-              genreNames.add('定番');
-            }
-            if (tags.contains('カード')) {
-              genres.add(GameGenre.card);
-              genreNames.add('カード');
-            }
-            if (tags.contains('協力')) {
-              genres.add(GameGenre.cooperation);
-              genreNames.add('協力');
-            }
-
-            // ジャンルが一つも登録されていない場合はデフォルト値を設定
-            if (genres.isEmpty) {
-              genres.add(GameGenre.all);
-              genreNames.add('すべて');
-            }
-          }
-
-          // ゲーム情報をリストに追加
-          parsedGames.add({
-            'id': gameId, // ソート用にIDを追加
-            'title': data['title'] ?? '',
-            'genre': genres, // 複数ジャンルをリストとして保存
-            'genreName': genreNames, // ジャンル名をリストとして保存
-            'players':
-                '${data['minPlayers'] ?? ''}-${data['maxPlayers'] ?? ''}人',
-            'time': '${data['duration'] ?? ''}分',
-            'overview': data['overview'] ?? '',
-            'description': data['description'] ?? '',
-            'playCnt': data['playCnt'] ?? 0, // ソート用に追加
-          });
-        }
-
-        // playCnt → gameIdの順にdescendingでソート
-        parsedGames.sort((a, b) {
-          final int playCntA = a['playCnt'] ?? 0;
-          final int playCntB = b['playCnt'] ?? 0;
-
-          // まずはplayCntで比較
-          final int playCntComparison = playCntB.compareTo(playCntA); // 降順
-
-          // playCntが同じならgameId(ドキュメントID)で比較
-          if (playCntComparison == 0) {
-            return (b['id'] ?? '').compareTo(a['id'] ?? ''); // 降順
-          }
-
-          return playCntComparison;
-        });
-
-        setState(() {
-          _gameList = parsedGames;
-          _isLoading = false;
-        });
-      } else {
-        // ドキュメントが存在しない場合はダミーデータを使用
-        setState(() {
-          _gameList = _getDummyGames();
-          _isLoading = false;
-        });
-        print('Firestoreにデータが存在しないため、ダミーデータを使用します');
-      }
-    } catch (e) {
-      print('Firestoreからのデータ取得エラー: $e');
-      // エラー時はダミーデータを使用
-      setState(() {
-        _gameList = _getDummyGames();
-        _isLoading = false;
-      });
-    }
-  }
-
-// ダミーデータを返す（Firestore取得失敗時のフォールバック用）
-  List<Map<String, dynamic>> _getDummyGames() {
-    return [
-      {
-        'title': 'タクティカルバトル',
-        'genre': [GameGenre.popular],
-        'genreName': ['定番'],
-        'category': '戦略',
-        'players': '2-4人',
-        'time': '30-60分',
-        'description': '資源を集めて拠点を建築し、対戦相手を打ち負かす戦略ゲーム',
-        'overview': '資源を集めて拠点を建築し、対戦相手を打ち負かす戦略ゲーム',
-      },
-      {
-        'title': 'カードマスター',
-        'genre': [GameGenre.card],
-        'genreName': ['カード'],
-        'category': 'カード',
-        'players': '2-6人',
-        'time': '20-40分',
-        'description': '手札を駆使して相手よりも多くのポイントを獲得するカードゲーム',
-        'overview': '手札を駆使して相手よりも多くのポイントを獲得するカードゲーム',
-      },
-      {
-        'title': 'コープアドベンチャー',
-        'genre': [GameGenre.cooperation],
-        'genreName': ['協力'],
-        'category': '協力',
-        'players': '3-5人',
-        'time': '45-90分',
-        'description': 'プレイヤー全員で協力して、迫り来る危機から脱出を目指す',
-        'overview': 'プレイヤー全員で協力して、迫り来る危機から脱出を目指す',
-      },
-      {
-        'title': 'タクティカルカード',
-        'genre': [GameGenre.popular, GameGenre.card],
-        'genreName': ['定番', 'カード'],
-        'category': '戦略',
-        'players': '2人',
-        'time': '15-30分',
-        'description': '2人で対戦する戦略的なカードゲーム。シンプルなルールで奥深い戦略性',
-        'overview': '2人で対戦する戦略的なカードゲーム',
-      },
-      {
-        'title': '協力型カードゲーム',
-        'genre': [GameGenre.cooperation, GameGenre.card],
-        'genreName': ['協力', 'カード'],
-        'category': '協力',
-        'players': '2-4人',
-        'time': '30-45分',
-        'description': 'チームで協力してミッションをクリアするカードゲーム',
-        'overview': 'チームで協力してミッションをクリアするカードゲーム',
-      },
-    ];
-  }
 
   @override
   void initState() {
@@ -235,7 +73,30 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     });
 
     // Firestoreからゲームデータを取得
-    _fetchGamesFromFirestore();
+    _fetchGames();
+  }
+
+  // Firestoreからゲームデータを取得するメソッド
+  Future<void> _fetchGames() async {
+    setState(() {
+      _isGameLoading = true;
+    });
+
+    try {
+      // Utilクラスの共通関数を使用
+      final games = await fetchGamesFromFirestore();
+
+      setState(() {
+        _gameList = games;
+        _isGameLoading = false;
+      });
+    } catch (e) {
+      print('ゲームデータの取得エラー: $e');
+      setState(() {
+        _gameList = getDummyGames();
+        _isGameLoading = false;
+      });
+    }
   }
 
   // 部屋参加用のダイアログを表示
@@ -397,7 +258,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
           ),
           // TabBarViewでスワイプ可能なコンテンツ領域
           Expanded(
-            child: _isLoading
+            child: _isGameLoading
                 ? const Center(
                     child: CircularProgressIndicator(),
                   )
