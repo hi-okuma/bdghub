@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'RegisterProfilePage.dart';
 import '../components/GameListWidget.dart';
+import 'package:bodogehub/Util/Util.dart';
+import 'package:flutter/material.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
@@ -11,62 +12,26 @@ class TopPage extends StatefulWidget {
   State<TopPage> createState() => _TopPageState();
 }
 
-enum GameGenre { all, tactics, card, cooperation }
-
 class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
+  List<Map<String, dynamic>> games = [];
+  bool isLoading = true;
+  String selectedFilter = 'すべて';
+
   // TabControllerを追加
   late TabController _tabController;
+
+  // ゲームリスト（Firestoreから取得）
+  List<Map<String, dynamic>> _gameList = [];
+
+  // ゲームデータのローディング状態
+  bool _isGameLoading = true;
 
   // 選択されているジャンル
   Set<GameGenre> _selectedGenre = {GameGenre.all};
 
-  // ダミーのゲームリスト
-  final List<Map<String, dynamic>> _gameList = [
-    {
-      'title': 'タクティカルバトル',
-      'genre': GameGenre.tactics,
-      'category': '戦略',
-      'players': '2-4人',
-      'time': '30-60分',
-      'description': '資源を集めて拠点を建築し、対戦相手を打ち負かす戦略ゲーム',
-    },
-    {
-      'title': 'カードマスター',
-      'genre': GameGenre.card,
-      'category': 'カード',
-      'players': '2-6人',
-      'time': '20-40分',
-      'description': '手札を駆使して相手よりも多くのポイントを獲得するカードゲーム',
-    },
-    {
-      'title': 'コープアドベンチャー',
-      'genre': GameGenre.cooperation,
-      'category': '協力',
-      'players': '3-5人',
-      'time': '45-90分',
-      'description': 'プレイヤー全員で協力して、迫り来る危機から脱出を目指す',
-    },
-    {
-      'title': 'タクティカルカード',
-      'genre': GameGenre.tactics,
-      'category': '戦略',
-      'players': '2人',
-      'time': '15-30分',
-      'description': '2人で対戦する戦略的なカードゲーム。シンプルなルールで奥深い戦略性',
-    },
-    {
-      'title': '協力型カードゲーム',
-      'genre': GameGenre.cooperation,
-      'category': '協力',
-      'players': '2-4人',
-      'time': '30-45分',
-      'description': 'チームで協力してミッションをクリアするカードゲーム',
-    },
-  ];
-
   final List<Tab> tabs = const <Tab>[
     Tab(text: '全て'),
-    Tab(text: '戦略'),
+    Tab(text: '定番'),
     Tab(text: 'カード'),
     Tab(text: '協力'),
   ];
@@ -94,7 +59,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
-              _selectedGenre = {GameGenre.tactics};
+              _selectedGenre = {GameGenre.popular};
               break;
             case 2:
               _selectedGenre = {GameGenre.card};
@@ -106,6 +71,32 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         });
       }
     });
+
+    // Firestoreからゲームデータを取得
+    _fetchGames();
+  }
+
+  // Firestoreからゲームデータを取得するメソッド
+  Future<void> _fetchGames() async {
+    setState(() {
+      _isGameLoading = true;
+    });
+
+    try {
+      // Utilクラスの共通関数を使用
+      final games = await fetchGamesFromFirestore();
+
+      setState(() {
+        _gameList = games;
+        _isGameLoading = false;
+      });
+    } catch (e) {
+      print('ゲームデータの取得エラー: $e');
+      setState(() {
+        _gameList = getDummyGames();
+        _isGameLoading = false;
+      });
+    }
   }
 
   // 部屋参加用のダイアログを表示
@@ -139,14 +130,21 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  // 表示するゲームのリスト
+  // 表示するゲームのリスト（複数ジャンル対応）
   List<Map<String, dynamic>> get _filteredGames {
     if (_selectedGenre.contains(GameGenre.all)) {
       return _gameList;
     } else {
-      return _gameList
-          .where((game) => _selectedGenre.contains(game['genre']))
-          .toList();
+      return _gameList.where((game) {
+        // 'genre'が配列として格納されているため、いずれかの要素が選択ジャンルに含まれているか確認
+        if (game['genre'] is List) {
+          List<GameGenre> genres = List<GameGenre>.from(game['genre']);
+          // どれか1つでも選択ジャンルに含まれていればtrue
+          return genres.any((genre) => _selectedGenre.contains(genre));
+        }
+        // 互換性のため、従来の単一値のgenreにも対応
+        return _selectedGenre.contains(game['genre']);
+      }).toList();
     }
   }
 
@@ -260,41 +258,66 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
           ),
           // TabBarViewでスワイプ可能なコンテンツ領域
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              // カチッとしたスワイプ感のために物理特性を調整
-              physics: const PageScrollPhysics(
-                parent: ClampingScrollPhysics(),
-              ),
-              children: [
-                // 全てのゲーム
-                GameListWidget(
-                  games: _gameList,
-                  onGameSelected: _onGameSelected,
-                ),
-                // 戦略ゲーム
-                GameListWidget(
-                  games: _gameList
-                      .where((game) => game['genre'] == GameGenre.tactics)
-                      .toList(),
-                  onGameSelected: _onGameSelected,
-                ),
-                // カードゲーム
-                GameListWidget(
-                  games: _gameList
-                      .where((game) => game['genre'] == GameGenre.card)
-                      .toList(),
-                  onGameSelected: _onGameSelected,
-                ),
-                // 協力ゲーム
-                GameListWidget(
-                  games: _gameList
-                      .where((game) => game['genre'] == GameGenre.cooperation)
-                      .toList(),
-                  onGameSelected: _onGameSelected,
-                ),
-              ],
-            ),
+            child: _isGameLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : TabBarView(
+                    controller: _tabController,
+                    // カチッとしたスワイプ感のために物理特性を調整
+                    physics: const PageScrollPhysics(
+                      parent: ClampingScrollPhysics(),
+                    ),
+                    children: [
+                      // 全てのゲーム
+                      GameListWidget(
+                        games: _gameList,
+                        onGameSelected: _onGameSelected,
+                      ),
+                      // 定番ゲーム
+                      GameListWidget(
+                        games: _gameList.where((game) {
+                          // 複数ジャンル対応
+                          if (game['genre'] is List) {
+                            List<GameGenre> genres =
+                                List<GameGenre>.from(game['genre']);
+                            return genres.contains(GameGenre.popular);
+                          }
+                          // 互換性維持のため
+                          return game['genre'] == GameGenre.popular;
+                        }).toList(),
+                        onGameSelected: _onGameSelected,
+                      ),
+                      // カードゲーム
+                      GameListWidget(
+                        games: _gameList.where((game) {
+                          // 複数ジャンル対応
+                          if (game['genre'] is List) {
+                            List<GameGenre> genres =
+                                List<GameGenre>.from(game['genre']);
+                            return genres.contains(GameGenre.card);
+                          }
+                          // 互換性維持のため
+                          return game['genre'] == GameGenre.card;
+                        }).toList(),
+                        onGameSelected: _onGameSelected,
+                      ),
+                      // 協力ゲーム
+                      GameListWidget(
+                        games: _gameList.where((game) {
+                          // 複数ジャンル対応
+                          if (game['genre'] is List) {
+                            List<GameGenre> genres =
+                                List<GameGenre>.from(game['genre']);
+                            return genres.contains(GameGenre.cooperation);
+                          }
+                          // 互換性維持のため
+                          return game['genre'] == GameGenre.cooperation;
+                        }).toList(),
+                        onGameSelected: _onGameSelected,
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
