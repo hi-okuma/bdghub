@@ -1,0 +1,71 @@
+@startuml
+
+actor Presenter
+actor Answerer
+
+participant APIgateway_Functions
+participant Firestore
+
+== 〜タイトル画面表示 ==
+APIgateway_Functions -> Firestore: 開始リクエスト
+Firestore -> Firestore: roomStatus変更＆currentGame生成
+Presenter <- Firestore: roomStatusがinProgressになったことを検知
+Answerer <- Firestore: roomStatusがinProgressになったことを検知
+Presenter -> Firestore: currentGameをリクエスト
+Answerer -> Firestore: currentGameをリクエスト
+Presenter <-- Firestore: 返却
+Answerer <-- Firestore: 返却
+Presenter -> Presenter: タイトル画面表示
+Answerer -> Answerer: タイトル画面表示
+
+== 〜準備完了 ==
+Presenter -> Presenter: 「準備完了」押下\n押下後は非活性に
+Presenter -> APIgateway_Functions: 準備完了リクエスト
+APIgateway_Functions -> Firestore: isReadyをtrueに
+Firestore -> Firestore: isReady更新 (false → true)
+
+Answerer -> Answerer: 「準備完了」押下
+Answerer -> APIgateway_Functions: 準備完了リクエスト
+
+alt 準備完了していないプレイヤーが存在する場合
+APIgateway_Functions -> Firestore: isReadyをtrueに
+Firestore -> Firestore: isReady更新 (false → true)
+else 全員が準備完了している場合
+APIgateway_Functions -> Firestore: ゲーム開始リクエスト
+Firestore -> Firestore: gameStatus (waiting → playing)
+end
+
+Presenter <- Firestore: gameStatusがplayingになったことを検知
+Answerer <- Firestore: gameStatusがplayingになったことを検知
+Presenter -> Presenter: ゲーム画面表示
+Answerer -> Answerer: ゲーム画面表示
+
+== ゲーム中 ==
+Presenter -> Presenter: 回答者ボタンor\n失敗ボタンを押下
+Presenter -> APIgateway_Functions: リクエスト
+
+alt ターンが１周していない
+APIgateway_Functions -> Firestore: 回答者切り替えリクエスト
+Firestore -> Firestore: currentPresenterの切替
+Presenter <- Firestore: currentPresenterの切替を検知
+Answerer <- Firestore: currentPresenterの切替を検知
+Presenter -> Firestore: currentGameをリクエスト
+Answerer -> Firestore: currentGameをリクエスト
+Presenter <-- Firestore: 返却
+Answerer <-- Firestore: 返却
+Presenter -> Presenter: 再描画
+Answerer -> Answerer: 再描画
+else ターンが１周した
+APIgateway_Functions -> Firestore: 終了＆次ゲーム準備リクエスト
+Firestore -> Firestore: gameStatus更新 (playing → waiting)\n次ゲームに向けた初期化
+Presenter <- Firestore: gameStatusの更新(playing→waiting)を検知
+Answerer <- Firestore: gameStatusの更新(playing→waiting)を検知
+Presenter -> Firestore: currentGameをリクエスト
+Answerer -> Firestore: currentGameをリクエスト
+Presenter <-- Firestore: 返却
+Answerer <-- Firestore: 返却
+Presenter -> Presenter: 結果発表画面表示
+Answerer -> Answerer: 結果発表画面表示
+end
+
+@enduml

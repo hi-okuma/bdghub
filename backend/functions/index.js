@@ -7,8 +7,10 @@ const {joinRoomHandler} = require("./src/handlers/room/joinRoom");
 const {leaveRoomHandler} = require("./src/handlers/room/leaveRoom");
 const {startGameHandler} = require("./src/handlers/games/management/startGame");
 const {endGameHandler} = require("./src/handlers/games/management/endGame");
-const {setReadyHandler} = require("./src/handlers/games/0001/setReady");
-const {declareHandler} = require("./src/handlers/games/0001/declare");
+const {setReady0001Handler} = require("./src/handlers/games/0001/setReady");
+const {declare0001Handler} = require("./src/handlers/games/0001/declare");
+const {setReady0002Handler} = require("./src/handlers/games/0002/setReady");
+const {reportResult0002Handler} = require("./src/handlers/games/0002/reportResult");
 
 exports.createRoom = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
@@ -40,14 +42,26 @@ exports.endGame = onRequest({region: region}, async (req, res) => {
   await endGameHandler(req, res);
 });
 
-exports.setReady = onRequest({region: region}, async (req, res) => {
+exports.setReady0001 = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
   if (await checkMaintenance(req, res)) return;
-  await setReadyHandler(req, res);
+  await setReady0001Handler(req, res);
 });
 
-exports.declare = onRequest({region: region}, async (req, res) => {
+exports.declare0001 = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
   if (await checkMaintenance(req, res)) return;
-  await declareHandler(req, res);
+  await declare0001Handler(req, res);
+});
+
+exports.setReady0002 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await setReady0002Handler(req, res);
+});
+
+exports.reportResult0002 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await reportResult0002Handler(req, res);
 });

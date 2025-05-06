@@ -3,11 +3,11 @@ const {db} = require("../../../config/firebase");
 const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 
 /**
- * NGワードゲームの準備完了リクエストを処理するハンドラー
+ * カタカナ禁止ゲームの準備完了リクエストを処理するハンドラー
  * @param {object} req - リクエストオブジェクト
  * @param {object} res - レスポンスオブジェクト
  */
-async function setReady0001Handler(req, res) {
+async function setReady0002Handler(req, res) {
   const {roomId, nickname} = req.body;
 
   if (!roomId || !nickname) {
@@ -23,7 +23,7 @@ async function setReady0001Handler(req, res) {
   try {
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
-      const currentGameRef = roomRef.collection("currentGame").doc("0001");
+      const currentGameRef = roomRef.collection("currentGame").doc("0002");
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
@@ -91,5 +91,5 @@ async function setReady0001Handler(req, res) {
 }
 
 module.exports = {
-  setReady0001Handler,
+  setReady0002Handler,
 };
