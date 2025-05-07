@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ボドゲハブ(仮) : 0003.UIデザイン</title>
+        <link rel="stylesheet" href="styles/site.css" type="text/css" />
+        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+
+    <body class="theme-default aui-theme-default">
+        <div id="page">
+            <div id="main" class="aui-page-panel">
+                <div id="main-header">
+                    <div id="breadcrumb-section">
+                        <ol id="breadcrumbs">
+                            <li class="first">
+                                <span><a href="index.html">ボドゲハブ(仮)</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59408651.html">ボードゲームハブ(仮) Home</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506689.html">1.開発</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="69894145.html">0003.水平思考</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="69894160.html">0003.要件定義</a></span>
+                            </li>
+                                                </ol>
+                    </div>
+                    <h1 id="title-heading" class="pagetitle">
+                                                <span id="title-text">
+                            ボドゲハブ(仮) : 0003.UIデザイン
+                        </span>
+                    </h1>
+                </div>
+
+                <div id="content" class="view">
+                    <div class="page-metadata">
+                            
+        
+    
+        
+    
+        
+        
+            Created by <span class='author'> 大熊浩也</span>, last modified on 5月 07, 2025
+                        </div>
+                    <div id="main-content" class="wiki-content group">
+                    <span class="confluence-embedded-file-wrapper image-center-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-center" alt="image-20250507-135220.png" width="1419" loading="lazy" src="attachments/69894192/70025217.png?width=1419" data-image-src="attachments/69894192/70025217.png" data-height="673" data-width="1648" data-unresolved-comment-count="0" data-linked-resource-id="70025217" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="image-20250507-135220.png" data-base-url="https://hiokumatech.atlassian.net/wiki" data-linked-resource-content-type="image/png" data-linked-resource-container-id="69894192" data-linked-resource-container-version="3" data-media-id="7d813fb4-b2d5-4694-b735-fbf73cd806e8" data-media-type="file"></span><div class="table-wrap"><table data-table-width="1800" data-layout="align-start" data-local-id="4732b199-5a98-49e4-a88d-edec31d9a878" class="confluenceTable"><colgroup><col style="width: 66.0px;"/><col style="width: 196.0px;"/><col style="width: 477.0px;"/><col style="width: 217.0px;"/><col style="width: 343.0px;"/><col style="width: 314.0px;"/><col style="width: 174.0px;"/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>No.</strong></p></th><th class="confluenceTh"><p><strong>要素名</strong></p></th><th class="confluenceTh"><p><strong>表示制御</strong></p></th><th class="confluenceTh"><p><strong>ソート順</strong></p></th><th class="confluenceTh"><p><strong>動作制御</strong></p></th><th class="confluenceTh"><p><strong>遷移先</strong></p></th><th class="confluenceTh"><p><strong>備考</strong></p></th></tr><tr><td class="confluenceTd"><p>1</p></td><td class="confluenceTd"><p>プレイヤー一覧</p></td><td class="confluenceTd"><p>プレイヤーのニックネームとポイントを表示。</p><p>画面から見切れる場合、縦スクロール可能となる。また、縦スクロールが可能なことが認識できるよう、下部のボタンとの境目はグラデーション透過させる。<a href="https://qiita.com/Rui010/items/8e942c5b2001cd1632be" class="external-link" rel="nofollow">（参考サイト）</a></p></td><td class="confluenceTd"><p>第一ソート：<br/>　ポイント順</p><p>第二ソート：<br/>　playersのリスト順</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>2</p></td><td class="confluenceTd"><p>準備完了ボタン</p></td><td class="confluenceTd"><p>初期状態は「準備完了」を表示。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性のグレー表示とする。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他プレイヤーが未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>ゲーム画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>3</p></td><td class="confluenceTd"><p>ゲーム終了ボタン</p></td><td class="confluenceTd"><p>ホストプレイヤーにのみ表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>同じ部屋のプレイヤー全員に対して画面遷移</p></td><td class="confluenceTd"><p>ゲーム選択画面<br/>（ホストプレイヤーによってゲームが終了された旨のダイアログを表示）</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>4</p></td><td class="confluenceTd"><p>役割とその説明文</p></td><td class="confluenceTd"><p>出題者と回答者で異なるタイトル・説明文を表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>5</p></td><td class="confluenceTd"><p>問題</p></td><td class="confluenceTd"><p>出題者・回答者の両方に表示される。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>6</p></td><td class="confluenceTd"><p>回答</p></td><td class="confluenceTd"><p>出題者にのみ表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>7</p></td><td class="confluenceTd"><p>正解者選択プルダウン</p></td><td class="confluenceTd"><p>出題者にのみ表示。</p><p>出題者を除く、回答者のニックネームを選択可。</p><p>初期値は「プレイヤーを選択」を表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>プルダウン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>8</p></td><td class="confluenceTd"><p>正解ボタン</p></td><td class="confluenceTd"><p>出題者にのみ表示。</p><p>プルダウンで回答者が選択されていない場合は非活性とする。</p></td><td class="confluenceTd"><p>playersのリスト順</p></td><td class="confluenceTd"><p>画面遷移<br/>※出題者だけでなく回答者も</p></td><td class="confluenceTd"><p>ターンが１周していない<br/>→ゲーム画面（出題者変更）</p><p>ターンが１周した<br/>→結果発表画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>9</p></td><td class="confluenceTd"><p>スキップボタン</p></td><td class="confluenceTd"><p>出題者にのみ表示</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移<br/>※出題者だけでなく回答者も</p></td><td class="confluenceTd"><p>ターンが１周していない<br/>→ゲーム画面（出題者変更）</p><p>ターンが１周した<br/>→結果発表画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>10</p></td><td class="confluenceTd"><p>プレイヤー一覧</p></td><td class="confluenceTd"><p>プレイヤーのニックネームとポイントを表示。</p><p>画面から見切れる場合、縦スクロール可能となる。また、縦スクロールが可能なことが認識できるよう、下部のボタンとの境目はグラデーション透過させる。<a href="https://qiita.com/Rui010/items/8e942c5b2001cd1632be" class="external-link" rel="nofollow">（参考サイト）</a></p><p>最もポイント数の多いプレイヤーの背景色は黄色塗りつぶし。（複数プレイヤーいる場合はそれぞれ塗りつぶし）</p></td><td class="confluenceTd"><p>第一ソート：<br/>　ポイント順</p><p>第二ソート：<br/>　playersのリスト順</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>11</p></td><td class="confluenceTd"><p>もう一度遊ぶボタン</p></td><td class="confluenceTd"><p>初期状態は「もう一度遊ぶ」を表示。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性のグレー表示とする。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他プレイヤーが未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>ゲーム画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>12</p></td><td class="confluenceTd"><p>タイトルに戻るボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p></td><td class="confluenceTd"><p>タイトル画面</p></td><td class="confluenceTd"><p>ー</p></td></tr></tbody></table></div>
+                    </div>
+
+                                        <div class="pageSection group">
+                        <div class="pageSectionHeader">
+                            <h2 id="attachments" class="pageSectionTitle">Attachments:</h2>
+                        </div>
+
+                        <div class="greybox" align="left">
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/69894192/69894206.png">image-20250507-133716.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/69894192/69894209.png">image-20250507-120601.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/69894192/69894212.png">image-20250505-145518.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/69894192/69894215.png">image-20250505-091225.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/69894192/70025217.png">image-20250507-135220.png</a> (image/png)
+                                <br/>
+                                                    </div>
+                    </div>
+                    
+                                                      
+                </div>             </div> 
+            <div id="footer" role="contentinfo">
+                <section class="footer-body">
+                    <p>Document generated by Confluence on 5月 07, 2025 23:01</p>
+                    <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
+                </section>
+            </div>
+        </div>     </body>
+</html>
