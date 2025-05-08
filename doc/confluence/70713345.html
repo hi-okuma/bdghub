@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>ボドゲハブ(仮) : 0002.API仕様</title>
+        <title>ボドゲハブ(仮) : 0003.API仕様</title>
         <link rel="stylesheet" href="styles/site.css" type="text/css" />
         <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
     </head>
@@ -22,16 +22,16 @@
                                 <span><a href="59506689.html">1.開発</a></span>
                             </li>
                                                     <li>
-                                <span><a href="67830071.html">0002.カタカナ語禁止</a></span>
+                                <span><a href="69894145.html">0003.水平思考</a></span>
                             </li>
                                                     <li>
-                                <span><a href="67862753.html">0002.設計</a></span>
+                                <span><a href="69894237.html">0003.設計</a></span>
                             </li>
                                                 </ol>
                     </div>
                     <h1 id="title-heading" class="pagetitle">
                                                 <span id="title-text">
-                            ボドゲハブ(仮) : 0002.API仕様
+                            ボドゲハブ(仮) : 0003.API仕様
                         </span>
                     </h1>
                 </div>
@@ -45,10 +45,10 @@
     
         
         
-            Created by <span class='author'> 大熊浩也</span>, last modified on 5月 08, 2025
+            Created by <span class='author'> 大熊浩也</span> on 5月 08, 2025
                         </div>
                     <div id="main-content" class="wiki-content group">
-                    <h2 id="id-0002.API仕様-ゲーム開始準備完了（/setReady0002）">ゲーム開始準備完了（/setReady0002）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+                    <h2 id="id-0003.API仕様-ゲーム開始準備完了（/setReady0003）">ゲーム開始準備完了（/setReady0003）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
 <pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
   &quot;roomId&quot;: &lt;指定した部屋のroomId&gt;,
   &quot;nickname&quot;: &lt;プレイヤーのニックネーム&gt;,
@@ -58,7 +58,7 @@
   &quot;success&quot;: true,
   &quot;message&quot;: &quot;&quot;,
 }</pre>
-</div></div><div class="table-wrap"><table data-table-width="1800" data-layout="center" data-local-id="8cfea537-dc84-454f-873b-d60fa0759ab2" class="confluenceTable"><colgroup><col style="width: 282.0px;"/><col style="width: 437.0px;"/><col style="width: 235.0px;"/><col style="width: 484.0px;"/><col style="width: 360.0px;"/></colgroup><tbody><tr><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>エラーコード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>メッセージ</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p><strong>HTTP</strong>コード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>発生条件</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>クライアント挙動</p></th></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>InvalidArgument</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>不正なリクエストです。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>400</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>room_idやplayer_idが未指定または不正な形式</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>InvalidGameStatus</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>400</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>gameStatusがwaitingでない</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>GameNotFound</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>404</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>currentGameが存在しない</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>Internal</code>※</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>サーバーエラーが発生しました。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>500</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>サーバー側での予期しないエラー</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>Maintenance</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>現在メンテナンス中です。しばらくお待ちください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>503</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>メンテナンス中</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr></tbody></table></div><p> </p><h2 id="id-0002.API仕様-結果報告（/reportResult0002）">結果報告（/reportResult0002）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+</div></div><div class="table-wrap"><table data-table-width="1800" data-layout="center" data-local-id="8cfea537-dc84-454f-873b-d60fa0759ab2" class="confluenceTable"><colgroup><col style="width: 282.0px;"/><col style="width: 437.0px;"/><col style="width: 235.0px;"/><col style="width: 484.0px;"/><col style="width: 360.0px;"/></colgroup><tbody><tr><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>エラーコード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>メッセージ</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p><strong>HTTP</strong>コード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>発生条件</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>クライアント挙動</p></th></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>InvalidArgument</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>不正なリクエストです。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>400</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>room_idやplayer_idが未指定または不正な形式</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>InvalidGameStatus</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>400</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>gameStatusがwaitingでない</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>GameNotFound</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>404</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>currentGameが存在しない</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>Internal</code>※</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>サーバーエラーが発生しました。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>500</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>サーバー側での予期しないエラー</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td data-highlight-colour="#ffffff" class="confluenceTd"><p><code>Maintenance</code></p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>現在メンテナンス中です。しばらくお待ちください。</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>503</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>メンテナンス中</p></td><td data-highlight-colour="#ffffff" class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr></tbody></table></div><p> </p><h2 id="id-0003.API仕様-結果報告（/reportResult0003）">結果報告（/reportResult0003）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
 <pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
   &quot;roomId&quot;: &lt;指定した部屋のroomId&gt;,
   &quot;result&quot;: &lt;成功ならtrue、失敗ならfalse&gt;,
