@@ -41,14 +41,14 @@ Presenter -> Presenter: ゲーム画面表示
 Answerer -> Answerer: ゲーム画面表示
 
 == ゲーム中 ==
-Presenter -> Presenter: 回答者ボタンor\n失敗ボタンを押下
+Presenter -> Presenter: 正解ボタンor\nスキップボタン押下
 Presenter -> APIgateway_Functions: リクエスト
 
 alt ターンが１周していない
-APIgateway_Functions -> Firestore: 回答者切り替えリクエスト
+APIgateway_Functions -> Firestore: 役割交代リクエスト
 Firestore -> Firestore: currentPresenterの切替
-Presenter <- Firestore: currentPresenterの切替を検知
-Answerer <- Firestore: currentPresenterの切替を検知
+Presenter <- Firestore: currentPresenterの切替を検知（gameStatusが変わらないことも条件に含める）
+Answerer <- Firestore: currentPresenterの切替を検知（gameStatusが変わらないことも条件に含める）
 Presenter -> Firestore: currentGameをリクエスト
 Answerer -> Firestore: currentGameをリクエスト
 Presenter <-- Firestore: 返却
