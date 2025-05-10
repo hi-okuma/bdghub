@@ -69,6 +69,7 @@ Future<List<Map<String, dynamic>>> fetchGamesFromFirestore() async {
           'overview': data['overview'] ?? '',
           'description': data['description'] ?? '',
           'playCnt': data['playCnt'] ?? 0, // ソート用に追加
+          'creatorName': data['creatorName'] ?? '',
         });
       }
 

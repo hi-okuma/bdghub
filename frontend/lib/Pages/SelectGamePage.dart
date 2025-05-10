@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../components/GameListWidget.dart';
+import 'package:bodogehub/Pages/GameDetailPage.dart';
 import 'package:bodogehub/Util/Util.dart';
 
 class SelectGamePage extends StatefulWidget {
@@ -32,7 +33,7 @@ class _SelectGamePageState extends State<SelectGamePage>
   bool _isLoading = true;
   // エラーメッセージ
   String? _errorMessage;
-  
+
   // ゲームリスト（Firestoreから取得）
   List<Map<String, dynamic>> _gameList = [];
   // ゲームデータのローディング状態
@@ -52,7 +53,7 @@ class _SelectGamePageState extends State<SelectGamePage>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
-    
+
     // タブ切り替え時のリスナー
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -74,14 +75,14 @@ class _SelectGamePageState extends State<SelectGamePage>
         });
       }
     });
-    
+
     // Firestoreからプレイヤーデータを取得
     _subscribeToPlayers();
-    
+
     // Firestoreからゲームデータを取得
     _fetchGames();
   }
-  
+
   // Firestoreからゲームデータを取得するメソッド
   Future<void> _fetchGames() async {
     setState(() {
@@ -91,7 +92,7 @@ class _SelectGamePageState extends State<SelectGamePage>
     try {
       // Utilクラスの共通関数を使用
       final games = await fetchGamesFromFirestore();
-      
+
       setState(() {
         _gameList = games;
         _isGameLoading = false;
@@ -274,9 +275,13 @@ class _SelectGamePageState extends State<SelectGamePage>
 
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
-    // ゲーム詳細画面への遷移
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${game["title"]}が選択されました')),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => GameDetailPage(
+          game: game,
+          isFromRoom: true, // 部屋からの遷移なのでtrue
+        ),
+      ),
     );
   }
 
