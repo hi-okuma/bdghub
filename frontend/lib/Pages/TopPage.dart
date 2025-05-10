@@ -2,6 +2,7 @@ import 'RegisterProfilePage.dart';
 import '../components/GameListWidget.dart';
 import 'package:bodogehub/Util/Util.dart';
 import 'package:flutter/material.dart';
+import 'package:bodogehub/Pages/GameDetailPage.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
@@ -150,9 +151,13 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
 
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
-    // ゲーム詳細画面への遷移（ダミー）
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${game["title"]}が選択されました')),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => GameDetailPage(
+          game: game,
+          isFromRoom: false, // TOP画面からの遷移なのでfalse
+        ),
+      ),
     );
   }
 
