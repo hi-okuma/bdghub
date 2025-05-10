@@ -3,10 +3,9 @@ const {db} = require("../../../config/firebase");
 /**
  * NGワードゲームのcurrentGameデータを生成する
  * @param {Array<string>} players - プレイヤーのニックネーム配列
- * @param {Object} gameData - ゲーム情報
  * @return {Promise<Object>} currentGameデータ
  */
-async function createCurrentGame(players, gameData) {
+async function createCurrentGame(players) {
   const ngWordsDoc = await db.collection("games").doc("0001")
       .collection("assets")
       .doc("ngWords")

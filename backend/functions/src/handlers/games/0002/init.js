@@ -3,10 +3,9 @@ const {db} = require("../../../config/firebase");
 /**
  * カタカナ禁止ゲームのcurrentGameデータを生成する
  * @param {Array<string>} players - プレイヤーのニックネーム配列
- * @param {Object} gameData - ゲーム情報
  * @return {Promise<Object>} currentGameデータ
  */
-async function createCurrentGame(players, gameData) {
+async function createCurrentGame(players) {
   const topicsDoc = await db.collection("games").doc("0002")
       .collection("assets")
       .doc("topics")

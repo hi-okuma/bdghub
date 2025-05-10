@@ -11,6 +11,8 @@ const {setReady0001Handler} = require("./src/handlers/games/0001/setReady");
 const {declare0001Handler} = require("./src/handlers/games/0001/declare");
 const {setReady0002Handler} = require("./src/handlers/games/0002/setReady");
 const {reportResult0002Handler} = require("./src/handlers/games/0002/reportResult");
+const {setReady0003Handler} = require("./src/handlers/games/0003/setReady");
+const {reportResult0003Handler} = require("./src/handlers/games/0003/reportResult");
 
 exports.createRoom = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
@@ -64,4 +66,16 @@ exports.reportResult0002 = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
   if (await checkMaintenance(req, res)) return;
   await reportResult0002Handler(req, res);
+});
+
+exports.setReady0003 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await setReady0003Handler(req, res);
+});
+
+exports.reportResult0003 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await reportResult0003Handler(req, res);
 });

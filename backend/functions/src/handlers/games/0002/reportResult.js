@@ -77,7 +77,7 @@ async function reportResult0002Handler(req, res) {
           newTopic = selectNewTopic(topicsList, currentGameData.currentTopic);
         }
 
-        const firstPresenterIndex = (currentIndfex + 1) % updatedPlayers.length;
+        const firstPresenterIndex = (currentIndex + 1) % updatedPlayers.length;
         const firstPresenter = updatedPlayers[firstPresenterIndex].nickname;
 
         updateData = {
