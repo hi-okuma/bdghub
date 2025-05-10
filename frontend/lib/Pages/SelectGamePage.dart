@@ -279,6 +279,8 @@ class _SelectGamePageState extends State<SelectGamePage>
       MaterialPageRoute(
         builder: (context) => GameDetailPage(
           game: game,
+          gameId: game['gameId'],
+          roomId: widget.roomId,
           isFromRoom: true, // 部屋からの遷移なのでtrue
         ),
       ),

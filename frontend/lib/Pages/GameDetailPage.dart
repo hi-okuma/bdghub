@@ -1,21 +1,145 @@
 import 'package:flutter/material.dart';
-import '../components/GameListWidget.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
-class GameDetailPage extends StatelessWidget {
+class GameDetailPage extends StatefulWidget {
   final Map<String, dynamic> game;
   final bool isFromRoom; // 部屋から来たかどうかのフラグ
+  final String? roomId;
+  final String gameId;
 
   const GameDetailPage({
     Key? key,
     required this.game,
     this.isFromRoom = false, // デフォルトはTOP画面からの遷移（ボタン非表示）
+    this.roomId,
+    required this.gameId,
   }) : super(key: key);
+
+  @override
+  State<GameDetailPage> createState() => _GameDetailPageState();
+}
+
+class _GameDetailPageState extends State<GameDetailPage> {
+  String? _errorMessage;
+  bool _isLoading = false;
+
+  Future<void> _startGame() async {
+    // 処理開始前にローディング状態をtrueに設定
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null; // エラーメッセージをリセット
+    });
+
+    try {
+      final Uri apiUrl = Uri.parse(
+          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/startGame');
+      final Map<String, dynamic> requestBody = {
+        'roomId': widget.roomId,
+        'gameId': widget.gameId,
+      };
+
+      // APIリクエスト
+      final response = await http.post(
+        apiUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      // レスポンスの処理
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        // success=falseの場合のエラーハンドリングを追加
+        if (responseData.containsKey('success') &&
+            responseData['success'] == false) {
+          if (!mounted) return;
+
+          // エラーメッセージを設定
+          final String errorMsg = responseData.containsKey('message')
+              ? responseData['message']
+              : 'ゲーム開始に失敗しました';
+
+          setState(() {
+            _errorMessage = errorMsg;
+          });
+
+          // ユーザーにエラーを通知
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
+        } else {
+          if (!mounted) return;
+
+          // 成功メッセージを表示
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ゲームを開始します')),
+          );
+        }
+      } else {
+        // エラー時の処理
+        try {
+          // レスポンスボディをJSONとしてパース
+          final Map<String, dynamic> errorData = jsonDecode(response.body);
+          // messageキーの値があれば表示、なければ全体のレスポンスを表示
+          final String errorMsg = errorData.containsKey('message')
+              ? '${errorData['message']}'
+              : 'エラー: ${response.statusCode}';
+
+          setState(() {
+            _errorMessage = errorMsg;
+          });
+
+          if (!mounted) return;
+
+          // ユーザーにエラーを通知
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
+        } catch (e) {
+          // JSONパースに失敗した場合
+          final String errorMsg = '応答の解析に失敗しました: ${response.body}';
+
+          setState(() {
+            _errorMessage = errorMsg;
+          });
+
+          if (!mounted) return;
+
+          // ユーザーにエラーを通知
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
+        }
+      }
+    } catch (e) {
+      // 例外発生時の処理
+      final String errorMsg = '通信エラー: $e';
+
+      setState(() {
+        _errorMessage = errorMsg;
+      });
+
+      if (!mounted) return;
+
+      // ユーザーにエラーを通知
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(game['title']),
+        title: Text(widget.game['title']),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -26,26 +150,25 @@ class GameDetailPage extends StatelessWidget {
             _buildGameCard(context),
 
             // 「このゲームで遊ぶ」ボタン（部屋から来た場合のみ表示）
-            if (isFromRoom) ...[
+            if (widget.isFromRoom) ...[
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // ゲームを開始する処理
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${game["title"]}で遊びます'),
-                      ),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _startGame, // ローディング中は無効化
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  child: const Text(
-                    'このゲームで遊ぶ',
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'このゲームで遊ぶ',
+                          style: TextStyle(fontSize: 16),
+                        ),
                 ),
               ),
             ],
@@ -61,7 +184,7 @@ class GameDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              game['description'] ?? '説明がありません',
+              widget.game['description'] ?? '説明がありません',
               style: const TextStyle(
                 fontSize: 14,
                 height: 1.5,
@@ -71,13 +194,13 @@ class GameDetailPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('作成者：${game['creatorName']}'),
+                Text('作成者：${widget.game['creatorName']}'),
                 ElevatedButton(
                     onPressed: () {
                       // ECサイトへ移動する処理
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${game["title"]}の購入サイトへ移動します'),
+                          content: Text('${widget.game["title"]}の購入サイトへ移動します'),
                         ),
                       );
                     },
@@ -116,10 +239,10 @@ class GameDetailPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[300],
               ),
-              child: (game['thumbnailUrl'] != null &&
-                      game['thumbnailUrl'].isNotEmpty)
+              child: (widget.game['thumbnailUrl'] != null &&
+                      widget.game['thumbnailUrl'].isNotEmpty)
                   ? Image.network(
-                      game['thumbnailUrl'],
+                      widget.game['thumbnailUrl'],
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
@@ -151,7 +274,7 @@ class GameDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    game['title'],
+                    widget.game['title'],
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -163,12 +286,12 @@ class GameDetailPage extends StatelessWidget {
                   Wrap(
                     spacing: 4,
                     runSpacing: 4,
-                    children: _buildGenreChips(game),
+                    children: _buildGenreChips(widget.game),
                   ),
                   const SizedBox(height: 4),
 
                   Text(
-                    '所要時間: ${game['time']} / ${game['players']}',
+                    '所要時間: ${widget.game['time']} / ${widget.game['players']}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
@@ -177,7 +300,7 @@ class GameDetailPage extends StatelessWidget {
                   const SizedBox(height: 4),
 
                   Text(
-                    game['overview'] ?? '',
+                    widget.game['overview'] ?? '',
                     style: const TextStyle(fontSize: 14),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,

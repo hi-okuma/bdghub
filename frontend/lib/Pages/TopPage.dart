@@ -155,6 +155,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
       MaterialPageRoute(
         builder: (context) => GameDetailPage(
           game: game,
+          gameId: game['gameId'],
           isFromRoom: false, // TOP画面からの遷移なのでfalse
         ),
       ),
