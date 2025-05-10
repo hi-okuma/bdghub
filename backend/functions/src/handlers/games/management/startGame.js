@@ -80,7 +80,7 @@ async function startGameHandler(req, res) {
         throw new Error(`InitializerNotFound:${gameId}`);
       }
 
-      const currentGameData = await gameInitializer.createCurrentGame(roomData.players, gameData);
+      const currentGameData = await gameInitializer.createCurrentGame(roomData.players);
 
       const gameInfo = {
         title: gameData.title,
