@@ -275,11 +275,18 @@ class _SelectGamePageState extends State<SelectGamePage>
 
   // ゲーム選択時の処理
   void _onGameSelected(Map<String, dynamic> game) {
+    // 現在のユーザーがホストかどうかを判断
+    bool isUserHost = _players.any((player) =>
+        player['nickname'] == widget.myNickname && player['isHost'] == true);
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => GameDetailPage(
           game: game,
+          gameId: game['gameId'],
+          roomId: widget.roomId,
           isFromRoom: true, // 部屋からの遷移なのでtrue
+          isHost: isUserHost,
         ),
       ),
     );
