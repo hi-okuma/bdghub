@@ -146,11 +146,19 @@ class _SelectGamePageState extends State<SelectGamePage>
         });
       }
     }, onError: (error) {
+      final String errorMsg = 'データの取得中にエラーが発生しました';
       setState(() {
         _isLoading = false;
-        _errorMessage = 'データの取得中にエラーが発生しました';
-        print('Firestoreエラー: $error');
+        _errorMessage = errorMsg;
       });
+
+      // Firestoreエラーもスナックバーで表示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg)),
+        );
+      }
+      print('Firestoreエラー: $error');
     });
   }
 
@@ -209,12 +217,9 @@ class _SelectGamePageState extends State<SelectGamePage>
   // 退出処理
   void _leaveRoom() async {
     try {
-      final Uri apiUrl;
-      final Map<String, dynamic> requestBody;
-
-      apiUrl = Uri.parse(
+      final Uri apiUrl = Uri.parse(
           'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
-      requestBody = {
+      final Map<String, dynamic> requestBody = {
         'nickname': widget.myNickname,
         'roomId': widget.roomId,
       };
@@ -231,6 +236,25 @@ class _SelectGamePageState extends State<SelectGamePage>
         // 成功時の処理
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
+        // success = false の場合の処理を追加
+        if (responseData.containsKey('success') &&
+            responseData['success'] == false) {
+          final String errorMsg = responseData.containsKey('message')
+              ? responseData['message']
+              : '退出に失敗しました';
+
+          setState(() {
+            _errorMessage = errorMsg;
+          });
+
+          // APIからのエラーレスポンスはスナックバーで表示
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
+          return;
+        }
+
         if (!mounted) return;
 
         // 成功メッセージを表示
@@ -239,29 +263,54 @@ class _SelectGamePageState extends State<SelectGamePage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage)),
         );
+
+        // TOP画面に戻る
+        Navigator.of(context).pop();
       } else {
         // エラー時の処理
         try {
           // レスポンスボディをJSONとしてパース
           final Map<String, dynamic> errorData = jsonDecode(response.body);
           // messageキーの値があれば表示、なければ全体のレスポンスを表示
+          final String errorMsg = errorData.containsKey('message')
+              ? '${errorData['message']}'
+              : 'エラー: ${response.statusCode}';
+
           setState(() {
-            _errorMessage = errorData.containsKey('message')
-                ? '${errorData['message']}'
-                : response.body;
+            _errorMessage = errorMsg;
           });
+
+          // APIからのエラーレスポンスはスナックバーで表示
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
         } catch (e) {
-          // JSONパースに失敗した場合は元のレスポンスボディをそのまま表示
+          // JSONパースに失敗した場合
+          final String errorMsg = '応答の解析に失敗しました: ${response.body}';
           setState(() {
-            _errorMessage = response.body;
+            _errorMessage = errorMsg;
           });
+
+          // APIからのエラーレスポンスはスナックバーで表示
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
         }
       }
     } catch (e) {
       // 例外発生時の処理
+      final String errorMsg = '通信エラー: $e';
       setState(() {
-        _errorMessage = '通信エラー: $e';
+        _errorMessage = errorMsg;
       });
+
+      // 通信エラーもスナックバーで表示
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -269,8 +318,6 @@ class _SelectGamePageState extends State<SelectGamePage>
         });
       }
     }
-
-    Navigator.of(context).pop(); // TOP画面に戻る
   }
 
   // ゲーム選択時の処理
