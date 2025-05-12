@@ -115,6 +115,28 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
       if (response.statusCode == 200) {
         // 成功時の処理
         final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        // success = false の場合の処理を追加（APIからのエラー）
+        if (responseData.containsKey('success') &&
+            responseData['success'] == false) {
+          final String errorMsg = responseData.containsKey('message')
+              ? responseData['message']
+              : '操作に失敗しました';
+
+          setState(() {
+            _errorMessage = errorMsg;
+            _isLoading = false;
+          });
+
+          // APIからのエラーレスポンスはスナックバーで表示
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
+          return;
+        }
+
+        // 成功時の処理
         final String roomId = widget.isJoiningRoom
             ? _roomIdController.text
             : responseData['roomId'];
@@ -147,29 +169,48 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           // レスポンスボディをJSONとしてパース
           final Map<String, dynamic> errorData = jsonDecode(response.body);
           // messageキーの値があれば表示、なければ全体のレスポンスを表示
+          final String errorMsg = errorData.containsKey('message')
+              ? '${errorData['message']}'
+              : 'エラー: ${response.statusCode}';
+
           setState(() {
-            _errorMessage = errorData.containsKey('message')
-                ? '${errorData['message']}'
-                : response.body;
+            _errorMessage = errorMsg;
+            _isLoading = false;
           });
+
+          // APIからのエラーレスポンスはスナックバーで表示
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
         } catch (e) {
-          // JSONパースに失敗した場合は元のレスポンスボディをそのまま表示
+          // JSONパースに失敗した場合
+          final String errorMsg = '応答の解析に失敗しました: ${response.body}';
           setState(() {
-            _errorMessage = response.body;
+            _errorMessage = errorMsg;
+            _isLoading = false;
           });
+
+          // APIからのエラーレスポンスはスナックバーで表示
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
+          );
         }
       }
     } catch (e) {
       // 例外発生時の処理
+      final String errorMsg = '通信エラー: $e';
       setState(() {
-        _errorMessage = '通信エラー: $e';
+        _errorMessage = errorMsg;
+        _isLoading = false;
       });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+
+      // 通信エラーもスナックバーで表示
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
     }
   }
 
