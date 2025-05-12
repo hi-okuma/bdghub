@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 class GameDetailPage extends StatefulWidget {
   final Map<String, dynamic> game;
   final bool isFromRoom; // 部屋から来たかどうかのフラグ
+  final bool isHost; // ホストユーザーかどうかのフラグ
   final String? roomId;
   final String gameId;
 
@@ -12,6 +13,7 @@ class GameDetailPage extends StatefulWidget {
     Key? key,
     required this.game,
     this.isFromRoom = false, // デフォルトはTOP画面からの遷移（ボタン非表示）
+    this.isHost = false, //デフォルトはホストユーザーではない（ボタン非表示）
     this.roomId,
     required this.gameId,
   }) : super(key: key);
@@ -149,8 +151,8 @@ class _GameDetailPageState extends State<GameDetailPage> {
             // ゲームカード（GameListWidgetからUIを流用）
             _buildGameCard(context),
 
-            // 「このゲームで遊ぶ」ボタン（部屋から来た場合のみ表示）
-            if (widget.isFromRoom) ...[
+            // 「このゲームで遊ぶ」ボタン（部屋から来た場合かつホストユーザーのみ表示）
+            if (widget.isFromRoom && widget.isHost) ...[
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
