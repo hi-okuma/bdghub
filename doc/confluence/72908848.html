@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ボドゲハブ(仮) : 0004.UI仕様</title>
+        <link rel="stylesheet" href="styles/site.css" type="text/css" />
+        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+
+    <body class="theme-default aui-theme-default">
+        <div id="page">
+            <div id="main" class="aui-page-panel">
+                <div id="main-header">
+                    <div id="breadcrumb-section">
+                        <ol id="breadcrumbs">
+                            <li class="first">
+                                <span><a href="index.html">ボドゲハブ(仮)</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59408651.html">ボードゲームハブ(仮) Home</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506689.html">1.開発</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="72908801.html">0004.偏見プロフィール</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="72908816.html">0004.要件定義</a></span>
+                            </li>
+                                                </ol>
+                    </div>
+                    <h1 id="title-heading" class="pagetitle">
+                                                <span id="title-text">
+                            ボドゲハブ(仮) : 0004.UI仕様
+                        </span>
+                    </h1>
+                </div>
+
+                <div id="content" class="view">
+                    <div class="page-metadata">
+                            
+        
+    
+        
+    
+        
+        
+            Created by <span class='author'> 大熊浩也</span>, last modified on 5月 14, 2025
+                        </div>
+                    <div id="main-content" class="wiki-content group">
+                    <span class="confluence-embedded-file-wrapper image-center-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-center" alt="image-20250514-131511.png" width="1379" loading="lazy" src="attachments/72908848/73564173.png?width=1379" data-image-src="attachments/72908848/73564173.png" data-height="560" data-width="1517" data-unresolved-comment-count="0" data-linked-resource-id="73564173" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="image-20250514-131511.png" data-base-url="https://hiokumatech.atlassian.net/wiki" data-linked-resource-content-type="image/png" data-linked-resource-container-id="72908848" data-linked-resource-container-version="13" data-media-id="5e60baf7-6027-4a7c-9456-e2c3c344a539" data-media-type="file"></span><span class="confluence-embedded-file-wrapper image-center-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-center" alt="image-20250514-131519.png" width="1379" loading="lazy" src="attachments/72908848/73400339.png?width=1379" data-image-src="attachments/72908848/73400339.png" data-height="563" data-width="1581" data-unresolved-comment-count="0" data-linked-resource-id="73400339" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="image-20250514-131519.png" data-base-url="https://hiokumatech.atlassian.net/wiki" data-linked-resource-content-type="image/png" data-linked-resource-container-id="72908848" data-linked-resource-container-version="13" data-media-id="28bcef68-aefb-4597-bd39-177988897178" data-media-type="file"></span><div class="table-wrap"><table data-table-width="1800" data-layout="align-start" data-local-id="4732b199-5a98-49e4-a88d-edec31d9a878" class="confluenceTable"><colgroup><col style="width: 66.0px;"/><col style="width: 196.0px;"/><col style="width: 477.0px;"/><col style="width: 217.0px;"/><col style="width: 343.0px;"/><col style="width: 314.0px;"/><col style="width: 174.0px;"/></colgroup><tbody><tr><th class="confluenceTh"><p><strong>No.</strong></p></th><th class="confluenceTh"><p>要素名</p></th><th class="confluenceTh"><p>表示制御</p></th><th class="confluenceTh"><p>ソート順</p></th><th class="confluenceTh"><p>動作制御</p></th><th class="confluenceTh"><p>遷移先</p></th><th class="confluenceTh"><p>備考</p></th></tr><tr><td class="confluenceTd"><p>1</p></td><td class="confluenceTd"><p>ゲーム紹介画像</p></td><td class="confluenceTd"><p>画像の取得中はぐるぐる表示。</p><p>取得に失敗した場合はエラー画像を表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>カルーセル</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>2</p></td><td class="confluenceTd"><p>準備完了ボタン</p></td><td class="confluenceTd"><p>初期状態は「準備完了」を表示。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性とする。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他プレイヤーが未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>子ターン画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>3</p></td><td class="confluenceTd"><p>ゲーム終了ボタン</p></td><td class="confluenceTd"><p>ホストプレイヤーにのみ表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>同じ部屋のプレイヤー全員に対して画面遷移</p></td><td class="confluenceTd"><p>ゲーム選択画面<br/>（ホストプレイヤーによってゲームが終了された旨のダイアログを表示）</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>4</p></td><td class="confluenceTd"><p>役割とその説明文</p></td><td class="confluenceTd"><p>役割や画面で異なるタイトル・説明文を表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>5</p></td><td class="confluenceTd"><p>お題画像</p></td><td class="confluenceTd"><p>子にのみ表示。</p><p>取得中はぐるぐるを表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>6</p></td><td class="confluenceTd"><p>お題プロフィール</p></td><td class="confluenceTd"><p>子にのみ表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>7</p></td><td class="confluenceTd"><p>ヒント入力欄</p></td><td class="confluenceTd"><p>子にのみ表示。</p><p>プレースホルダー「偏見を入力してください」</p><p>入力文字数に依らず縦横幅は固定。</p><p>＜入力制限＞<br/>・最大文字数: 100文字<br/>・禁止文字: ' &quot; ; - = / *<br/>※入力制限を満たさない場合は、下部にエラーとその理由を表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>タップ</p></td><td class="confluenceTd"><p>キーボード表示</p><p>※入力欄の下に表示され、入力欄が隠れないこと。</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>8</p></td><td class="confluenceTd"><p>提出ボタン</p></td><td class="confluenceTd"><p>子にのみ表示。</p><p>ヒント入力欄の入力が無い、または入力制限を満たさない場合は非活性とする。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性とする。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他の子が未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>親ターン画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>9</p></td><td class="confluenceTd"><p>選択肢一覧</p></td><td class="confluenceTd"><p>選択肢となる人物画像が５枚、横スクロール可能な形で表示される。</p><p>取得中は画像毎にぐるぐるを表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>スクロール</p><p>※親の場合のみタップ可能で、タップした画像に枠線がつく。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>10</p></td><td class="confluenceTd"><p>ヒント一覧</p></td><td class="confluenceTd"><p>子それぞれに割り振られたお題プロフィールのリストを表示。</p></td><td class="confluenceTd"><p>playersのリスト順</p></td><td class="confluenceTd"><p>ダイアログ表示</p></td><td class="confluenceTd"><p>ヒント確認ダイアログ</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>11</p></td><td class="confluenceTd"><p>人物決定ボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p></td><td class="confluenceTd"><p>正誤確認画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>12</p></td><td class="confluenceTd"><p>正誤表示</p></td><td class="confluenceTd"><p>親の回答結果（正解/不正解）の表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>13</p></td><td class="confluenceTd"><p>お題画像</p></td><td class="confluenceTd"><p>取得中はぐるぐるを表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>14</p></td><td class="confluenceTd"><p>親が選択した画像</p></td><td class="confluenceTd"><p>取得中はぐるぐるを表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>15</p></td><td class="confluenceTd"><p>ベストヒント選択の説明文</p></td><td class="confluenceTd"><p>正解した場合、親にのみ表示。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>16</p></td><td class="confluenceTd"><p>次に進むボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他のプレイヤーが未押下なら画面遷移せずボタンを非活性に。<br/>（正解の場合の親はベストヒント決定ボタンが判定対象）</p></td><td class="confluenceTd"><p>ターンが１周していない<br/>→子ターン画面（役割変更）</p><p>ターンが１周した<br/>→結果発表画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>17</p></td><td class="confluenceTd"><p>プレイヤー一覧</p></td><td class="confluenceTd"><p>プレイヤーのニックネームとポイントを表示。</p><p>画面から見切れる場合、縦スクロール可能となる。また、縦スクロールが可能なことが認識できるよう、下部のボタンとの境目はグラデーション透過させる。<a class="external-link" href="https://qiita.com/Rui010/items/8e942c5b2001cd1632be" rel="nofollow">（参考サイト）</a></p><p>最もポイント数の多いプレイヤーの背景色は黄色塗りつぶし。（複数プレイヤーいる場合はそれぞれ塗りつぶし）</p></td><td class="confluenceTd"><p>第一ソート：<br/>　ポイント順</p><p>第二ソート：<br/>　playersのリスト順</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>18</p></td><td class="confluenceTd"><p>もう一度遊ぶボタン</p></td><td class="confluenceTd"><p>初期状態は「もう一度遊ぶ」を表示。</p><p>押下後、「他プレイヤー待ち」の表示に変更し、ボタンは非活性のグレー表示とする。</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他プレイヤーが未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>ゲーム画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>19</p></td><td class="confluenceTd"><p>タイトルに戻るボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p></td><td class="confluenceTd"><p>タイトル画面</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>20</p></td><td class="confluenceTd"><p>お題プロフィール</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>21</p></td><td class="confluenceTd"><p>ヒント入力者ニックネーム</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>22</p></td><td class="confluenceTd"><p>ヒント内容</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>23</p></td><td class="confluenceTd"><p>閉じるボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ダイアログを閉じる</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td></tr><tr><td class="confluenceTd"><p>24</p></td><td class="confluenceTd"><p>ベストヒント決定ボタン</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>ー</p></td><td class="confluenceTd"><p>画面遷移</p><p>※他の子が次に進むボタン未押下なら画面遷移せずボタンを非活性に。</p></td><td class="confluenceTd"><p>ターンが１周していない<br/>→子ターン画面（役割変更）</p><p>ターンが１周した<br/>→結果発表画面</p></td><td class="confluenceTd"><p>ー</p></td></tr></tbody></table></div>
+                    </div>
+
+                                        <div class="pageSection group">
+                        <div class="pageSectionHeader">
+                            <h2 id="attachments" class="pageSectionTitle">Attachments:</h2>
+                        </div>
+
+                        <div class="greybox" align="left">
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/72908862.png">image-20250510-115828.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/72908865.png">image-20250507-135220.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/72908868.png">image-20250505-091225.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/72908871.png">image-20250505-145518.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/72908874.png">image-20250507-120601.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/72908877.png">image-20250507-133716.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/73170945.png">image-20250513-144239.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/73203713.png">image-20250513-144244.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/73170952.png">image-20250513-144315.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/73564173.png">image-20250514-131511.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/72908848/73400339.png">image-20250514-131519.png</a> (image/png)
+                                <br/>
+                                                    </div>
+                    </div>
+                    
+                                                      
+                </div>             </div> 
+            <div id="footer" role="contentinfo">
+                <section class="footer-body">
+                    <p>Document generated by Confluence on 5月 15, 2025 23:26</p>
+                    <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
+                </section>
+            </div>
+        </div>     </body>
+</html>
