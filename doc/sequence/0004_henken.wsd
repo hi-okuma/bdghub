@@ -1,0 +1,98 @@
+@startuml
+
+actor Parent
+actor Children
+
+participant APIgateway_Functions
+participant Firestore
+
+== 〜タイトル画面表示 ==
+note over Parent, Firestore: currentGameが生成され、クライアントはroomStatusがinProgressとなったことを契機に取得
+
+== 〜準備完了 ==
+note over Parent, Firestore: 全員のisReadyがtrueとなったら、gameStatusがwaiting→childTurnに変更される
+Parent <- Firestore: gameStatusの更新(waiting→childTurn)を検知
+Children <- Firestore: gameStatusの更新(waiting→childTurn)を検知
+Parent -> Parent: 子ターン画面(親)を表示
+Children -> Children: 子ターン画面(子)を表示
+
+== 子ターン（ヒント入力） ==
+Children -> Children: ヒントを入力し提出ボタン押下
+Children -> APIgateway_Functions: ヒント提出リクエスト
+
+alt 提出していない子プレイヤーが存在する場合
+    APIgateway_Functions -> Firestore: ヒント提出リクエスト
+    Firestore -> Firestore: hints更新
+else 全ての子プレイヤーが提出完了した場合
+    APIgateway_Functions -> Firestore: ヒント提出 & gameStatus変更リクエスト
+    Firestore -> Firestore: gameStatus更新 (childTurn→parentTurn)
+    Parent <- Firestore: gameStatusの更新(childTurn→parentTurn)を検知
+    Children <- Firestore: gameStatusの更新(childTurn→parentTurn)を検知
+    Parent -> Firestore: currentGameをリクエスト
+    Children -> Firestore: currentGameをリクエスト
+    Parent <-- Firestore: 返却
+    Children <-- Firestore: 返却
+    Parent -> Parent: 親ターン画面(親)表示
+    Children -> Children: 親ターン画面(子)表示
+end
+
+== 親ターン（人物選択） ==
+Parent -> Parent: 人物を選択し決定ボタン押下
+Parent -> APIgateway_Functions: 決定リクエスト
+APIgateway_Functions -> Firestore: 決定リクエスト
+Firestore -> Firestore: parentSelectedIndex更新 &\ngameStatus更新 (parentTurn→result)
+Parent <- Firestore: gameStatusの更新(parentTurn→result)を検知
+Children <- Firestore: gameStatusの更新(parentTurn→result)を検知
+Parent -> Firestore: currentGameをリクエスト
+Children -> Firestore: currentGameをリクエスト
+Parent <-- Firestore: 返却
+Children <-- Firestore: 返却
+Parent -> Parent: 正誤確認画面表示
+Children -> Children: 正誤確認画面表示
+
+== 正誤確認 ==
+alt 親が正解した場合
+    Parent -> Parent: ベストヒント選択
+    Parent -> APIgateway_Functions: 正誤確認済みリクエスト（ベストヒント含む）
+    APIgateway_Functions -> Firestore: 正誤確認済みリクエスト（ベストヒント含む）
+    Firestore -> Firestore: bestHintPlayer更新 & isReady更新 (false→true)
+else 親が不正解の場合
+    Parent -> Parent: 次に進むボタン押下
+    Parent -> APIgateway_Functions: 正誤確認済みリクエスト
+    APIgateway_Functions -> Firestore: 正誤確認済みリクエスト
+    Firestore -> Firestore: isReady更新 (false→true)
+end
+
+Children -> Children: 次に進むボタン押下
+Children -> APIgateway_Functions: 正誤確認済みリクエスト
+
+alt 正誤確認していないプレイヤーが存在する場合
+    APIgateway_Functions -> Firestore: 正誤確認済みリクエスト
+    Firestore -> Firestore: isReady更新 (false→true)
+else 全員が正誤確認済みの場合（親のベストヒント選択含む）
+    alt ターンが１周していない場合
+        APIgateway_Functions -> Firestore: 次ターン準備リクエスト
+        Firestore -> Firestore: gameStatus更新 (result→childTurn)\n次ターンに向けた初期化
+        Parent <- Firestore: gameStatusの更新(result→childTurn)を検知
+        Children <- Firestore: gameStatusの更新(result→childTurn)を検知
+        Parent -> Firestore: currentGameをリクエスト
+        Children -> Firestore: currentGameをリクエスト
+        Parent <-- Firestore: 返却
+        Children <-- Firestore: 返却
+        Parent -> Parent: 子ターン画面(親)を表示
+        Children -> Children: 子ターン画面(子)を表示
+    else ターンが１周した場合
+        APIgateway_Functions -> Firestore: 終了&次ゲーム準備リクエスト
+        Firestore -> Firestore: gameStatus更新 (result→waiting)\n次ゲームに向けた初期化
+        Parent <- Firestore: gameStatusの更新(result→waiting)を検知
+        Children <- Firestore: gameStatusの更新(result→waiting)を検知
+        Parent -> Firestore: currentGameをリクエスト
+        Children -> Firestore: currentGameをリクエスト
+        Parent <-- Firestore: 返却
+        Children <-- Firestore: 返却
+        Parent -> Parent: 結果発表画面表示
+        Children -> Children: 結果発表画面表示
+    end
+end
+
+@enduml
