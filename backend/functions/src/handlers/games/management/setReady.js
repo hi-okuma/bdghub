@@ -1,6 +1,7 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {sendSuccess, sendError} = require("../../../utils/responseHandler");
+const {getReadyTransitionStatus} = require("./statusTransitions");
 
 /**
  * ゲーム準備完了リクエストの共通ハンドラー
@@ -50,7 +51,11 @@ async function setReadyHandler(req, res) {
       };
 
       if (allReady) {
-        updateData.gameStatus = "playing";
+        updateData.gameStatus = getReadyTransitionStatus(gameId);
+        updateData.players = updatedPlayers.map((player) => ({
+          ...player,
+          isReady: false,
+        }));
       }
 
       transaction.update(currentGameRef, updateData);
