@@ -3,14 +3,14 @@ const {db} = require("../../../config/firebase");
 const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 
 /**
- * カタカナ禁止ゲームの準備完了リクエストを処理するハンドラー
+ * 偏見プロフィールゲームの画像選択リクエストを処理するハンドラー
  * @param {object} req - リクエストオブジェクト
  * @param {object} res - レスポンスオブジェクト
  */
-async function setReady0002Handler(req, res) {
-  const {roomId, nickname} = req.body;
+async function determineAnswer0004Handler(req, res) {
+  const {roomId, nickname, imageIndex} = req.body;
 
-  if (!roomId || !nickname) {
+  if (!roomId || !nickname || imageIndex === undefined || imageIndex < 0 || imageIndex > 4) {
     return sendError(
         res,
         "InvalidArgument",
@@ -23,7 +23,7 @@ async function setReady0002Handler(req, res) {
   try {
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
-      const currentGameRef = roomRef.collection("currentGame").doc("0002");
+      const currentGameRef = roomRef.collection("currentGame").doc("0004");
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
@@ -32,51 +32,49 @@ async function setReady0002Handler(req, res) {
 
       const currentGameData = currentGameDoc.data();
 
-      if (currentGameData.gameStatus !== "waiting") {
+      if (currentGameData.gameStatus !== "parentTurn") {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.nickname === nickname) {
-          return {...player, isReady: true};
-        }
-        return player;
-      });
-
-      const allReady = updatedPlayers.every((player) => player.isReady);
-
-      const updateData = {
-        players: updatedPlayers,
-      };
-
-      if (allReady) {
-        updateData.gameStatus = "playing";
+      if (nickname !== currentGameData.currentParent) {
+        throw new Error("OnlyParentCandetermineAnswer");
       }
 
-      transaction.update(currentGameRef, updateData);
+      transaction.update(currentGameRef, {
+        parentSelectedIndex: imageIndex,
+        gameStatus: "result",
+      });
     });
 
-    logger.info(`準備完了設定成功: roomId=${roomId}, nickname=${nickname}`);
+    logger.info(`画像選択成功: roomId=${roomId}, nickname=${nickname}, imageIndex=${imageIndex}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
-    logger.error(`準備完了設定エラー: ${error.message}`, {
+    logger.error(`画像選択エラー: ${error.message}`, {
       roomId,
       nickname,
+      imageIndex,
       error: error.stack,
     });
 
     const errorMessage = error.message || "サーバーエラーが発生しました。";
 
     if (errorMessage.includes("GameNotFound")) {
-      return sendError(res, "GameNotFound", "ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。", 404, {roomId});
+      return sendError(res, "GameNotFound", "ゲームが見つかりません。", 404, {roomId});
     } else if (errorMessage.includes("InvalidGameStatus")) {
       const status = errorMessage.split(":")[1] || "unknown";
       return sendError(
           res,
           "InvalidGameStatus",
-          "ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。",
+          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
           400,
           {status},
+      );
+    } else if (errorMessage.includes("OnlyParentCandetermineAnswer")) {
+      return sendError(
+          res,
+          "OnlyParentCandetermineAnswer",
+          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
+          400,
       );
     }
 
@@ -91,5 +89,5 @@ async function setReady0002Handler(req, res) {
 }
 
 module.exports = {
-  setReady0002Handler,
+  determineAnswer0004Handler,
 };

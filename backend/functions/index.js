@@ -11,6 +11,9 @@ const {setReadyHandler} = require("./src/handlers/games/management/setReady");
 const {declare0001Handler} = require("./src/handlers/games/0001/declare");
 const {reportResult0002Handler} = require("./src/handlers/games/0002/reportResult");
 const {reportResult0003Handler} = require("./src/handlers/games/0003/reportResult");
+const {submitHint0004Handler} = require("./src/handlers/games/0004/submitHint");
+const {determineAnswer0004Handler} = require("./src/handlers/games/0004/determineAnswer");
+const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToNext");
 
 exports.createRoom = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
@@ -64,4 +67,22 @@ exports.reportResult0003 = onRequest({region: region}, async (req, res) => {
   if (setupCors(req, res)) return;
   if (await checkMaintenance(req, res)) return;
   await reportResult0003Handler(req, res);
+});
+
+exports.submitHint0004 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await submitHint0004Handler(req, res);
+});
+
+exports.determineAnswer0004 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await determineAnswer0004Handler(req, res);
+});
+
+exports.proceedToNext0004 = onRequest({region: region}, async (req, res) => {
+  if (setupCors(req, res)) return;
+  if (await checkMaintenance(req, res)) return;
+  await proceedToNext0004Handler(req, res);
 });
