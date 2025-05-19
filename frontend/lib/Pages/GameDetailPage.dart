@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../components/custom_widgets.dart';
+import '../components/app_theme.dart';
 
 class GameDetailPage extends StatefulWidget {
   final Map<String, dynamic> game;
-  final bool isFromRoom; // 部屋から来たかどうかのフラグ
-  final bool isHost; // ホストユーザーかどうかのフラグ
+  final bool isFromRoom;
+  final bool isHost;
   final String? roomId;
   final String gameId;
 
   const GameDetailPage({
     Key? key,
     required this.game,
-    this.isFromRoom = false, // デフォルトはTOP画面からの遷移（ボタン非表示）
-    this.isHost = false, //デフォルトはホストユーザーではない（ボタン非表示）
+    this.isFromRoom = false,
+    this.isHost = false,
     this.roomId,
     required this.gameId,
   }) : super(key: key);
@@ -27,10 +29,9 @@ class _GameDetailPageState extends State<GameDetailPage> {
   bool _isLoading = false;
 
   Future<void> _startGame() async {
-    // 処理開始前にローディング状態をtrueに設定
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // エラーメッセージをリセット
+      _errorMessage = null;
     });
 
     try {
@@ -41,93 +42,29 @@ class _GameDetailPageState extends State<GameDetailPage> {
         'gameId': widget.gameId,
       };
 
-      // APIリクエスト
       final response = await http.post(
         apiUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       );
 
-      // レスポンスの処理
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-        // success=falseの場合のエラーハンドリングを追加
         if (responseData.containsKey('success') &&
             responseData['success'] == false) {
-          if (!mounted) return;
-
-          // エラーメッセージを設定
-          final String errorMsg = responseData.containsKey('message')
-              ? responseData['message']
-              : 'ゲーム開始に失敗しました';
-
-          setState(() {
-            _errorMessage = errorMsg;
-          });
-
-          // ユーザーにエラーを通知
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
+          _handleApiError(responseData);
         } else {
           if (!mounted) return;
-
-          // 成功メッセージを表示
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('ゲームを開始します')),
           );
         }
       } else {
-        // エラー時の処理
-        try {
-          // レスポンスボディをJSONとしてパース
-          final Map<String, dynamic> errorData = jsonDecode(response.body);
-          // messageキーの値があれば表示、なければ全体のレスポンスを表示
-          final String errorMsg = errorData.containsKey('message')
-              ? '${errorData['message']}'
-              : 'エラー: ${response.statusCode}';
-
-          setState(() {
-            _errorMessage = errorMsg;
-          });
-
-          if (!mounted) return;
-
-          // ユーザーにエラーを通知
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        } catch (e) {
-          // JSONパースに失敗した場合
-          final String errorMsg = '応答の解析に失敗しました: ${response.body}';
-
-          setState(() {
-            _errorMessage = errorMsg;
-          });
-
-          if (!mounted) return;
-
-          // ユーザーにエラーを通知
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        }
+        _handleHttpError(response);
       }
     } catch (e) {
-      // 例外発生時の処理
-      final String errorMsg = '通信エラー: $e';
-
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-
-      if (!mounted) return;
-
-      // ユーザーにエラーを通知
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
+      _handleException(e);
     } finally {
       if (mounted) {
         setState(() {
@@ -137,6 +74,64 @@ class _GameDetailPageState extends State<GameDetailPage> {
     }
   }
 
+  void _handleApiError(Map<String, dynamic> responseData) {
+    if (!mounted) return;
+
+    final String errorMsg = responseData.containsKey('message')
+        ? responseData['message']
+        : 'ゲーム開始に失敗しました';
+
+    setState(() {
+      _errorMessage = errorMsg;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMsg)),
+    );
+  }
+
+  void _handleHttpError(http.Response response) {
+    try {
+      final Map<String, dynamic> errorData = jsonDecode(response.body);
+      final String errorMsg = errorData.containsKey('message')
+          ? '${errorData['message']}'
+          : 'エラー: ${response.statusCode}';
+
+      setState(() {
+        _errorMessage = errorMsg;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    } catch (e) {
+      final String errorMsg = '応答の解析に失敗しました: ${response.body}';
+
+      setState(() {
+        _errorMessage = errorMsg;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    }
+  }
+
+  void _handleException(dynamic e) {
+    final String errorMsg = '通信エラー: $e';
+
+    setState(() {
+      _errorMessage = errorMsg;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMsg)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,131 +139,67 @@ class _GameDetailPageState extends State<GameDetailPage> {
         title: Text(widget.game['title']),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppSpacing.large),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ゲームカード（GameListWidgetからUIを流用）
-            _buildGameCard(context),
+            // ゲームカード - カスタムウィジェットを使用
+            _buildGameCard(),
 
             // 「このゲームで遊ぶ」ボタン（部屋から来た場合かつホストユーザーのみ表示）
             if (widget.isFromRoom && widget.isHost) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxLarge),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _startGame, // ローディング中は無効化
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          'このゲームで遊ぶ',
-                          style: TextStyle(fontSize: 16),
-                        ),
+                child: LoadingButton(
+                  text: 'このゲームで遊ぶ',
+                  isLoading: _isLoading,
+                  onPressed: _startGame,
                 ),
               ),
             ],
 
-            // ゲーム詳細説明
-            const SizedBox(height: 24),
-            const Text(
-              'ゲーム詳細',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            // エラー表示
+            ErrorDisplay(
+              errorMessage: _errorMessage,
+              onRetry: widget.isFromRoom && widget.isHost ? _startGame : null,
             ),
-            const SizedBox(height: 8),
+
+            // ゲーム詳細説明
+            const SizedBox(height: AppSpacing.xxLarge),
+            Text(
+              'ゲーム詳細',
+              style: AppTextStyles.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.small),
             Text(
               widget.game['description'] ?? '説明がありません',
-              style: const TextStyle(
-                fontSize: 14,
-                height: 1.5,
-              ),
+              style: AppTextStyles.body.copyWith(height: 1.5),
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('作成者：${widget.game['creatorName']}'),
-                ElevatedButton(
-                    onPressed: () {
-                      // ECサイトへ移動する処理
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${widget.game["title"]}の購入サイトへ移動します'),
-                        ),
-                      );
-                    },
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.open_in_new,
-                          size: 18.0,
-                        ),
-                        Text('購入サイトへ'),
-                      ],
-                    ))
-              ],
-            )
+            const SizedBox(height: AppSpacing.small),
+            // 区切り線
+            const Divider(height: AppSpacing.xxLarge),
+            // 作成者情報と購入リンク
+            _buildGameFooter(),
           ],
         ),
       ),
     );
   }
 
-  // GameListWidgetのカードデザインを流用したゲームカードウィジェット
-  Widget _buildGameCard(BuildContext context) {
+  Widget _buildGameCard() {
     return Card(
-      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(AppSpacing.medium),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // サムネイル
-            Container(
-              width: 100,
-              height: 100,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[300],
-              ),
-              child: (widget.game['thumbnailUrl'] != null &&
-                      widget.game['thumbnailUrl'].isNotEmpty)
-                  ? Image.network(
-                      widget.game['thumbnailUrl'],
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.broken_image,
-                          size: 40,
-                          color: Colors.grey,
-                        );
-                      },
-                    )
-                  : const Icon(
-                      Icons.casino,
-                      size: 40,
-                      color: Colors.grey,
-                    ),
+            // サムネイル - カスタムウィジェットを使用（詳細画面用サイズ）
+            GameThumbnail(
+              thumbnailUrl: widget.game['thumbnailUrl'],
+              size: AppIconSizes.gameDetailThumbnail,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.medium),
 
             // ゲーム情報
             Expanded(
@@ -277,34 +208,24 @@ class _GameDetailPageState extends State<GameDetailPage> {
                 children: [
                   Text(
                     widget.game['title'],
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.titleMedium,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xSmall),
 
-                  // ジャンル名をChipとして表示
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: _buildGenreChips(widget.game),
-                  ),
-                  const SizedBox(height: 4),
+                  // ジャンルチップ - カスタムウィジェットを使用
+                  _buildGenreChips(widget.game),
+                  const SizedBox(height: AppSpacing.xSmall),
 
                   Text(
                     '所要時間: ${widget.game['time']} / ${widget.game['players']}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: AppTextStyles.gameCardTime,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xSmall),
 
                   Text(
                     widget.game['overview'] ?? '',
-                    style: const TextStyle(fontSize: 14),
-                    maxLines: 3,
+                    style: AppTextStyles.body,
+                    maxLines: AppLayout.maxGameDescriptionLines,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -316,40 +237,51 @@ class _GameDetailPageState extends State<GameDetailPage> {
     );
   }
 
-  // GameListWidgetからコピーしたジャンルチップ生成メソッド
-  List<Widget> _buildGenreChips(Map<String, dynamic> game) {
+  Widget _buildGenreChips(Map<String, dynamic> game) {
+    List<String> genreNames = [];
+
     if (game['genreName'] is List) {
-      List<String> genreNames = List<String>.from(game['genreName']);
-
-      if (genreNames.isEmpty) {
-        return [_buildSingleChip('すべて')];
-      }
-
-      return genreNames.map((name) => _buildSingleChip(name)).toList();
+      genreNames = List<String>.from(game['genreName']);
+    } else {
+      String genreName = (game['genreName'] ?? 'すべて').toString();
+      genreNames = [genreName];
     }
 
-    String genreName = (game['genreName'] ?? 'すべて').toString();
-    return [_buildSingleChip(genreName)];
+    if (genreNames.isEmpty) {
+      genreNames = ['すべて'];
+    }
+
+    return Wrap(
+      spacing: AppSpacing.xSmall,
+      runSpacing: AppSpacing.xSmall,
+      children: genreNames.map((name) => GenreChip(label: name)).toList(),
+    );
   }
 
-  // GameListWidgetからコピーした単一チップ生成メソッド
-  Widget _buildSingleChip(String name) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.blue[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        name,
-        style: TextStyle(
-          fontSize: 12,
-          color: Colors.blue[800],
-        ),
-      ),
+  Widget _buildGameFooter() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('作成者：${widget.game['creatorName']}'),
+        ElevatedButton(
+            onPressed: () {
+              // ECサイトへ移動する処理
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${widget.game["title"]}の購入サイトへ移動します'),
+                ),
+              );
+            },
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.open_in_new,
+                  size: 18.0,
+                ),
+                Text('購入サイトへ'),
+              ],
+            ))
+      ],
     );
   }
 }

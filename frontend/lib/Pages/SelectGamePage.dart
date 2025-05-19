@@ -5,6 +5,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../components/GameListWidget.dart';
+import '../components/custom_widgets.dart';
+import '../components/app_theme.dart';
 import 'package:bodogehub/Pages/GameDetailPage.dart';
 import 'package:bodogehub/Util/Util.dart';
 
@@ -25,23 +27,15 @@ class SelectGamePage extends StatefulWidget {
 class _SelectGamePageState extends State<SelectGamePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // プレイヤーリスト
   List<Map<String, dynamic>> _players = [];
-  // Firestoreリスナー用
   StreamSubscription? _playersSubscription;
-  // プレイヤーデータのローディング状態
   bool _isLoading = true;
-  // エラーメッセージ
   String? _errorMessage;
 
-  // ゲームリスト（Firestoreから取得）
   List<Map<String, dynamic>> _gameList = [];
-  // ゲームデータのローディング状態
   bool _isGameLoading = true;
-  // 選択されているジャンル
   Set<GameGenre> _selectedGenre = {GameGenre.all};
 
-  // タブの定義
   final List<Tab> _tabs = const <Tab>[
     Tab(text: '全て'),
     Tab(text: '定番'),
@@ -54,7 +48,6 @@ class _SelectGamePageState extends State<SelectGamePage>
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
 
-    // タブ切り替え時のリスナー
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {
@@ -76,23 +69,17 @@ class _SelectGamePageState extends State<SelectGamePage>
       }
     });
 
-    // Firestoreからプレイヤーデータを取得
     _subscribeToPlayers();
-
-    // Firestoreからゲームデータを取得
     _fetchGames();
   }
 
-  // Firestoreからゲームデータを取得するメソッド
   Future<void> _fetchGames() async {
     setState(() {
       _isGameLoading = true;
     });
 
     try {
-      // Utilクラスの共通関数を使用
       final games = await fetchGamesFromFirestore();
-
       setState(() {
         _gameList = games;
         _isGameLoading = false;
@@ -106,7 +93,6 @@ class _SelectGamePageState extends State<SelectGamePage>
     }
   }
 
-  // Firestoreからプレイヤーデータを取得するメソッド
   void _subscribeToPlayers() {
     setState(() {
       _isLoading = true;
@@ -123,16 +109,13 @@ class _SelectGamePageState extends State<SelectGamePage>
 
         setState(() {
           _isLoading = false;
-          // プレイヤーデータをマッピング
           _players = List.generate(playersData.length, (index) {
-            // プレイヤーデータが文字列の場合
             if (playersData[index] is String) {
               return {
                 'nickname': playersData[index],
-                'isHost': index == 0, // インデックス0がホスト
+                'isHost': index == 0,
               };
             }
-            // そのほかの場合（念のため）
             return {
               'nickname': playersData[index].toString(),
               'isHost': index == 0,
@@ -142,7 +125,7 @@ class _SelectGamePageState extends State<SelectGamePage>
       } else {
         setState(() {
           _isLoading = false;
-          _players = []; // データがない場合は空リスト
+          _players = [];
         });
       }
     }, onError: (error) {
@@ -152,7 +135,6 @@ class _SelectGamePageState extends State<SelectGamePage>
         _errorMessage = errorMsg;
       });
 
-      // Firestoreエラーもスナックバーで表示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg)),
@@ -164,26 +146,23 @@ class _SelectGamePageState extends State<SelectGamePage>
 
   @override
   void dispose() {
-    // リスナーを解除
     _playersSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  // URLをコピーする処理
   void _copyRoomUrl() {
     String shareUrl = 'https://bdghub.web.app/?roomId=${widget.roomId}';
     Clipboard.setData(ClipboardData(text: shareUrl)).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('URLをコピーしました'),
-          duration: Duration(milliseconds: 4000),
+        SnackBar(
+          content: const Text('URLをコピーしました'),
+          duration: AppAnimations.snackBarDuration,
         ),
       );
     });
   }
 
-  // 退出ダイアログを表示
   void _showExitDialog() {
     showDialog(
       context: context,
@@ -191,22 +170,19 @@ class _SelectGamePageState extends State<SelectGamePage>
         return AlertDialog(
           title: const Text('部屋から退出しますか？'),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // ダイアログを閉じる
-              },
-              child: const Text('キャンセル'),
+            LoadingButton(
+              text: 'キャンセル',
+              isLoading: false,
+              isElevated: false,
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            ElevatedButton(
+            LoadingButton(
+              text: '退出する',
+              isLoading: false,
               onPressed: () {
-                Navigator.of(context).pop(); // ダイアログを閉じる
-                _leaveRoom(); // 退出処理を実行
+                Navigator.of(context).pop();
+                _leaveRoom();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('退出する'),
             ),
           ],
         );
@@ -214,8 +190,11 @@ class _SelectGamePageState extends State<SelectGamePage>
     );
   }
 
-  // 退出処理
   void _leaveRoom() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final Uri apiUrl = Uri.parse(
           'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
@@ -224,93 +203,34 @@ class _SelectGamePageState extends State<SelectGamePage>
         'roomId': widget.roomId,
       };
 
-      // APIリクエスト
       final response = await http.post(
         apiUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       );
 
-      // レスポンスの処理
       if (response.statusCode == 200) {
-        // 成功時の処理
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-        // success = false の場合の処理を追加
         if (responseData.containsKey('success') &&
             responseData['success'] == false) {
-          final String errorMsg = responseData.containsKey('message')
-              ? responseData['message']
-              : '退出に失敗しました';
-
-          setState(() {
-            _errorMessage = errorMsg;
-          });
-
-          // APIからのエラーレスポンスはスナックバーで表示
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
+          _handleApiError(responseData);
           return;
         }
 
         if (!mounted) return;
 
-        // 成功メッセージを表示
         String successMessage = '部屋: ${widget.roomId} を退出しました';
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage)),
         );
 
-        // TOP画面に戻る
         Navigator.of(context).pop();
       } else {
-        // エラー時の処理
-        try {
-          // レスポンスボディをJSONとしてパース
-          final Map<String, dynamic> errorData = jsonDecode(response.body);
-          // messageキーの値があれば表示、なければ全体のレスポンスを表示
-          final String errorMsg = errorData.containsKey('message')
-              ? '${errorData['message']}'
-              : 'エラー: ${response.statusCode}';
-
-          setState(() {
-            _errorMessage = errorMsg;
-          });
-
-          // APIからのエラーレスポンスはスナックバーで表示
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        } catch (e) {
-          // JSONパースに失敗した場合
-          final String errorMsg = '応答の解析に失敗しました: ${response.body}';
-          setState(() {
-            _errorMessage = errorMsg;
-          });
-
-          // APIからのエラーレスポンスはスナックバーで表示
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        }
+        _handleHttpError(response);
       }
     } catch (e) {
-      // 例外発生時の処理
-      final String errorMsg = '通信エラー: $e';
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-
-      // 通信エラーもスナックバーで表示
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
+      _handleException(e);
     } finally {
       if (mounted) {
         setState(() {
@@ -320,9 +240,62 @@ class _SelectGamePageState extends State<SelectGamePage>
     }
   }
 
-  // ゲーム選択時の処理
+  void _handleApiError(Map<String, dynamic> responseData) {
+    final String errorMsg = responseData.containsKey('message')
+        ? responseData['message']
+        : '退出に失敗しました';
+
+    setState(() {
+      _errorMessage = errorMsg;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMsg)),
+    );
+  }
+
+  void _handleHttpError(http.Response response) {
+    try {
+      final Map<String, dynamic> errorData = jsonDecode(response.body);
+      final String errorMsg = errorData.containsKey('message')
+          ? '${errorData['message']}'
+          : 'エラー: ${response.statusCode}';
+
+      setState(() {
+        _errorMessage = errorMsg;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    } catch (e) {
+      final String errorMsg = '応答の解析に失敗しました: ${response.body}';
+      setState(() {
+        _errorMessage = errorMsg;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    }
+  }
+
+  void _handleException(dynamic e) {
+    final String errorMsg = '通信エラー: $e';
+    setState(() {
+      _errorMessage = errorMsg;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMsg)),
+    );
+  }
+
   void _onGameSelected(Map<String, dynamic> game) {
-    // 現在のユーザーがホストかどうかを判断
     bool isUserHost = _players.any((player) =>
         player['nickname'] == widget.myNickname && player['isHost'] == true);
 
@@ -332,7 +305,7 @@ class _SelectGamePageState extends State<SelectGamePage>
           game: game,
           gameId: game['gameId'],
           roomId: widget.roomId,
-          isFromRoom: true, // 部屋からの遷移なのでtrue
+          isFromRoom: true,
           isHost: isUserHost,
         ),
       ),
@@ -347,14 +320,16 @@ class _SelectGamePageState extends State<SelectGamePage>
         centerTitle: true,
         title: Text('部屋: ${widget.roomId}'),
         leading: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+          padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
           child: TextButton(
             style: TextButton.styleFrom(
               backgroundColor: Colors.grey[200],
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.small, vertical: 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4.0),
+                borderRadius: BorderRadius.circular(AppBorderRadius.small),
               ),
             ),
             onPressed: _showExitDialog,
@@ -362,22 +337,23 @@ class _SelectGamePageState extends State<SelectGamePage>
               '退出',
               style: TextStyle(
                 color: Colors.black,
-                fontSize: 12,
+                fontSize: AppTextStyles.captionFontSize,
               ),
             ),
           ),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            padding: const EdgeInsets.symmetric(
+                vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
             child: TextButton(
               style: TextButton.styleFrom(
                 backgroundColor: Colors.grey[200],
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.small, vertical: 0),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4.0),
+                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
                 ),
               ),
               onPressed: _copyRoomUrl,
@@ -385,12 +361,12 @@ class _SelectGamePageState extends State<SelectGamePage>
                 'URLをコピー',
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 12,
+                  fontSize: AppTextStyles.captionFontSize,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppSpacing.small),
         ],
       ),
       body: Column(
@@ -398,48 +374,38 @@ class _SelectGamePageState extends State<SelectGamePage>
         children: [
           // 参加者エリア
           Container(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppSpacing.large),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '参加者',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.titleMedium,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.small),
                 if (_isLoading)
                   const Center(child: CircularProgressIndicator())
                 else if (_errorMessage != null)
                   Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    style: AppTextStyles.errorText,
                   )
                 else if (_players.isEmpty)
-                  const Text('参加者がいません')
+                  Text(
+                    '参加者がいません',
+                    style: AppTextStyles.body,
+                  )
                 else
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: _players.map((player) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                                color: player['isHost']
-                                    ? Colors.amber[100]
-                                    : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(4.0)),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 4.0, horizontal: 8.0),
-                              child: Center(
-                                  child: player['isHost']
-                                      ? Text('${player['nickname']}（ホスト）')
-                                      : Text(player['nickname'])),
-                            ),
+                          padding:
+                              const EdgeInsets.only(right: AppSpacing.small),
+                          child: PlayerBadge(
+                            nickname: player['nickname'],
+                            isHost: player['isHost'],
                           ),
                         );
                       }).toList(),
@@ -449,28 +415,12 @@ class _SelectGamePageState extends State<SelectGamePage>
             ),
           ),
 
-          // タブバー
+          // タブバー - カスタムウィジェットを使用
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                tabs: _tabs,
-                labelColor: Theme.of(context).primaryColor,
-                unselectedLabelColor: Colors.grey,
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                indicator: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                labelPadding: const EdgeInsets.symmetric(horizontal: 6.0),
-                padding: const EdgeInsets.all(4.0),
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+            child: CustomTabBar(
+              controller: _tabController,
+              tabs: _tabs,
             ),
           ),
 
@@ -482,7 +432,6 @@ class _SelectGamePageState extends State<SelectGamePage>
                   )
                 : TabBarView(
                     controller: _tabController,
-                    // カチッとしたスワイプ感のために物理特性を調整
                     physics: const PageScrollPhysics(
                       parent: ClampingScrollPhysics(),
                     ),
@@ -495,13 +444,11 @@ class _SelectGamePageState extends State<SelectGamePage>
                       // 定番ゲーム
                       GameListWidget(
                         games: _gameList.where((game) {
-                          // 複数ジャンル対応
                           if (game['genre'] is List) {
                             List<GameGenre> genres =
                                 List<GameGenre>.from(game['genre']);
                             return genres.contains(GameGenre.popular);
                           }
-                          // 互換性維持のため
                           return game['genre'] == GameGenre.popular;
                         }).toList(),
                         onGameSelected: _onGameSelected,
@@ -509,13 +456,11 @@ class _SelectGamePageState extends State<SelectGamePage>
                       // カードゲーム
                       GameListWidget(
                         games: _gameList.where((game) {
-                          // 複数ジャンル対応
                           if (game['genre'] is List) {
                             List<GameGenre> genres =
                                 List<GameGenre>.from(game['genre']);
                             return genres.contains(GameGenre.card);
                           }
-                          // 互換性維持のため
                           return game['genre'] == GameGenre.card;
                         }).toList(),
                         onGameSelected: _onGameSelected,
@@ -523,13 +468,11 @@ class _SelectGamePageState extends State<SelectGamePage>
                       // 協力ゲーム
                       GameListWidget(
                         games: _gameList.where((game) {
-                          // 複数ジャンル対応
                           if (game['genre'] is List) {
                             List<GameGenre> genres =
                                 List<GameGenre>.from(game['genre']);
                             return genres.contains(GameGenre.cooperation);
                           }
-                          // 互換性維持のため
                           return game['genre'] == GameGenre.cooperation;
                         }).toList(),
                         onGameSelected: _onGameSelected,
