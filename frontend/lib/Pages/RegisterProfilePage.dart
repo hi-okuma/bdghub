@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'SelectGamePage.dart';
+import '../components/custom_widgets.dart';
+import '../components/app_theme.dart';
 
 class RegisterProfilePage extends StatefulWidget {
   final bool isJoiningRoom;
@@ -23,15 +25,12 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
   @override
   void initState() {
     super.initState();
-    // 初期部屋IDがある場合は設定
     if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
       _roomIdController.text = widget.initialRoomId!;
     }
   }
 
-  // 入力値のバリデーション
   bool _validateNickname(String value) {
-    // 空チェック
     if (value.isEmpty) {
       setState(() {
         _errorMessage = 'ニックネームを入力してください';
@@ -39,23 +38,20 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
       return false;
     }
 
-    // 文字数チェック（2〜10文字）
-    if (value.length < 2) {
+    if (value.length < AppLayout.minNicknameLength) {
       setState(() {
-        _errorMessage = 'ニックネームは2文字以上入力してください';
+        _errorMessage = 'ニックネームは${AppLayout.minNicknameLength}文字以上入力してください';
       });
       return false;
     }
 
-    // 文字数チェック（10文字以内）
-    if (value.length > 10) {
+    if (value.length > AppLayout.maxNicknameLength) {
       setState(() {
-        _errorMessage = 'ニックネームは10文字以内で入力してください';
+        _errorMessage = 'ニックネームは${AppLayout.maxNicknameLength}文字以内で入力してください';
       });
       return false;
     }
 
-    // 禁止文字チェック
     if (value.contains('/') || value.contains('.')) {
       setState(() {
         _errorMessage = '「/」や「.」は使用できません';
@@ -67,12 +63,10 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
   }
 
   Future<void> _createRoom() async {
-    // 入力値のバリデーション
     if (!_validateNickname(_nicknameController.text)) {
       return;
     }
 
-    // 部屋参加モードの場合は部屋コードの入力チェック
     if (widget.isJoiningRoom && _roomIdController.text.isEmpty) {
       setState(() {
         _errorMessage = '部屋コードを入力してください';
@@ -90,7 +84,6 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
       final Map<String, dynamic> requestBody;
 
       if (widget.isJoiningRoom) {
-        // 部屋参加モードの場合
         apiUrl = Uri.parse(
             'https://asia-northeast1-bdghub-dev.cloudfunctions.net/joinRoom');
         requestBody = {
@@ -98,25 +91,20 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           'roomId': _roomIdController.text
         };
       } else {
-        // 部屋作成モードの場合
         apiUrl = Uri.parse(
             'https://asia-northeast1-bdghub-dev.cloudfunctions.net/createRoom');
         requestBody = {'nickname': _nicknameController.text};
       }
 
-      // APIリクエスト
       final response = await http.post(
         apiUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       );
 
-      // レスポンスの処理
       if (response.statusCode == 200) {
-        // 成功時の処理
         final Map<String, dynamic> responseData = jsonDecode(response.body);
 
-        // success = false の場合の処理を追加（APIからのエラー）
         if (responseData.containsKey('success') &&
             responseData['success'] == false) {
           final String errorMsg = responseData.containsKey('message')
@@ -128,7 +116,6 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
             _isLoading = false;
           });
 
-          // APIからのエラーレスポンスはスナックバーで表示
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMsg)),
@@ -136,17 +123,14 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           return;
         }
 
-        // 成功時の処理
         final String roomId = widget.isJoiningRoom
             ? _roomIdController.text
             : responseData['roomId'];
 
         if (!mounted) return;
 
-        // ダイアログを閉じる
         Navigator.of(context).pop();
 
-        // ゲーム選択画面に遷移する
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => SelectGamePage(
@@ -156,7 +140,6 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           ),
         );
 
-        // 成功メッセージを表示
         final String successMessage =
             widget.isJoiningRoom ? '部屋に参加しました' : '部屋が作成されました';
 
@@ -164,54 +147,54 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
           SnackBar(content: Text(successMessage)),
         );
       } else {
-        // エラー時の処理
-        try {
-          // レスポンスボディをJSONとしてパース
-          final Map<String, dynamic> errorData = jsonDecode(response.body);
-          // messageキーの値があれば表示、なければ全体のレスポンスを表示
-          final String errorMsg = errorData.containsKey('message')
-              ? '${errorData['message']}'
-              : 'エラー: ${response.statusCode}';
-
-          setState(() {
-            _errorMessage = errorMsg;
-            _isLoading = false;
-          });
-
-          // APIからのエラーレスポンスはスナックバーで表示
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        } catch (e) {
-          // JSONパースに失敗した場合
-          final String errorMsg = '応答の解析に失敗しました: ${response.body}';
-          setState(() {
-            _errorMessage = errorMsg;
-            _isLoading = false;
-          });
-
-          // APIからのエラーレスポンスはスナックバーで表示
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(errorMsg)),
-          );
-        }
+        _handleApiError(response);
       }
     } catch (e) {
-      // 例外発生時の処理
-      final String errorMsg = '通信エラー: $e';
+      _handleException(e);
+    }
+  }
+
+  void _handleApiError(http.Response response) {
+    try {
+      final Map<String, dynamic> errorData = jsonDecode(response.body);
+      final String errorMsg = errorData.containsKey('message')
+          ? '${errorData['message']}'
+          : 'エラー: ${response.statusCode}';
+
       setState(() {
         _errorMessage = errorMsg;
         _isLoading = false;
       });
 
-      // 通信エラーもスナックバーで表示
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    } catch (e) {
+      final String errorMsg = '応答の解析に失敗しました: ${response.body}';
+      setState(() {
+        _errorMessage = errorMsg;
+        _isLoading = false;
+      });
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg)),
       );
     }
+  }
+
+  void _handleException(dynamic e) {
+    final String errorMsg = '通信エラー: $e';
+    setState(() {
+      _errorMessage = errorMsg;
+      _isLoading = false;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(errorMsg)),
+    );
   }
 
   @override
@@ -223,94 +206,90 @@ class _RegisterProfilePageState extends State<RegisterProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    // キーボードの高さを取得
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      width: 400, // ダイアログの幅
+      width: AppLayout.dialogWidth,
       padding: EdgeInsets.fromLTRB(
-          20.0, 20.0, 20.0, bottomInset > 0 ? 20.0 + bottomInset * 0.5 : 20.0),
+          AppSpacing.large,
+          AppSpacing.large,
+          AppSpacing.large,
+          bottomInset > 0
+              ? AppSpacing.large + bottomInset * 0.5
+              : AppSpacing.large),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // ダイアログのサイズを最小限にする
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ニックネーム入力
           TextField(
             controller: _nicknameController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'ニックネームを入力（2〜10文字）',
+            decoration: InputDecoration(
+              labelText:
+                  'ニックネームを入力（${AppLayout.minNicknameLength}〜${AppLayout.maxNicknameLength}文字）',
               hintText: '例：ボドゲハブ',
               helperText: '※「/」と「.」は使用できません',
             ),
-            // 入力時のリアルタイムバリデーション
             onChanged: (value) {
-              // 文字入力のたびにエラーメッセージをクリア
               if (_errorMessage != null) {
                 setState(() {
                   _errorMessage = null;
                 });
               }
 
-              // 文字数チェック（リアルタイム）
-              if (value.length > 10) {
+              if (value.length > AppLayout.maxNicknameLength) {
                 setState(() {
-                  _errorMessage = 'ニックネームは10文字以内で入力してください';
+                  _errorMessage =
+                      'ニックネームは${AppLayout.maxNicknameLength}文字以内で入力してください';
                 });
-              }
-
-              // 禁止文字のリアルタイムチェック
-              else if (value.contains('/') || value.contains('.')) {
+              } else if (value.contains('/') || value.contains('.')) {
                 setState(() {
                   _errorMessage = '「/」や「.」は使用できません';
                 });
               }
             },
           ),
+
+          // エラー表示 - カスタムウィジェットを使用
           if (_errorMessage != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8.0),
+              padding: const EdgeInsets.only(top: AppSpacing.small),
               child: Text(
                 _errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                style: AppTextStyles.errorText,
               ),
             ),
-          const SizedBox(height: 10),
+
+          const SizedBox(height: AppSpacing.medium),
+
+          // 部屋コード入力（部屋参加時のみ）
           if (widget.isJoiningRoom)
             TextField(
               controller: _roomIdController,
-              // 初期部屋IDがある場合は入力欄を非活性化
               enabled:
                   widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
               decoration: const InputDecoration(
-                border: OutlineInputBorder(),
                 labelText: '部屋コードを入力',
                 hintText: 'abcdefg1234',
               ),
             ),
-          const SizedBox(height: 20),
+
+          const SizedBox(height: AppSpacing.xLarge),
+
+          // ボタン群
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('キャンセル'),
+              LoadingButton(
+                text: 'キャンセル',
+                isLoading: false,
+                isElevated: false,
+                onPressed: () => Navigator.of(context).pop(),
               ),
-              // 作成または参加ボタン
-              TextButton(
-                onPressed: _isLoading ? null : _createRoom,
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 10.0),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(widget.isJoiningRoom ? '部屋に参加する' : '部屋を作成する'),
+              LoadingButton(
+                text: widget.isJoiningRoom ? '部屋に参加する' : '部屋を作成する',
+                isLoading: _isLoading,
+                onPressed: _createRoom,
               ),
             ],
           ),

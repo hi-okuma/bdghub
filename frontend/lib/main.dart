@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:bodogehub/Pages/TopPage.dart';
+import 'package:bodogehub/components/app_theme.dart';
 // Flutter WebでのみUriを取得するためにプラットフォーム固有のインポート
 import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -43,17 +44,13 @@ class MyApp extends StatelessWidget {
 
   const MyApp({super.key, this.roomId});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-        fontFamily: 'NotoSansJP',
-      ),
+      title: 'ボードゲームハブ',
+      // app_theme.dartで定義したテーマを使用
+      theme: AppTheme.lightTheme,
       home: TopPage(roomId: roomId),
     );
   }
