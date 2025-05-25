@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'custom_widgets.dart';
 import 'app_theme.dart';
+import '../utils/genre_utils.dart';
 
 class GameListWidget extends StatelessWidget {
   final List<Map<String, dynamic>> games;
@@ -63,8 +64,8 @@ class GameListWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xSmall),
 
-                    // ジャンルチップ - カスタムウィジェットを使用
-                    _buildGenreChips(game),
+                    // ジャンルチップ - GenreUtilsを使用
+                    GenreUtils.buildGenreChips(game),
                     const SizedBox(height: AppSpacing.xSmall),
 
                     // 所要時間・プレイヤー数
@@ -95,29 +96,6 @@ class GameListWidget extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildGenreChips(Map<String, dynamic> game) {
-    List<String> genreNames = [];
-
-    // ジャンル名の処理
-    if (game['genreName'] is List) {
-      genreNames = List<String>.from(game['genreName']);
-    } else {
-      String genreName = (game['genreName'] ?? 'すべて').toString();
-      genreNames = [genreName];
-    }
-
-    // 空の場合は「すべて」を表示
-    if (genreNames.isEmpty) {
-      genreNames = ['すべて'];
-    }
-
-    return Wrap(
-      spacing: AppSpacing.xSmall,
-      runSpacing: AppSpacing.xSmall,
-      children: genreNames.map((name) => GenreChip(label: name)).toList(),
     );
   }
 }

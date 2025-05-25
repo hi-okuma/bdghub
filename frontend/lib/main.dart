@@ -1,24 +1,40 @@
+import 'package:bodogehub/Pages/0000_HubMain/game_title_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:bodogehub/Pages/TopPage.dart';
+import 'package:bodogehub/Pages/0000_HubMain/top_page.dart';
 import 'package:bodogehub/components/app_theme.dart';
 // Flutter WebでのみUriを取得するためにプラットフォーム固有のインポート
 import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> main() async {
-  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: "assets/.env");
+  } catch (e) {
+    print('Error loading .env file: $e');
+    // .envファイルが読み込めない場合でも続行
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // UIテスト用フラグ
+  const bool testSpecificPage = false;
+
   // URLから部屋IDを取得
   final String? roomId = _getRoomIdFromUrl();
 
-  runApp(MyApp(roomId: roomId));
+  runApp(
+    ProviderScope(
+      child: testSpecificPage ? TestApp() : MyApp(roomId: roomId),
+    ),
+  );
 }
 
 // URLパラメータから部屋IDを取得するヘルパー関数
@@ -52,6 +68,20 @@ class MyApp extends StatelessWidget {
       // app_theme.dartで定義したテーマを使用
       theme: AppTheme.lightTheme,
       home: TopPage(roomId: roomId),
+    );
+  }
+}
+
+class TestApp extends StatelessWidget {
+  const TestApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      // app_theme.dartで定義したテーマを使用
+      theme: AppTheme.lightTheme,
+      home: GameTitlePage(),
     );
   }
 }
