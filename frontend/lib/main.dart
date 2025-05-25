@@ -1,4 +1,4 @@
-import 'package:bodogehub/Pages/0001_NGWordGame/ng_word_game_title_page.dart';
+import 'package:bodogehub/Pages/0000_HubMain/game_title_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -11,8 +11,15 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> main() async {
-  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await dotenv.load(fileName: "assets/.env");
+  } catch (e) {
+    print('Error loading .env file: $e');
+    // .envファイルが読み込めない場合でも続行
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -74,7 +81,7 @@ class TestApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // app_theme.dartで定義したテーマを使用
       theme: AppTheme.lightTheme,
-      home: NGWordGameTitlePage(),
+      home: GameTitlePage(),
     );
   }
 }

@@ -5,10 +5,11 @@ import '../../components/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../utils/error_handler.dart';
 import '../../utils/genre_utils.dart';
-import '../0001_NGWordGame/ng_word_game_title_page.dart';
+import 'game_title_page.dart';
 import '/models/user_state.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
+import '/providers/game_provider.dart'; // 追加
 
 class GameDetailPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> game;
@@ -45,7 +46,8 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
       );
 
       // APIエラーレスポンスのチェック
-      if (responseData.containsKey('success') && responseData['success'] == false) {
+      if (responseData.containsKey('success') &&
+          responseData['success'] == false) {
         ApiErrorHandler.handleApiError(context, responseData, (error) {
           setState(() {
             _errorMessage = error;
@@ -54,14 +56,22 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
         return;
       }
 
+      // ★ ゲーム情報をプロバイダーに保存 ★
+      // 既存のgame_service.dartから取得したデータを使用（互換性維持）
+      // ref.read(currentGameProvider.notifier).setGameFromExistingData(widget.game);
+
+      // または、より正確な情報が必要な場合はFirestoreから直接取得
+      await ref
+          .read(currentGameProvider.notifier)
+          .loadGameFromFirestore(widget.gameId);
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ゲームを開始します')),
       );
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-            builder: (context) => const NGWordGameTitlePage()),
+        MaterialPageRoute(builder: (context) => const GameTitlePage()),
       );
     } catch (e) {
       ApiErrorHandler.handleException(context, e, (error) {

@@ -94,7 +94,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     final roomId = ref.read(currentRoomIdProvider);
     if (roomId == null) return;
 
-    String shareUrl = 'https://bdghub.web.app/?roomId=$roomId';
+    String shareUrl = 'https://bdghub-dev.web.app/?roomId=$roomId';
     Clipboard.setData(ClipboardData(text: shareUrl)).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
