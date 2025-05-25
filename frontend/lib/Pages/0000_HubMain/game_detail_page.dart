@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../components/custom_widgets.dart';
-import '../components/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../components/custom_widgets.dart';
+import '../../components/app_theme.dart';
+import '../../services/api_service.dart';
+import '../../utils/error_handler.dart';
+import '../../utils/genre_utils.dart';
+import '../0001_NGWordGame/ng_word_game_title_page.dart';
+import '/models/user_state.dart';
+import '/providers/user_provider.dart';
+import '/providers/room_provider.dart';
 
-class GameDetailPage extends StatefulWidget {
+class GameDetailPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> game;
   final bool isFromRoom;
-  final bool isHost;
   final String? roomId;
   final String gameId;
 
@@ -15,16 +20,15 @@ class GameDetailPage extends StatefulWidget {
     Key? key,
     required this.game,
     this.isFromRoom = false,
-    this.isHost = false,
     this.roomId,
     required this.gameId,
   }) : super(key: key);
 
   @override
-  State<GameDetailPage> createState() => _GameDetailPageState();
+  ConsumerState<GameDetailPage> createState() => _GameDetailPageState();
 }
 
-class _GameDetailPageState extends State<GameDetailPage> {
+class _GameDetailPageState extends ConsumerState<GameDetailPage> {
   String? _errorMessage;
   bool _isLoading = false;
 
@@ -35,36 +39,36 @@ class _GameDetailPageState extends State<GameDetailPage> {
     });
 
     try {
-      final Uri apiUrl = Uri.parse(
-          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/startGame');
-      final Map<String, dynamic> requestBody = {
-        'roomId': widget.roomId,
-        'gameId': widget.gameId,
-      };
-
-      final response = await http.post(
-        apiUrl,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
+      final responseData = await ApiService.startGame(
+        widget.roomId!,
+        widget.gameId,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-        if (responseData.containsKey('success') &&
-            responseData['success'] == false) {
-          _handleApiError(responseData);
-        } else {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ゲームを開始します')),
-          );
-        }
-      } else {
-        _handleHttpError(response);
+      // APIエラーレスポンスのチェック
+      if (responseData.containsKey('success') && responseData['success'] == false) {
+        ApiErrorHandler.handleApiError(context, responseData, (error) {
+          setState(() {
+            _errorMessage = error;
+          });
+        });
+        return;
       }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ゲームを開始します')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const NGWordGameTitlePage()),
+      );
     } catch (e) {
-      _handleException(e);
+      ApiErrorHandler.handleException(context, e, (error) {
+        setState(() {
+          _errorMessage = error;
+        });
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -74,66 +78,10 @@ class _GameDetailPageState extends State<GameDetailPage> {
     }
   }
 
-  void _handleApiError(Map<String, dynamic> responseData) {
-    if (!mounted) return;
-
-    final String errorMsg = responseData.containsKey('message')
-        ? responseData['message']
-        : 'ゲーム開始に失敗しました';
-
-    setState(() {
-      _errorMessage = errorMsg;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMsg)),
-    );
-  }
-
-  void _handleHttpError(http.Response response) {
-    try {
-      final Map<String, dynamic> errorData = jsonDecode(response.body);
-      final String errorMsg = errorData.containsKey('message')
-          ? '${errorData['message']}'
-          : 'エラー: ${response.statusCode}';
-
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
-    } catch (e) {
-      final String errorMsg = '応答の解析に失敗しました: ${response.body}';
-
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
-    }
-  }
-
-  void _handleException(dynamic e) {
-    final String errorMsg = '通信エラー: $e';
-
-    setState(() {
-      _errorMessage = errorMsg;
-    });
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMsg)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isHost = ref.watch(isHostProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.game['title']),
@@ -143,11 +91,11 @@ class _GameDetailPageState extends State<GameDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ゲームカード - カスタムウィジェットを使用
+            // ゲームカード
             _buildGameCard(),
 
             // 「このゲームで遊ぶ」ボタン（部屋から来た場合かつホストユーザーのみ表示）
-            if (widget.isFromRoom && widget.isHost) ...[
+            if (widget.isFromRoom && isHost) ...[
               const SizedBox(height: AppSpacing.xxLarge),
               SizedBox(
                 width: double.infinity,
@@ -158,12 +106,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
                 ),
               ),
             ],
-
-            // エラー表示
-            ErrorDisplay(
-              errorMessage: _errorMessage,
-              onRetry: widget.isFromRoom && widget.isHost ? _startGame : null,
-            ),
 
             // ゲーム詳細説明
             const SizedBox(height: AppSpacing.xxLarge),
@@ -194,7 +136,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // サムネイル - カスタムウィジェットを使用（詳細画面用サイズ）
+            // サムネイル
             GameThumbnail(
               thumbnailUrl: widget.game['thumbnailUrl'],
               size: AppIconSizes.gameDetailThumbnail,
@@ -212,8 +154,8 @@ class _GameDetailPageState extends State<GameDetailPage> {
                   ),
                   const SizedBox(height: AppSpacing.xSmall),
 
-                  // ジャンルチップ - カスタムウィジェットを使用
-                  _buildGenreChips(widget.game),
+                  // ジャンルチップ - GenreUtilsを使用
+                  GenreUtils.buildGenreChips(widget.game),
                   const SizedBox(height: AppSpacing.xSmall),
 
                   Text(
@@ -234,27 +176,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildGenreChips(Map<String, dynamic> game) {
-    List<String> genreNames = [];
-
-    if (game['genreName'] is List) {
-      genreNames = List<String>.from(game['genreName']);
-    } else {
-      String genreName = (game['genreName'] ?? 'すべて').toString();
-      genreNames = [genreName];
-    }
-
-    if (genreNames.isEmpty) {
-      genreNames = ['すべて'];
-    }
-
-    return Wrap(
-      spacing: AppSpacing.xSmall,
-      runSpacing: AppSpacing.xSmall,
-      children: genreNames.map((name) => GenreChip(label: name)).toList(),
     );
   }
 

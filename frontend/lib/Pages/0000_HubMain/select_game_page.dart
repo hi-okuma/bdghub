@@ -1,36 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../components/GameListWidget.dart';
-import '../components/custom_widgets.dart';
-import '../components/app_theme.dart';
-import 'package:bodogehub/Pages/GameDetailPage.dart';
-import 'package:bodogehub/Util/Util.dart';
+import '/components/game_list_widget.dart';
+import '/components/custom_widgets.dart';
+import '/components/app_theme.dart';
+import '/Pages/0000_HubMain/game_detail_page.dart';
+import '/utils/game_service.dart';
+import '/providers/user_provider.dart';
+import '/providers/room_provider.dart';
+import 'package:bodogehub/models/user_state.dart';
 
-class SelectGamePage extends StatefulWidget {
-  final String roomId;
-  final String myNickname;
-
-  const SelectGamePage({
-    Key? key,
-    required this.roomId,
-    required this.myNickname,
-  }) : super(key: key);
+class SelectGamePage extends ConsumerStatefulWidget {
+  const SelectGamePage({Key? key}) : super(key: key);
 
   @override
-  State<SelectGamePage> createState() => _SelectGamePageState();
+  ConsumerState<SelectGamePage> createState() => _SelectGamePageState();
 }
 
-class _SelectGamePageState extends State<SelectGamePage>
+class _SelectGamePageState extends ConsumerState<SelectGamePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Map<String, dynamic>> _players = [];
-  StreamSubscription? _playersSubscription;
-  bool _isLoading = true;
-  String? _errorMessage;
 
   List<Map<String, dynamic>> _gameList = [];
   bool _isGameLoading = true;
@@ -69,7 +61,6 @@ class _SelectGamePageState extends State<SelectGamePage>
       }
     });
 
-    _subscribeToPlayers();
     _fetchGames();
   }
 
@@ -93,66 +84,17 @@ class _SelectGamePageState extends State<SelectGamePage>
     }
   }
 
-  void _subscribeToPlayers() {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    _playersSubscription = FirebaseFirestore.instance
-        .collection('rooms')
-        .doc(widget.roomId)
-        .snapshots()
-        .listen((snapshot) {
-      if (snapshot.exists && snapshot.data()!.containsKey('players')) {
-        List<dynamic> playersData = snapshot.get('players');
-
-        setState(() {
-          _isLoading = false;
-          _players = List.generate(playersData.length, (index) {
-            if (playersData[index] is String) {
-              return {
-                'nickname': playersData[index],
-                'isHost': index == 0,
-              };
-            }
-            return {
-              'nickname': playersData[index].toString(),
-              'isHost': index == 0,
-            };
-          });
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-          _players = [];
-        });
-      }
-    }, onError: (error) {
-      final String errorMsg = 'データの取得中にエラーが発生しました';
-      setState(() {
-        _isLoading = false;
-        _errorMessage = errorMsg;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMsg)),
-        );
-      }
-      print('Firestoreエラー: $error');
-    });
-  }
-
   @override
   void dispose() {
-    _playersSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
   void _copyRoomUrl() {
-    String shareUrl = 'https://bdghub.web.app/?roomId=${widget.roomId}';
+    final roomId = ref.read(currentRoomIdProvider);
+    if (roomId == null) return;
+
+    String shareUrl = 'https://bdghub.web.app/?roomId=$roomId';
     Clipboard.setData(ClipboardData(text: shareUrl)).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -163,150 +105,16 @@ class _SelectGamePageState extends State<SelectGamePage>
     });
   }
 
-  void _showExitDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('部屋から退出しますか？'),
-          actions: [
-            LoadingButton(
-              text: 'キャンセル',
-              isLoading: false,
-              isElevated: false,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            LoadingButton(
-              text: '退出する',
-              isLoading: false,
-              onPressed: () {
-                Navigator.of(context).pop();
-                _leaveRoom();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _leaveRoom() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final Uri apiUrl = Uri.parse(
-          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
-      final Map<String, dynamic> requestBody = {
-        'nickname': widget.myNickname,
-        'roomId': widget.roomId,
-      };
-
-      final response = await http.post(
-        apiUrl,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-
-        if (responseData.containsKey('success') &&
-            responseData['success'] == false) {
-          _handleApiError(responseData);
-          return;
-        }
-
-        if (!mounted) return;
-
-        String successMessage = '部屋: ${widget.roomId} を退出しました';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(successMessage)),
-        );
-
-        Navigator.of(context).pop();
-      } else {
-        _handleHttpError(response);
-      }
-    } catch (e) {
-      _handleException(e);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _handleApiError(Map<String, dynamic> responseData) {
-    final String errorMsg = responseData.containsKey('message')
-        ? responseData['message']
-        : '退出に失敗しました';
-
-    setState(() {
-      _errorMessage = errorMsg;
-    });
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMsg)),
-    );
-  }
-
-  void _handleHttpError(http.Response response) {
-    try {
-      final Map<String, dynamic> errorData = jsonDecode(response.body);
-      final String errorMsg = errorData.containsKey('message')
-          ? '${errorData['message']}'
-          : 'エラー: ${response.statusCode}';
-
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
-    } catch (e) {
-      final String errorMsg = '応答の解析に失敗しました: ${response.body}';
-      setState(() {
-        _errorMessage = errorMsg;
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
-    }
-  }
-
-  void _handleException(dynamic e) {
-    final String errorMsg = '通信エラー: $e';
-    setState(() {
-      _errorMessage = errorMsg;
-    });
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(errorMsg)),
-    );
-  }
-
   void _onGameSelected(Map<String, dynamic> game) {
-    bool isUserHost = _players.any((player) =>
-        player['nickname'] == widget.myNickname && player['isHost'] == true);
+    final roomId = ref.read(currentRoomIdProvider);
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => GameDetailPage(
           game: game,
           gameId: game['gameId'],
-          roomId: widget.roomId,
+          roomId: roomId,
           isFromRoom: true,
-          isHost: isUserHost,
         ),
       ),
     );
@@ -314,11 +122,16 @@ class _SelectGamePageState extends State<SelectGamePage>
 
   @override
   Widget build(BuildContext context) {
+    final userState = ref.watch(userProvider);
+    final roomId = userState.roomId ?? '';
+    final playersAsync =
+        ref.watch(roomStreamProvider(roomId)); // AsyncValue<DocumentSnapshot>
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: Text('部屋: ${widget.roomId}'),
+        title: Text('部屋: $roomId'),
         leading: Padding(
           padding: const EdgeInsets.symmetric(
               vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
@@ -383,39 +196,61 @@ class _SelectGamePageState extends State<SelectGamePage>
                   style: AppTextStyles.titleMedium,
                 ),
                 const SizedBox(height: AppSpacing.small),
-                if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else if (_errorMessage != null)
-                  Text(
-                    _errorMessage!,
+                // ★ ここを修正 ★
+                playersAsync.when(
+                  data: (snapshot) {
+                    if (!snapshot.exists) {
+                      return Text(
+                        '部屋が見つかりません',
+                        style: AppTextStyles.errorText,
+                      );
+                    }
+
+                    final data = snapshot.data() as Map<String, dynamic>?;
+                    final playersData =
+                        data?['players'] as List<dynamic>? ?? [];
+
+                    if (playersData.isEmpty) {
+                      return Text(
+                        '参加者がいません',
+                        style: AppTextStyles.body,
+                      );
+                    }
+
+                    final players = playersData.asMap().entries.map((entry) {
+                      return Player(
+                        nickname: entry.value.toString(),
+                        isHost: entry.key == 0,
+                      );
+                    }).toList();
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: players.map((player) {
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(right: AppSpacing.small),
+                            child: PlayerBadge(
+                              nickname: player.nickname,
+                              isHost: player.isHost,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, stackTrace) => Text(
+                    'データの取得中にエラーが発生しました',
                     style: AppTextStyles.errorText,
-                  )
-                else if (_players.isEmpty)
-                  Text(
-                    '参加者がいません',
-                    style: AppTextStyles.body,
-                  )
-                else
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _players.map((player) {
-                        return Padding(
-                          padding:
-                              const EdgeInsets.only(right: AppSpacing.small),
-                          child: PlayerBadge(
-                            nickname: player['nickname'],
-                            isHost: player['isHost'],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  )
+                  ),
+                ),
               ],
             ),
           ),
 
-          // タブバー - カスタムウィジェットを使用
+          // タブバー
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
             child: CustomTabBar(
@@ -436,12 +271,10 @@ class _SelectGamePageState extends State<SelectGamePage>
                       parent: ClampingScrollPhysics(),
                     ),
                     children: [
-                      // 全てのゲーム
                       GameListWidget(
                         games: _gameList,
                         onGameSelected: _onGameSelected,
                       ),
-                      // 定番ゲーム
                       GameListWidget(
                         games: _gameList.where((game) {
                           if (game['genre'] is List) {
@@ -453,7 +286,6 @@ class _SelectGamePageState extends State<SelectGamePage>
                         }).toList(),
                         onGameSelected: _onGameSelected,
                       ),
-                      // カードゲーム
                       GameListWidget(
                         games: _gameList.where((game) {
                           if (game['genre'] is List) {
@@ -465,7 +297,6 @@ class _SelectGamePageState extends State<SelectGamePage>
                         }).toList(),
                         onGameSelected: _onGameSelected,
                       ),
-                      // 協力ゲーム
                       GameListWidget(
                         games: _gameList.where((game) {
                           if (game['genre'] is List) {
@@ -483,5 +314,97 @@ class _SelectGamePageState extends State<SelectGamePage>
         ],
       ),
     );
+  }
+
+  void _showExitDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('部屋から退出しますか？'),
+          actions: [
+            LoadingButton(
+              text: 'キャンセル',
+              isLoading: false,
+              isElevated: false,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            LoadingButton(
+              text: '退出する',
+              isLoading: false,
+              onPressed: () {
+                Navigator.of(context).pop();
+                _leaveRoom();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _leaveRoom() async {
+    try {
+      final userState = ref.read(userProvider);
+
+      print('🚪 退出開始: ${userState.nickname} が部屋 ${userState.roomId} から退出');
+
+      // API呼び出しで退出処理
+      final Uri apiUrl = Uri.parse(
+          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
+      final Map<String, dynamic> requestBody = {
+        'nickname': userState.nickname,
+        'roomId': userState.roomId,
+      };
+
+      final response = await http.post(
+        apiUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
+        if (responseData.containsKey('success') &&
+            responseData['success'] == false) {
+          // エラーハンドリング
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(responseData['message'] ?? 'エラーが発生しました')),
+          );
+          return;
+        }
+
+        print('🚪 API退出成功');
+
+        // 画面遷移を先に実行
+        if (!mounted) return;
+        Navigator.of(context).pop();
+
+        // Firestoreの更新完了を待つ方法（オプション）
+        await ref.read(roomStreamProvider(userState.roomId!).future);
+
+        // ★ 状態クリアは最後に実行 ★
+        ref.read(userProvider.notifier).leaveRoom();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('部屋を退出しました')),
+          );
+        }
+      } else {
+        print('🚪 API退出失敗: ${response.statusCode}');
+        // HTTPエラーハンドリング
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('退出に失敗しました: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      print('🚪 退出エラー: $e');
+      // 通信エラーハンドリング
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('通信エラー: $e')),
+      );
+    }
   }
 }

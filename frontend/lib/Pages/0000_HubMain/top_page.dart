@@ -1,10 +1,10 @@
-import 'RegisterProfilePage.dart';
-import '../components/GameListWidget.dart';
-import '../components/custom_widgets.dart';
-import '../components/app_theme.dart';
-import 'package:bodogehub/Util/Util.dart';
+import '../0000_HubMain/register_profile_page.dart';
+import '../../components/game_list_widget.dart';
+import '../../components/custom_widgets.dart';
+import '../../components/app_theme.dart';
+import 'package:bodogehub/utils/game_service.dart';
 import 'package:flutter/material.dart';
-import 'package:bodogehub/Pages/GameDetailPage.dart';
+import 'package:bodogehub/Pages/0000_HubMain/game_detail_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TopPage extends StatefulWidget {
