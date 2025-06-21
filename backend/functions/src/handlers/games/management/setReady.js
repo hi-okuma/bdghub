@@ -9,9 +9,9 @@ const {getReadyTransitionStatus} = require("./statusTransitions");
  * @param {object} res - レスポンスオブジェクト
  */
 async function setReadyHandler(req, res) {
-  const {roomId, nickname, gameId} = req.body;
+  const {uid, roomId, gameId} = req.body;
 
-  if (!roomId || !nickname || !gameId) {
+  if (!uid || !roomId || !gameId) {
     return sendError(
         res,
         "InvalidArgument",
@@ -21,7 +21,7 @@ async function setReadyHandler(req, res) {
     );
   }
 
-  try {
+    try {
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
       const currentGameRef = roomRef.collection("currentGame").doc(gameId);
@@ -29,6 +29,13 @@ async function setReadyHandler(req, res) {
 
       if (!currentGameDoc.exists) {
         throw new Error("GameNotFound");
+      }
+
+      const roomDoc = await transaction.get(roomRef);
+      const nickname = roomDoc.data().players[uid]?.nickname;
+      
+      if (!nickname) {
+        throw new Error("PlayerNotFound");
       }
 
       const currentGameData = currentGameDoc.data();

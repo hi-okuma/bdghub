@@ -10,13 +10,13 @@ const {DEFAULT_MAX_ROOM_PLAYERS} = require("../../config/environment");
  * @param {object} res - レスポンスオブジェクト
  */
 async function joinRoomHandler(req, res) {
-  const {nickname, roomId} = req.body;
+  const {nickname, uid, roomId} = req.body;
 
-  if (!nickname || !roomId) {
+  if (!nickname || !uid || !roomId) {
     return sendError(
         res,
         "InvalidArgument",
-        "部屋参加にはニックネームと部屋IDが必要です。",
+        "部屋に参加できませんでした。",
         400,
         {body: req.body},
     );
@@ -47,7 +47,9 @@ async function joinRoomHandler(req, res) {
     const roomData = roomDoc.data();
     const roomRef = db.collection("rooms").doc(roomId);
 
-    if (roomData.status === "full" && roomData.players.length < maxRoomPlayers) {
+    const currentPlayerCount = Object.keys(roomData.players).length;
+
+    if (roomData.status === "full" && currentPlayerCount < maxRoomPlayers) {
       logger.info(`部屋ID=${roomId} はfullですが、最大人数が引き上げられたためacceptingに戻します。`);
       await roomRef.update({
         status: "accepting",
@@ -93,10 +95,11 @@ async function joinRoomHandler(req, res) {
     }
 
     const willBeFull = roomData.players.length + 1 >= maxRoomPlayers;
-    await addPlayerToRoom(roomId, nickname, willBeFull);
+    await addPlayerToRoom(roomId, nickname, uid, willBeFull);
 
-    logger.info(`プレイヤー参加成功: ${nickname} to room ${roomId}`, {
+    logger.info(`プレイヤー参加成功: ${nickname}(${uid}) to room ${roomId}`, {
       nickname,
+      uid,
       willBeFull,
     });
 
@@ -156,19 +159,20 @@ function handleInvalidRoomStatus(res, status) {
  * @return {boolean} 重複している場合はtrue、そうでない場合はfalse
  */
 function isNicknameDuplicate(roomData, nickname) {
-  return roomData.players.includes(nickname);
+  return Object.values(roomData.players).some(player => player.nickname === nickname);
 }
 
 /**
  * プレイヤーを部屋に追加する
  * @param {string} roomId - 部屋ID
  * @param {string} nickname - ニックネーム
+ * @param {string} uid - プレイヤーのUID
  * @param {boolean} willBeFull - 部屋が満員になるかどうか
  * @return {Promise} 更新処理のPromise
  */
-async function addPlayerToRoom(roomId, nickname, willBeFull) {
+async function addPlayerToRoom(roomId, nickname, uid, willBeFull) {
   return db.collection("rooms").doc(roomId).update({
-    players: FieldValue.arrayUnion(nickname), // 文字列をそのまま追加
+    [`players.${uid}`]: {nickname: nickname},
     status: willBeFull ? "full" : "accepting",
     updatedAt: FieldValue.serverTimestamp(),
   });
