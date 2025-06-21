@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function submitHint0004Handler(req, res) {
-  const {roomId, nickname, hint} = req.body;
+  const {roomId, uid, hint} = req.body;
 
-  if (!roomId || !nickname || !hint) {
+  if (!roomId || !uid || !hint) {
     return sendError(
         res,
         "InvalidArgument",
@@ -59,17 +59,17 @@ async function submitHint0004Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      if (nickname === currentGameData.currentParent) {
+      if (uid === currentGameData.currentParent) {
         throw new Error("ParentCannotsubmitHint");
       }
 
-      const updatedHints = {...currentGameData.hints, [nickname]: hint};
+      const updatedHints = {...currentGameData.hints, [uid]: hint};
 
       const childPlayers = currentGameData.players.filter(
-          (player) => player.nickname !== currentGameData.currentParent,
+          (player) => player.uid !== currentGameData.currentParent,
       );
       const allChildrenSubmitted = childPlayers.every(
-          (player) => updatedHints[player.nickname],
+          (player) => updatedHints[player.uid],
       );
 
       const updateData = {
@@ -83,12 +83,12 @@ async function submitHint0004Handler(req, res) {
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`ヒント設定成功: roomId=${roomId}, nickname=${nickname}`);
+    logger.info(`ヒント設定成功: roomId=${roomId}, uid=${uid}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`ヒント設定エラー: ${error.message}`, {
       roomId,
-      nickname,
+      uid,
       error: error.stack,
     });
 

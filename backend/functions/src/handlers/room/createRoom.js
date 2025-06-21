@@ -86,7 +86,7 @@ function createRoomData(nickname, uid) {
   return {
     status: "accepting",
     players: {
-      [uid]: {nickname: nickname}
+      [uid]: {nickname: nickname},
     },
     hostPlayer: nickname,
     createdAt: FieldValue.serverTimestamp(),

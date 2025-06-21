@@ -159,7 +159,7 @@ function handleInvalidRoomStatus(res, status) {
  * @return {boolean} 重複している場合はtrue、そうでない場合はfalse
  */
 function isNicknameDuplicate(roomData, nickname) {
-  return Object.values(roomData.players).some(player => player.nickname === nickname);
+  return Object.values(roomData.players).some((player) => player.nickname === nickname);
 }
 
 /**

@@ -21,7 +21,7 @@ async function setReadyHandler(req, res) {
     );
   }
 
-    try {
+  try {
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
       const currentGameRef = roomRef.collection("currentGame").doc(gameId);
@@ -32,9 +32,8 @@ async function setReadyHandler(req, res) {
       }
 
       const roomDoc = await transaction.get(roomRef);
-      const nickname = roomDoc.data().players[uid]?.nickname;
-      
-      if (!nickname) {
+
+      if (!roomDoc.data().players[uid]) {
         throw new Error("PlayerNotFound");
       }
 
@@ -45,7 +44,7 @@ async function setReadyHandler(req, res) {
       }
 
       const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.nickname === nickname) {
+        if (player.uid === uid) {
           return {...player, isReady: true};
         }
         return player;
@@ -68,12 +67,12 @@ async function setReadyHandler(req, res) {
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`準備完了設定成功: roomId=${roomId}, nickname=${nickname}, gameId=${gameId}`);
+    logger.info(`準備完了設定成功: roomId=${roomId}, uid=${uid}, gameId=${gameId}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`準備完了設定エラー: ${error.message}`, {
       roomId,
-      nickname,
+      uid,
       gameId,
       error: error.stack,
     });

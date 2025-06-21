@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function declare0001Handler(req, res) {
-  const {roomId, nickname} = req.body;
+  const {roomId, uid} = req.body;
 
-  if (!roomId || !nickname) {
+  if (!roomId || !uid) {
     return sendError(
         res,
         "InvalidArgument",
@@ -37,7 +37,7 @@ async function declare0001Handler(req, res) {
       }
 
       const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.nickname === nickname) {
+        if (player.uid === uid) {
           return {...player, isAlive: false};
         }
         return player;
@@ -52,7 +52,7 @@ async function declare0001Handler(req, res) {
       if (alivePlayersCount === 1) {
         const winner = updatedPlayers.find((player) => player.isAlive);
         updateData.players = updatedPlayers.map((player) => {
-          if (player.nickname === winner.nickname) {
+          if (player.uid === winner.uid) {
             return {
               ...player,
               point: (player.point || 0) + 1,
@@ -76,8 +76,8 @@ async function declare0001Handler(req, res) {
         const ngWordsList = ngWordsDoc.data().words;
         const shuffledWords = shuffleArray(ngWordsList);
 
-        updateData.players = updateData.players.map((player, index) => ({
-          nickname: player.nickname,
+        updateData.players = updatedPlayers.map((player, index) => ({
+          uid: player.uid,
           isReady: false,
           ngWord: [shuffledWords[index % shuffledWords.length]],
           isAlive: true,
@@ -88,12 +88,12 @@ async function declare0001Handler(req, res) {
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`申告成功: roomId=${roomId}, nickname=${nickname}`);
+    logger.info(`申告成功: roomId=${roomId}, uid=${uid}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`申告エラー: ${error.message}`, {
       roomId,
-      nickname,
+      uid,
       error: error.stack,
     });
 

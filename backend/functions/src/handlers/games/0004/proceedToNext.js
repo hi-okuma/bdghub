@@ -9,9 +9,9 @@ const {initializeGameData} = require("./init");
  * @param {object} res - レスポンスオブジェクト
  */
 async function proceedToNext0004Handler(req, res) {
-  const {roomId, nickname, bestHintPlayer} = req.body;
+  const {roomId, uid, bestHintPlayerUid} = req.body;
 
-  if (!roomId || !nickname) {
+  if (!roomId || !uid) {
     return sendError(
         res,
         "InvalidArgument",
@@ -38,38 +38,38 @@ async function proceedToNext0004Handler(req, res) {
       }
 
       const isCorrect = currentGameData.parentSelectedIndex === currentGameData.answerImageIndex;
-      const isParent = nickname === currentGameData.currentParent;
+      const isParent = uid === currentGameData.currentParent;
 
-      if (isCorrect && isParent && !bestHintPlayer) {
+      if (isCorrect && isParent && !bestHintPlayerUid) {
         throw new Error("BestHintPlayerRequired");
       }
 
       const updateData = {};
       let updatedPlayers = [...currentGameData.players];
 
-      if (isCorrect && isParent && bestHintPlayer) {
-        if (bestHintPlayer === currentGameData.currentParent) {
+      if (isCorrect && isParent && bestHintPlayerUid) {
+        if (bestHintPlayerUid === currentGameData.currentParent) {
           throw new Error("InvalidBestHintPlayer");
         }
 
-        if (!currentGameData.hints[bestHintPlayer]) {
+        if (!currentGameData.hints[bestHintPlayerUid]) {
           throw new Error("PlayerDidNotSubmitHint");
         }
 
         updatedPlayers = updatedPlayers.map((player) => {
-          if (player.nickname === bestHintPlayer) {
+          if (player.uid === bestHintPlayerUid) {
             return {...player, point: (player.point || 0) + 1};
           }
-          if (player.nickname === currentGameData.currentParent) {
+          if (player.uid === currentGameData.currentParent) {
             return {...player, point: (player.point || 0) + 1, isReady: true};
           }
           return player;
         });
 
-        updateData.bestHintPlayer = bestHintPlayer;
+        updateData.bestHintPlayer = bestHintPlayerUid;
       } else {
         updatedPlayers = updatedPlayers.map((player) => {
-          if (player.nickname === nickname) {
+          if (player.uid === uid) {
             return {...player, isReady: true};
           }
           return player;
@@ -87,13 +87,13 @@ async function proceedToNext0004Handler(req, res) {
       }
     });
 
-    logger.info("結果確認成功: roomId=${roomId}, nickname=${nickname}${bestHintPlayer ? `, bestHintPlayer=${bestHintPlayer}` : ''}");
+    logger.info(`結果確認成功: roomId=${roomId}, uid=${uid}${bestHintPlayerUid ? ", bestHintPlayerUid=" + bestHintPlayerUid : ""}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`結果確認エラー: ${error.message}`, {
       roomId,
-      nickname,
-      bestHintPlayer,
+      uid,
+      bestHintPlayerUid,
       error: error.stack,
     });
 
@@ -152,18 +152,18 @@ async function proceedToNext0004Handler(req, res) {
  */
 async function prepareNextTurn(transaction, currentGameRef, currentGameData, updatedPlayers) {
   const currentParentIndex = updatedPlayers.findIndex(
-      (player) => player.nickname === currentGameData.currentParent,
+      (player) => player.uid === currentGameData.currentParent,
   );
   const nextParentIndex = (currentParentIndex + 1) % updatedPlayers.length;
   const isOneRoundCompleted = updatedPlayers[nextParentIndex].isEverParent;
-  const playerNicknames = updatedPlayers.map((player) => player.nickname);
+  const playerUids = updatedPlayers.map((player) => player.uid);
 
   if (isOneRoundCompleted) {
     const gameDataForNewRound = {
       ...currentGameData,
       players: updatedPlayers,
     };
-    const newGameData = await initializeGameData(playerNicknames, gameDataForNewRound, true);
+    const newGameData = await initializeGameData(playerUids, gameDataForNewRound, true);
 
     transaction.update(currentGameRef, {
       gameStatus: "waiting",
@@ -179,7 +179,7 @@ async function prepareNextTurn(transaction, currentGameRef, currentGameData, upd
       usedTopics: newGameData.usedTopics,
     });
   } else {
-    const nextTurnData = await initializeGameData(playerNicknames, currentGameData);
+    const nextTurnData = await initializeGameData(playerUids, currentGameData);
 
     transaction.update(currentGameRef, {
       gameStatus: "childTurn",
@@ -195,7 +195,7 @@ async function prepareNextTurn(transaction, currentGameRef, currentGameData, upd
       players: updatedPlayers.map((player) => ({
         ...player,
         isReady: false,
-        isEverParent: player.isEverParent || player.nickname === nextTurnData.currentParent,
+        isEverParent: player.isEverParent || player.uid === nextTurnData.currentParent,
       })),
     });
   }

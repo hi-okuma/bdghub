@@ -100,9 +100,9 @@ function prepareUpdateData(roomData, updatedPlayers, removedUid) {
   };
 
   const playerNicknames = Object.values(updatedPlayers).map(p => p.nickname);
-  const removedNickname = roomData.players[removedUid]?.nickname;
+  const removedUid = roomData.players[removedUid] && roomData.players[removedUid].uid;
 
-  if (roomData.hostPlayer === removedNickname && playerNicknames.length > 0) {
+  if (roomData.hostPlayer === removedUid && playerNicknames.length > 0) {
     updateData.hostPlayer = playerNicknames[0];
     logger.info(`新しいホストプレイヤーを設定: ${playerNicknames[0]}`);
   }

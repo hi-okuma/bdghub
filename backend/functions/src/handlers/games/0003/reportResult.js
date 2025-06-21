@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function reportResult0003Handler(req, res) {
-  const {roomId, result, answerer} = req.body;
+  const {roomId, result, answererUid} = req.body;
 
-  if (!roomId || result === undefined || (result === true && !answerer)) {
+  if (!roomId || result === undefined || (result === true && !answererUid)) {
     return sendError(
         res,
         "InvalidArgument",
@@ -36,7 +36,7 @@ async function reportResult0003Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      const updatedPlayers = updatePlayerPoints(currentGameData.players, result, answerer);
+      const updatedPlayers = updatePlayerPoints(currentGameData.players, result, answererUid);
       const {nextQuestioner, isOneRoundCompleted} = determineNextQuestioner(updatedPlayers, currentGameData.questioner);
       const questionsList = await getQuestionsList(transaction);
       const nextQuestionData = selectNextQuestion(questionsList, currentGameData);
@@ -58,7 +58,7 @@ async function reportResult0003Handler(req, res) {
     logger.error(`結果報告エラー: ${error.message}`, {
       roomId,
       result,
-      answerer,
+      answererUid,
       error: error.stack,
     });
 
@@ -70,14 +70,14 @@ async function reportResult0003Handler(req, res) {
  * プレイヤーのポイントを更新する
  * @param {Array} players - プレイヤーデータの配列
  * @param {boolean} result - 正解かどうか
- * @param {string} answerer - 回答者のニックネーム
+ * @param {string} answererUid - 回答者のUID
  * @return {Array} 更新されたプレイヤーデータ
  */
-function updatePlayerPoints(players, result, answerer) {
+function updatePlayerPoints(players, result, answererUid) {
   if (!result) return [...players];
 
   return players.map((player) => {
-    if (player.nickname === answerer) {
+    if (player.uid === answererUid) {
       return {...player, point: (player.point || 0) + 1};
     }
     return player;
@@ -91,9 +91,9 @@ function updatePlayerPoints(players, result, answerer) {
  * @return {Object} 次の出題者と一巡したかどうか
  */
 function determineNextQuestioner(players, currentQuestioner) {
-  const currentIndex = players.findIndex((player) => player.nickname === currentQuestioner);
+  const currentIndex = players.findIndex((player) => player.uid === currentQuestioner);
   const nextIndex = (currentIndex + 1) % players.length;
-  const nextQuestioner = players[nextIndex].nickname;
+  const nextQuestioner = players[nextIndex].uid;
   const isOneRoundCompleted = players[nextIndex].isEverQuestioner;
 
   return {nextQuestioner, isOneRoundCompleted};
@@ -166,7 +166,7 @@ function createUpdateData(players, nextQuestioner, questionData, isOneRoundCompl
 
   if (isOneRoundCompleted) {
     const randomPlayerIndex = Math.floor(Math.random() * players.length);
-    const firstQuestioner = players[randomPlayerIndex].nickname;
+    const firstQuestioner = players[randomPlayerIndex].uid;
 
     return {
       gameStatus: "waiting",
@@ -177,13 +177,13 @@ function createUpdateData(players, nextQuestioner, questionData, isOneRoundCompl
       players: players.map((player) => ({
         ...player,
         isReady: false,
-        isEverQuestioner: player.nickname === firstQuestioner,
+        isEverQuestioner: player.uid === firstQuestioner,
       })),
     };
   } else {
     return {
       players: players.map((player) => {
-        if (player.nickname === nextQuestioner) {
+        if (player.uid === nextQuestioner) {
           return {...player, isEverQuestioner: true};
         }
         return player;

@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function reportResult0002Handler(req, res) {
-  const {roomId, result, answerer} = req.body;
+  const {roomId, result, answererUid} = req.body;
 
-  if (!roomId || result === undefined || (result === true && !answerer)) {
+  if (!roomId || result === undefined || (result === true && !answererUid)) {
     return sendError(
         res,
         "InvalidArgument",
@@ -39,7 +39,7 @@ async function reportResult0002Handler(req, res) {
       let updatedPlayers = [...currentGameData.players];
       if (result === true) {
         updatedPlayers = updatedPlayers.map((player) => {
-          if (player.nickname === answerer || player.nickname === currentGameData.currentPresenter) {
+          if (player.uid === answererUid || player.uid === currentGameData.currentPresenter) {
             return {...player, point: (player.point || 0) + 1};
           }
           return player;
@@ -47,10 +47,10 @@ async function reportResult0002Handler(req, res) {
       }
 
       const currentIndex = updatedPlayers.findIndex(
-          (player) => player.nickname === currentGameData.currentPresenter,
+          (player) => player.uid === currentGameData.currentPresenter,
       );
       const nextIndex = (currentIndex + 1) % updatedPlayers.length;
-      const nextPresenter = updatedPlayers[nextIndex].nickname;
+      const nextPresenter = updatedPlayers[nextIndex].uid;
       const isOneRoundCompleted = updatedPlayers[nextIndex].isEverPresenter;
 
       const topicsDoc = await transaction.get(
@@ -125,7 +125,7 @@ async function reportResult0002Handler(req, res) {
     logger.error(`結果報告エラー: ${error.message}`, {
       roomId,
       result,
-      answerer,
+      answererUid,
       error: error.stack,
     });
 
