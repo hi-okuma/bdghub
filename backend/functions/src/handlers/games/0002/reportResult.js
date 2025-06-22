@@ -78,7 +78,7 @@ async function reportResult0002Handler(req, res) {
         }
 
         const firstPresenterIndex = (currentIndex + 1) % updatedPlayers.length;
-        const firstPresenter = updatedPlayers[firstPresenterIndex].nickname;
+        const firstPresenter = updatedPlayers[firstPresenterIndex].uid;
 
         updateData = {
           gameStatus: "waiting",
@@ -88,7 +88,7 @@ async function reportResult0002Handler(req, res) {
           players: updatedPlayers.map((player) => ({
             ...player,
             isReady: false,
-            isEverPresenter: player.nickname === firstPresenter,
+            isEverPresenter: player.uid === firstPresenter,
           })),
         };
       } else {
@@ -105,7 +105,7 @@ async function reportResult0002Handler(req, res) {
 
         updateData = {
           players: updatedPlayers.map((player) => {
-            if (player.nickname === nextPresenter) {
+            if (player.uid === nextPresenter) {
               return {...player, isEverPresenter: true};
             }
             return player;

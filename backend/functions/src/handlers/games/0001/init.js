@@ -2,7 +2,7 @@ const {db} = require("../../../config/firebase");
 
 /**
  * NGワードゲームのcurrentGameデータを生成する
- * @param {Array<string>} players - プレイヤーのニックネーム配列
+ * @param {Object} players - プレイヤー情報
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players) {
@@ -17,8 +17,9 @@ async function createCurrentGame(players) {
 
   const ngWordsList = ngWordsDoc.data().words;
   const shuffledWords = shuffleArray(ngWordsList);
-  const playerData = players.map((nickname, index) => ({
-    nickname: nickname,
+  const playerUids = Object.keys(players);
+  const playerData = playerUids.map((uid, index) => ({
+    uid: uid,
     isReady: false,
     ngWord: [shuffledWords[index % shuffledWords.length]],
     isAlive: true,

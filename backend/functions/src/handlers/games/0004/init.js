@@ -2,11 +2,12 @@ const {db} = require("../../../config/firebase");
 
 /**
  * 偏見プロフィールゲームのcurrentGameデータを生成する
- * @param {Array<string>} players - プレイヤーのニックネーム配列
+ * @param {Object} players - プレイヤー情報
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players) {
-  const gameData = await initializeGameData(players);
+  const playerUids = Object.keys(players);
+  const gameData = await initializeGameData(playerUids);
 
   return {
     gameStatus: "waiting",
@@ -25,12 +26,12 @@ async function createCurrentGame(players) {
 
 /**
  * ゲームデータを初期化する共通関数
- * @param {Array<string>} playerNicknames - プレイヤーのニックネーム配列
+ * @param {Array<string>} playerUids - プレイヤーのuidの配列
  * @param {Object} existingGameData - 既存のゲームデータ（継続時）
  * @param {boolean} isNewRound - 新しいラウンドかどうか（一巡後）
  * @return {Promise<Object>} 初期化されたゲームデータ
  */
-async function initializeGameData(playerNicknames, existingGameData = null, isNewRound = false) {
+async function initializeGameData(playerUids, existingGameData = null, isNewRound = false) {
   const assetsDoc = await db.collection("games").doc("0004")
       .collection("assets")
       .doc("data")
@@ -44,7 +45,7 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
   const allImages = assets.images || [];
   const allTopics = assets.topics || [];
 
-  if (allImages.length < 5 || allTopics.length < playerNicknames.length - 1) {
+  if (allImages.length < 5 || allTopics.length < playerUids.length - 1) {
     throw new Error("アセットが不足しています");
   }
 
@@ -52,13 +53,13 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
     const shuffledImages = shuffleArray(allImages);
     const currentImages = shuffledImages.slice(0, 5);
     const answerImageIndex = Math.floor(Math.random() * 5);
-    const randomIndex = Math.floor(Math.random() * playerNicknames.length);
-    const parentPlayer = playerNicknames[randomIndex];
+    const randomIndex = Math.floor(Math.random() * playerUids.length);
+    const parentPlayer = playerUids[randomIndex];
 
-    const players = playerNicknames.map((nickname) => ({
-      nickname: nickname,
+    const players = playerUids.map((uid) => ({
+      uid: uid,
       isReady: false,
-      isEverParent: nickname === parentPlayer,
+      isEverParent: uid === parentPlayer,
       point: 0,
     }));
 
@@ -66,9 +67,9 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
     const topics = {};
     let topicIndex = 0;
 
-    playerNicknames.forEach((nickname) => {
-      if (nickname !== parentPlayer) {
-        topics[nickname] = shuffledTopics[topicIndex++];
+    playerUids.forEach((uid) => {
+      if (uid !== parentPlayer) {
+        topics[uid] = shuffledTopics[topicIndex++];
       }
     });
 
@@ -84,13 +85,13 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
   }
 
   if (isNewRound) {
-    const randomIndex = Math.floor(Math.random() * playerNicknames.length);
-    const parentPlayer = playerNicknames[randomIndex];
+    const randomIndex = Math.floor(Math.random() * playerUids.length);
+    const parentPlayer = playerUids[randomIndex];
 
     const players = existingGameData.players.map((player) => ({
-      nickname: player.nickname,
+      uid: player.uid,
       isReady: false,
-      isEverParent: player.nickname === parentPlayer,
+      isEverParent: player.uid === parentPlayer,
       point: player.point || 0,
     }));
 
@@ -108,13 +109,13 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
 
     const answerImageIndex = Math.floor(Math.random() * 5);
     const topics = {};
-    const childPlayers = playerNicknames.filter((nickname) => nickname !== parentPlayer);
+    const childPlayers = playerUids.filter((uid) => uid !== parentPlayer);
     const unusedTopics = allTopics.filter((topic) => !usedTopics.includes(topic));
     const topicSource = unusedTopics.length >= childPlayers.length ? unusedTopics : allTopics;
     const shuffledTopics = shuffleArray(topicSource);
 
-    childPlayers.forEach((nickname, index) => {
-      topics[nickname] = shuffledTopics[index % shuffledTopics.length];
+    childPlayers.forEach((uid, index) => {
+      topics[uid] = shuffledTopics[index % shuffledTopics.length];
     });
 
     usedImages = [...usedImages, ...currentImages];
@@ -132,10 +133,10 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
   }
 
   const currentParentIndex = existingGameData.players.findIndex(
-      (player) => player.nickname === existingGameData.currentParent,
+      (player) => player.uid === existingGameData.currentParent,
   );
   const nextParentIndex = (currentParentIndex + 1) % existingGameData.players.length;
-  const nextParent = existingGameData.players[nextParentIndex].nickname;
+  const nextParent = existingGameData.players[nextParentIndex].uid;
   let usedImages = [...existingGameData.usedImages];
   let usedTopics = [...existingGameData.usedTopics];
   const unusedImages = allImages.filter((img) => !usedImages.includes(img));
@@ -150,13 +151,13 @@ async function initializeGameData(playerNicknames, existingGameData = null, isNe
 
   const answerImageIndex = Math.floor(Math.random() * 5);
   const topics = {};
-  const childPlayers = playerNicknames.filter((nickname) => nickname !== nextParent);
+  const childPlayers = playerUids.filter((uid) => uid !== nextParent);
   const unusedTopics = allTopics.filter((topic) => !usedTopics.includes(topic));
   const topicSource = unusedTopics.length >= childPlayers.length ? unusedTopics : allTopics;
   const shuffledTopics = shuffleArray(topicSource);
 
-  childPlayers.forEach((nickname, index) => {
-    topics[nickname] = shuffledTopics[index % shuffledTopics.length];
+  childPlayers.forEach((uid, index) => {
+    topics[uid] = shuffledTopics[index % shuffledTopics.length];
   });
 
   usedImages = [...usedImages, ...currentImages];
