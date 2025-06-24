@@ -58,10 +58,12 @@ async function setReadyHandler(req, res) {
 
       if (allReady) {
         updateData.gameStatus = getReadyTransitionStatus(gameId);
-        updateData.players = updatedPlayers.map((player) => ({
-          ...player,
-          isReady: false,
-        }));
+        updateData.players = Object.fromEntries(
+          Object.entries(updatedPlayers).map(([uid, player]) => [
+            uid,
+            {...player, isReady: false}
+          ])
+        );
       }
 
       transaction.update(currentGameRef, updateData);

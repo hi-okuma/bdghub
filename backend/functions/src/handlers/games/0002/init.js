@@ -21,17 +21,18 @@ async function createCurrentGame(players) {
   const randomIndex = Math.floor(Math.random() * playerUids.length);
   const firstPresenter = playerUids[randomIndex];
   const firstTopic = shuffledTopics[0];
-
-  const playerData = playerUids.map((uid) => ({
-    uid: uid,
-    isReady: false,
-    isEverPresenter: uid === firstPresenter,
-    point: 0,
-  }));
+  const playersData = {};
+  playerUids.forEach((uid) => {
+    playersData[uid] = {
+      isReady: false,
+      isEverPresenter: uid === firstPresenter,
+      point: 0,
+    };
+  });
 
   return {
     gameStatus: "waiting",
-    players: playerData,
+    players: playersData,
     currentPresenter: firstPresenter,
     currentTopic: firstTopic,
     usedTopic: [firstTopic],

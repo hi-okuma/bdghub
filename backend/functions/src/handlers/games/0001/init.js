@@ -18,17 +18,19 @@ async function createCurrentGame(players) {
   const ngWordsList = ngWordsDoc.data().words;
   const shuffledWords = shuffleArray(ngWordsList);
   const playerUids = Object.keys(players);
-  const playerData = playerUids.map((uid, index) => ({
-    uid: uid,
-    isReady: false,
-    ngWord: [shuffledWords[index % shuffledWords.length]],
-    isAlive: true,
-    point: 0,
-  }));
+  const playersData = {};
+  playerUids.forEach((uid, index) => {
+    playersData[uid] = {
+      isReady: false,
+      ngWord: [shuffledWords[index % shuffledWords.length]],
+      isAlive: true,
+      point: 0,
+    };
+  });
 
   return {
     gameStatus: "waiting",
-    players: playerData,
+    players: playersData,
   };
 }
 

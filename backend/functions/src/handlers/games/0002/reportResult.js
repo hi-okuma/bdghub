@@ -36,21 +36,20 @@ async function reportResult0002Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      let updatedPlayers = [...currentGameData.players];
+      const updatedPlayers = {...currentGameData.players};
       if (result === true) {
-        updatedPlayers = updatedPlayers.map((player) => {
-          if (player.uid === answererUid || player.uid === currentGameData.currentPresenter) {
-            return {...player, point: (player.point || 0) + 1};
-          }
-          return player;
-        });
+        if (updatedPlayers[answererUid]) {
+          updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
+        }
+        if (updatedPlayers[currentGameData.currentPresenter]) {
+          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
+        }
       }
 
-      const currentIndex = updatedPlayers.findIndex(
-          (player) => player.uid === currentGameData.currentPresenter,
-      );
-      const nextIndex = (currentIndex + 1) % updatedPlayers.length;
-      const nextPresenter = updatedPlayers[nextIndex].uid;
+      const playerUids = Object.keys(updatedPlayers);
+      const currentIndex = playerUids.findIndex((uid) => uid === currentGameData.currentPresenter);
+      const nextIndex = (currentIndex + 1) % playerUids.length;
+      const nextPresenter = playerUids[nextIndex];
       const isOneRoundCompleted = updatedPlayers[nextIndex].isEverPresenter;
 
       const topicsDoc = await transaction.get(
@@ -104,12 +103,14 @@ async function reportResult0002Handler(req, res) {
         }
 
         updateData = {
-          players: updatedPlayers.map((player) => {
-            if (player.uid === nextPresenter) {
-              return {...player, isEverPresenter: true};
-            }
-            return player;
-          }),
+          players: Object.fromEntries(
+            Object.entries(updatedPlayers).map(([uid, player]) => [
+              uid,
+              uid === nextPresenter
+                ? {...player, isEverPresenter: true}
+                : player
+            ])
+          ),
           currentPresenter: nextPresenter,
           currentTopic: nextTopic,
           usedTopic: [...currentGameData.usedTopic, nextTopic],

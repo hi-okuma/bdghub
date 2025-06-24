@@ -88,7 +88,7 @@ function createRoomData(nickname, uid) {
     players: {
       [uid]: {nickname: nickname},
     },
-    hostPlayer: nickname,
+    hostPlayer: uid,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };

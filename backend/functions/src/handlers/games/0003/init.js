@@ -22,17 +22,18 @@ async function createCurrentGame(players) {
   const playerUids = Object.keys(players);
   const randomPlayerIndex = Math.floor(Math.random() * playerUids.length);
   const firstQuestioner = playerUids[randomPlayerIndex];
-
-  const playerData = playerUids.map((uid) => ({
-    uid: uid,
-    isReady: false,
-    isEverQuestioner: uid === firstQuestioner,
-    point: 0,
-  }));
+  const playersData = {};
+  playerUids.forEach((uid) => {
+    playersData[uid] = {
+      isReady: false,
+      isEverQuestioner: uid === firstQuestioner,
+      point: 0,
+    };
+  });
 
   return {
     gameStatus: "waiting",
-    players: playerData,
+    players: playersData,
     questioner: firstQuestioner,
     question: firstQuestion,
     answer: firstAnswer,

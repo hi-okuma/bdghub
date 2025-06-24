@@ -55,13 +55,14 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     const answerImageIndex = Math.floor(Math.random() * 5);
     const randomIndex = Math.floor(Math.random() * playerUids.length);
     const parentPlayer = playerUids[randomIndex];
-
-    const players = playerUids.map((uid) => ({
-      uid: uid,
-      isReady: false,
-      isEverParent: uid === parentPlayer,
-      point: 0,
-    }));
+    const playersData = {};
+    playerUids.forEach((uid) => {
+      playersData[uid] = {
+        isReady: false,
+        isEverParent: uid === parentPlayer,
+        point: 0,
+      };
+    });
 
     const shuffledTopics = shuffleArray(allTopics);
     const topics = {};
@@ -74,7 +75,7 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     });
 
     return {
-      players: players,
+      players: playersData,
       currentParent: parentPlayer,
       currentImages: currentImages,
       answerImageIndex: answerImageIndex,

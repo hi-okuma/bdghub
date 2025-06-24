@@ -65,6 +65,7 @@ async function leaveRoomHandler(req, res) {
 /**
  * トランザクションを使用して部屋データを更新する
  * @param {object} roomRef - 部屋のドキュメント参照
+ * @param {object} uid - プレイヤーのUID
  * @return {Promise} トランザクション処理のPromise
  */
 async function updateRoomWithTransaction(roomRef, uid) {

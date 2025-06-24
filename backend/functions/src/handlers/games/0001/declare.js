@@ -36,30 +36,24 @@ async function declare0001Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.uid === uid) {
-          return {...player, isAlive: false};
-        }
-        return player;
-      });
-
-      const alivePlayersCount = updatedPlayers.filter((player) => player.isAlive).length;
+      const updatedPlayers = {...currentGameData.players};
+      updatedPlayers[uid] = {...updatedPlayers[uid], isAlive: false};
+      const alivePlayersCount = Object.values(updatedPlayers).filter((player) => player.isAlive).length;
 
       const updateData = {
         players: updatedPlayers,
       };
 
       if (alivePlayersCount === 1) {
-        const winner = updatedPlayers.find((player) => player.isAlive);
-        updateData.players = updatedPlayers.map((player) => {
-          if (player.uid === winner.uid) {
-            return {
-              ...player,
-              point: (player.point || 0) + 1,
-            };
-          }
-          return player;
-        });
+        const winnerUid = Object.entries(updatedPlayers).find(([uid, player]) => player.isAlive)[0];
+        updateData.players = Object.fromEntries(
+          Object.entries(updatedPlayers).map(([uid, player]) => [
+            uid,
+            uid === winnerUid
+              ? {...player, point: (player.point || 0) + 1}
+              : player
+          ])
+        );
 
         updateData.gameStatus = "waiting";
 
@@ -76,13 +70,17 @@ async function declare0001Handler(req, res) {
         const ngWordsList = ngWordsDoc.data().words;
         const shuffledWords = shuffleArray(ngWordsList);
 
-        updateData.players = updatedPlayers.map((player, index) => ({
-          uid: player.uid,
-          isReady: false,
-          ngWord: [shuffledWords[index % shuffledWords.length]],
-          isAlive: true,
-          point: player.point || 0,
-        }));
+        updateData.players = Object.fromEntries(
+          Object.keys(updatedPlayers).map((uid, index) => [
+            uid,
+            {
+              isReady: false,
+              ngWord: [shuffledWords[index % shuffledWords.length]],
+              isAlive: true,
+              point: updatedPlayers[uid].point || 0,
+            }
+          ])
+        );
       }
 
       transaction.update(currentGameRef, updateData);
