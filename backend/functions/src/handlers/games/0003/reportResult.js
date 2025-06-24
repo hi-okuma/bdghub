@@ -92,10 +92,11 @@ function updatePlayerPoints(players, result, answererUid) {
  * @return {Object} 次の出題者と一巡したかどうか
  */
 function determineNextQuestioner(players, currentQuestioner) {
-  const currentIndex = players.findIndex((player) => player.uid === currentQuestioner);
-  const nextIndex = (currentIndex + 1) % players.length;
-  const nextQuestioner = players[nextIndex].uid;
-  const isOneRoundCompleted = players[nextIndex].isEverQuestioner;
+  const playerUids = Object.keys(players);
+  const currentIndex = playerUids.findIndex(uid => uid === currentQuestioner);
+  const nextIndex = (currentIndex + 1) % playerUids.length;
+  const nextQuestioner = playerUids[nextIndex];
+  const isOneRoundCompleted = players[nextQuestioner].isEverQuestioner;
 
   return {nextQuestioner, isOneRoundCompleted};
 }
@@ -166,8 +167,9 @@ function createUpdateData(players, nextQuestioner, questionData, isOneRoundCompl
   const usedQuestionIndex = [...currentGameData.usedQuestionIndex, questionData.questionIndex.toString()];
 
   if (isOneRoundCompleted) {
-    const randomPlayerIndex = Math.floor(Math.random() * players.length);
-    const firstQuestioner = players[randomPlayerIndex].uid;
+    const playerUids = Object.keys(players);
+    const randomPlayerIndex = Math.floor(Math.random() * playerUids.length);
+    const firstQuestioner = playerUids[randomPlayerIndex];
 
     return {
       gameStatus: "waiting",
@@ -175,20 +177,27 @@ function createUpdateData(players, nextQuestioner, questionData, isOneRoundCompl
       question: questionData.question,
       answer: questionData.answer,
       usedQuestionIndex: usedQuestionIndex,
-      players: players.map((player) => ({
-        ...player,
-        isReady: false,
-        isEverQuestioner: player.uid === firstQuestioner,
-      })),
+      players: Object.fromEntries(
+        Object.entries(players).map(([uid, player]) => [
+          uid,
+          {
+            ...player,
+            isReady: false,
+            isEverQuestioner: uid === firstQuestioner,
+          }
+        ])
+      ),
     };
   } else {
     return {
-      players: players.map((player) => {
-        if (player.uid === nextQuestioner) {
-          return {...player, isEverQuestioner: true};
-        }
-        return player;
-      }),
+      players: Object.fromEntries(
+        Object.entries(players).map(([uid, player]) => [
+          uid,
+          uid === nextQuestioner
+            ? {...player, isEverQuestioner: true}
+            : player
+        ])
+      ),
       questioner: nextQuestioner,
       question: questionData.question,
       answer: questionData.answer,

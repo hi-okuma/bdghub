@@ -89,12 +89,16 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     const randomIndex = Math.floor(Math.random() * playerUids.length);
     const parentPlayer = playerUids[randomIndex];
 
-    const players = existingGameData.players.map((player) => ({
-      uid: player.uid,
-      isReady: false,
-      isEverParent: player.uid === parentPlayer,
-      point: player.point || 0,
-    }));
+    const players = Object.fromEntries(
+      Object.entries(existingGameData.players).map(([uid, player]) => [
+        uid,
+        {
+          isReady: false,
+          isEverParent: uid === parentPlayer,
+          point: player.point || 0,
+        }
+      ])
+    );
 
     let usedImages = [...existingGameData.usedImages];
     let usedTopics = [...existingGameData.usedTopics];
@@ -133,11 +137,12 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     };
   }
 
-  const currentParentIndex = existingGameData.players.findIndex(
-      (player) => player.uid === existingGameData.currentParent,
+  const playerUids = Object.keys(existingGameData.players);
+  const currentParentIndex = playerUids.findIndex(
+      uid => uid === existingGameData.currentParent
   );
-  const nextParentIndex = (currentParentIndex + 1) % existingGameData.players.length;
-  const nextParent = existingGameData.players[nextParentIndex].uid;
+  const nextParentIndex = (currentParentIndex + 1) % playerUids.length;
+  const nextParent = playerUids[nextParentIndex];
   let usedImages = [...existingGameData.usedImages];
   let usedTopics = [...existingGameData.usedTopics];
   const unusedImages = allImages.filter((img) => !usedImages.includes(img));

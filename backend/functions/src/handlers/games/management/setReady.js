@@ -48,7 +48,7 @@ async function setReadyHandler(req, res) {
         updatedPlayers[uid] = {...updatedPlayers[uid], isReady: true};
       }
 
-      const allReady = updatedPlayers.every((player) => player.isReady);
+      const allReady = Object.values(updatedPlayers).every((player) => player.isReady);
 
       const updateData = {
         players: updatedPlayers,

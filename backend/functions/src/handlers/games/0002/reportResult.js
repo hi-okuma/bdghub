@@ -66,7 +66,7 @@ async function reportResult0002Handler(req, res) {
 
       if (isOneRoundCompleted) {
         const unusedTopics = topicsList.filter(
-            (topic) => !currentGameData.usedTopic.includes(topic),
+          (topic) => !currentGameData.usedTopic.includes(topic),
         );
 
         let newTopic;
@@ -76,19 +76,25 @@ async function reportResult0002Handler(req, res) {
           newTopic = selectNewTopic(topicsList, currentGameData.currentTopic);
         }
 
-        const firstPresenterIndex = (currentIndex + 1) % updatedPlayers.length;
-        const firstPresenter = updatedPlayers[firstPresenterIndex].uid;
+        const playerUids = Object.keys(updatedPlayers);
+        const nextIndex = (currentIndex + 1) % playerUids.length;
+        const firstPresenter = playerUids[nextIndex];
 
         updateData = {
           gameStatus: "waiting",
           currentTopic: newTopic,
           usedTopic: [...currentGameData.usedTopic, newTopic],
           currentPresenter: firstPresenter,
-          players: updatedPlayers.map((player) => ({
-            ...player,
-            isReady: false,
-            isEverPresenter: player.uid === firstPresenter,
-          })),
+          players: Object.fromEntries(
+            Object.entries(updatedPlayers).map(([uid, player]) => [
+              uid,
+              {
+                ...player,
+                isReady: false,
+                isEverPresenter: uid === firstPresenter,
+              }
+            ])
+          ),
         };
       } else {
         const unusedTopics = topicsList.filter(

@@ -78,7 +78,7 @@ async function proceedToNext0004Handler(req, res) {
 
       updateData.players = updatedPlayers;
 
-      const allReady = updatedPlayers.every((player) => player.isReady);
+      const allReady = Object.values(updatedPlayers).every((player) => player.isReady);
 
       if (allReady) {
         await prepareNextTurn(transaction, currentGameRef, currentGameData, updatedPlayers);
@@ -151,12 +151,12 @@ async function proceedToNext0004Handler(req, res) {
  * @param {Array} updatedPlayers - 更新されたプレイヤーデータ
  */
 async function prepareNextTurn(transaction, currentGameRef, currentGameData, updatedPlayers) {
-  const currentParentIndex = updatedPlayers.findIndex(
-      (player) => player.uid === currentGameData.currentParent,
+  const playerUids = Object.keys(updatedPlayers);
+  const currentParentIndex = playerUids.findIndex(
+    uid => uid === currentGameData.currentParent
   );
-  const nextParentIndex = (currentParentIndex + 1) % updatedPlayers.length;
-  const isOneRoundCompleted = updatedPlayers[nextParentIndex].isEverParent;
-  const playerUids = updatedPlayers.map((player) => player.uid);
+  const nextParentIndex = (currentParentIndex + 1) % playerUids.length;
+  const isOneRoundCompleted = updatedPlayers[playerUids[nextParentIndex]].isEverParent;
 
   if (isOneRoundCompleted) {
     const gameDataForNewRound = {
@@ -192,11 +192,16 @@ async function prepareNextTurn(transaction, currentGameRef, currentGameData, upd
       bestHintPlayer: null,
       usedImages: nextTurnData.usedImages,
       usedTopics: nextTurnData.usedTopics,
-      players: updatedPlayers.map((player) => ({
-        ...player,
-        isReady: false,
-        isEverParent: player.isEverParent || player.uid === nextTurnData.currentParent,
-      })),
+      players: Object.fromEntries(
+        Object.entries(updatedPlayers).map(([uid, player]) => [
+          uid,
+          {
+            ...player,
+            isReady: false,
+            isEverParent: player.isEverParent || uid === nextTurnData.currentParent,
+          }
+        ])
+      ),
     });
   }
 }
