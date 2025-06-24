@@ -45,7 +45,7 @@ async function proceedToNext0004Handler(req, res) {
       }
 
       const updateData = {};
-      let updatedPlayers = [...currentGameData.players];
+      let updatedPlayers = {...currentGameData.players};
 
       if (isCorrect && isParent && bestHintPlayerUid) {
         if (bestHintPlayerUid === currentGameData.currentParent) {

@@ -43,12 +43,10 @@ async function setReadyHandler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.uid === uid) {
-          return {...player, isReady: true};
-        }
-        return player;
-      });
+      const updatedPlayers = {...currentGameData.players};
+      if (updatedPlayers[uid]) {
+        updatedPlayers[uid] = {...updatedPlayers[uid], isReady: true};
+      }
 
       const allReady = updatedPlayers.every((player) => player.isReady);
 

@@ -50,7 +50,7 @@ async function reportResult0002Handler(req, res) {
       const currentIndex = playerUids.findIndex((uid) => uid === currentGameData.currentPresenter);
       const nextIndex = (currentIndex + 1) % playerUids.length;
       const nextPresenter = playerUids[nextIndex];
-      const isOneRoundCompleted = updatedPlayers[nextIndex].isEverPresenter;
+      const isOneRoundCompleted = updatedPlayers[nextPresenter].isEverPresenter;
 
       const topicsDoc = await transaction.get(
           db.collection("games").doc("0002")

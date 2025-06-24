@@ -74,14 +74,15 @@ async function reportResult0003Handler(req, res) {
  * @return {Array} 更新されたプレイヤーデータ
  */
 function updatePlayerPoints(players, result, answererUid) {
-  if (!result) return [...players];
-
-  return players.map((player) => {
-    if (player.uid === answererUid) {
-      return {...player, point: (player.point || 0) + 1};
-    }
-    return player;
-  });
+  if (!result) return {...players};
+  const updatedPlayers = {...players};
+  if (updatedPlayers[answererUid]) {
+    updatedPlayers[answererUid] = {
+      ...updatedPlayers[answererUid], 
+      point: (updatedPlayers[answererUid].point || 0) + 1
+    };
+  }
+  return updatedPlayers;
 }
 
 /**
