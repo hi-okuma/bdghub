@@ -56,24 +56,28 @@ async function proceedToNext0004Handler(req, res) {
           throw new Error("PlayerDidNotSubmitHint");
         }
 
-        updatedPlayers = updatedPlayers.map((player) => {
-          if (player.uid === bestHintPlayerUid) {
-            return {...player, point: (player.point || 0) + 1};
-          }
-          if (player.uid === currentGameData.currentParent) {
-            return {...player, point: (player.point || 0) + 1, isReady: true};
-          }
-          return player;
-        });
+        updatedPlayers = Object.fromEntries(
+            Object.entries(updatedPlayers).map(([playerUid, player]) => {
+              if (playerUid === bestHintPlayerUid) {
+                return [playerUid, {...player, point: (player.point || 0) + 1}];
+              }
+              if (playerUid === currentGameData.currentParent) {
+                return [playerUid, {...player, point: (player.point || 0) + 1, isReady: true}];
+              }
+              return [playerUid, player];
+            }),
+        );
 
         updateData.bestHintPlayer = bestHintPlayerUid;
       } else {
-        updatedPlayers = updatedPlayers.map((player) => {
-          if (player.uid === uid) {
-            return {...player, isReady: true};
-          }
-          return player;
-        });
+        updatedPlayers = Object.fromEntries(
+            Object.entries(updatedPlayers).map(([playerUid, player]) => {
+              if (playerUid === uid) {
+                return [playerUid, {...player, isReady: true}];
+              }
+              return [playerUid, player];
+            }),
+        );
       }
 
       updateData.players = updatedPlayers;

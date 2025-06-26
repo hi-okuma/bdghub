@@ -65,11 +65,11 @@ async function submitHint0004Handler(req, res) {
 
       const updatedHints = {...currentGameData.hints, [uid]: hint};
 
-      const childPlayers = currentGameData.players.filter(
-          (player) => player.uid !== currentGameData.currentParent,
+      const childPlayers = Object.entries(currentGameData.players).filter(
+          ([uid, player]) => uid !== currentGameData.currentParent,
       );
       const allChildrenSubmitted = childPlayers.every(
-          (player) => updatedHints[player.uid],
+          ([uid, player]) => updatedHints[uid],
       );
 
       const updateData = {
