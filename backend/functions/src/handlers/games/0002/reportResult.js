@@ -80,7 +80,6 @@ async function reportResult0002Handler(req, res) {
         const nextIndex = (currentIndex + 1) % playerUids.length;
         const firstPresenter = playerUids[nextIndex];
 
-        // declare0001と同様に明示的にプロパティを指定
         const finalPlayers = Object.fromEntries(
             Object.keys(updatedPlayers).map((uid) => [
               uid,
