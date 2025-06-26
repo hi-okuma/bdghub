@@ -153,7 +153,7 @@ async function proceedToNext0004Handler(req, res) {
 async function prepareNextTurn(transaction, currentGameRef, currentGameData, updatedPlayers) {
   const playerUids = Object.keys(updatedPlayers);
   const currentParentIndex = playerUids.findIndex(
-    uid => uid === currentGameData.currentParent
+      (uid) => uid === currentGameData.currentParent,
   );
   const nextParentIndex = (currentParentIndex + 1) % playerUids.length;
   const isOneRoundCompleted = updatedPlayers[playerUids[nextParentIndex]].isEverParent;
@@ -193,14 +193,14 @@ async function prepareNextTurn(transaction, currentGameRef, currentGameData, upd
       usedImages: nextTurnData.usedImages,
       usedTopics: nextTurnData.usedTopics,
       players: Object.fromEntries(
-        Object.entries(updatedPlayers).map(([uid, player]) => [
-          uid,
-          {
-            ...player,
-            isReady: false,
-            isEverParent: player.isEverParent || uid === nextTurnData.currentParent,
-          }
-        ])
+          Object.entries(updatedPlayers).map(([uid, player]) => [
+            uid,
+            {
+              ...player,
+              isReady: false,
+              isEverParent: player.isEverParent || uid === nextTurnData.currentParent,
+            },
+          ]),
       ),
     });
   }

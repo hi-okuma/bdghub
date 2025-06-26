@@ -78,8 +78,8 @@ function updatePlayerPoints(players, result, answererUid) {
   const updatedPlayers = {...players};
   if (updatedPlayers[answererUid]) {
     updatedPlayers[answererUid] = {
-      ...updatedPlayers[answererUid], 
-      point: (updatedPlayers[answererUid].point || 0) + 1
+      ...updatedPlayers[answererUid],
+      point: (updatedPlayers[answererUid].point || 0) + 1,
     };
   }
   return updatedPlayers;
@@ -93,7 +93,7 @@ function updatePlayerPoints(players, result, answererUid) {
  */
 function determineNextQuestioner(players, currentQuestioner) {
   const playerUids = Object.keys(players);
-  const currentIndex = playerUids.findIndex(uid => uid === currentQuestioner);
+  const currentIndex = playerUids.findIndex((uid) => uid === currentQuestioner);
   const nextIndex = (currentIndex + 1) % playerUids.length;
   const nextQuestioner = playerUids[nextIndex];
   const isOneRoundCompleted = players[nextQuestioner].isEverQuestioner;
@@ -178,25 +178,23 @@ function createUpdateData(players, nextQuestioner, questionData, isOneRoundCompl
       answer: questionData.answer,
       usedQuestionIndex: usedQuestionIndex,
       players: Object.fromEntries(
-        Object.entries(players).map(([uid, player]) => [
-          uid,
-          {
-            ...player,
-            isReady: false,
-            isEverQuestioner: uid === firstQuestioner,
-          }
-        ])
+          Object.entries(players).map(([uid, player]) => [
+            uid,
+            {
+              ...player,
+              isReady: false,
+              isEverQuestioner: uid === firstQuestioner,
+            },
+          ]),
       ),
     };
   } else {
     return {
       players: Object.fromEntries(
-        Object.entries(players).map(([uid, player]) => [
-          uid,
-          uid === nextQuestioner
-            ? {...player, isEverQuestioner: true}
-            : player
-        ])
+          Object.entries(players).map(([uid, player]) => [
+            uid,
+            uid === nextQuestioner ? {...player, isEverQuestioner: true} : player,
+          ]),
       ),
       questioner: nextQuestioner,
       question: questionData.question,

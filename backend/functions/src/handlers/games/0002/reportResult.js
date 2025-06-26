@@ -66,7 +66,7 @@ async function reportResult0002Handler(req, res) {
 
       if (isOneRoundCompleted) {
         const unusedTopics = topicsList.filter(
-          (topic) => !currentGameData.usedTopic.includes(topic),
+            (topic) => !currentGameData.usedTopic.includes(topic),
         );
 
         let newTopic;
@@ -80,21 +80,24 @@ async function reportResult0002Handler(req, res) {
         const nextIndex = (currentIndex + 1) % playerUids.length;
         const firstPresenter = playerUids[nextIndex];
 
+        // declare0001と同様に明示的にプロパティを指定
+        const finalPlayers = Object.fromEntries(
+            Object.keys(updatedPlayers).map((uid) => [
+              uid,
+              {
+                isReady: false,
+                isEverPresenter: uid === firstPresenter,
+                point: updatedPlayers[uid].point || 0,
+              },
+            ]),
+        );
+
         updateData = {
           gameStatus: "waiting",
           currentTopic: newTopic,
           usedTopic: [...currentGameData.usedTopic, newTopic],
           currentPresenter: firstPresenter,
-          players: Object.fromEntries(
-            Object.entries(updatedPlayers).map(([uid, player]) => [
-              uid,
-              {
-                ...player,
-                isReady: false,
-                isEverPresenter: uid === firstPresenter,
-              }
-            ])
-          ),
+          players: finalPlayers,
         };
       } else {
         const unusedTopics = topicsList.filter(
@@ -110,12 +113,10 @@ async function reportResult0002Handler(req, res) {
 
         updateData = {
           players: Object.fromEntries(
-            Object.entries(updatedPlayers).map(([uid, player]) => [
-              uid,
-              uid === nextPresenter
-                ? {...player, isEverPresenter: true}
-                : player
-            ])
+              Object.entries(updatedPlayers).map(([uid, player]) => [
+                uid,
+                uid === nextPresenter ? {...player, isEverPresenter: true} : player,
+              ]),
           ),
           currentPresenter: nextPresenter,
           currentTopic: nextTopic,

@@ -90,14 +90,14 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     const parentPlayer = playerUids[randomIndex];
 
     const players = Object.fromEntries(
-      Object.entries(existingGameData.players).map(([uid, player]) => [
-        uid,
-        {
-          isReady: false,
-          isEverParent: uid === parentPlayer,
-          point: player.point || 0,
-        }
-      ])
+        Object.entries(existingGameData.players).map(([uid, player]) => [
+          uid,
+          {
+            isReady: false,
+            isEverParent: uid === parentPlayer,
+            point: player.point || 0,
+          },
+        ]),
     );
 
     let usedImages = [...existingGameData.usedImages];
@@ -137,9 +137,8 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     };
   }
 
-  const playerUids = Object.keys(existingGameData.players);
   const currentParentIndex = playerUids.findIndex(
-      uid => uid === existingGameData.currentParent
+      (uid) => uid === existingGameData.currentParent,
   );
   const nextParentIndex = (currentParentIndex + 1) % playerUids.length;
   const nextParent = playerUids[nextParentIndex];

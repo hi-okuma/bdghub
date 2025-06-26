@@ -45,14 +45,18 @@ async function declare0001Handler(req, res) {
       };
 
       if (alivePlayersCount === 1) {
-        const winnerUid = Object.entries(updatedPlayers).find(([uid, player]) => player.isAlive)[0];
-        updateData.players = Object.fromEntries(
-          Object.entries(updatedPlayers).map(([uid, player]) => [
-            uid,
-            uid === winnerUid
-              ? {...player, point: (player.point || 0) + 1}
-              : player
-          ])
+        const winnerEntry = Object.entries(updatedPlayers).find(([uid, player]) => player.isAlive);
+
+        if (!winnerEntry) {
+          throw new Error("勝者が見つかりません");
+        }
+
+        const winnerUid = winnerEntry[0];
+        const playersWithUpdatedPoints = Object.fromEntries(
+            Object.entries(updatedPlayers).map(([uid, player]) => [
+              uid,
+              uid === winnerUid ? {...player, point: (player.point || 0) + 1} : {...player, point: player.point || 0},
+            ]),
         );
 
         updateData.gameStatus = "waiting";
@@ -70,17 +74,19 @@ async function declare0001Handler(req, res) {
         const ngWordsList = ngWordsDoc.data().words;
         const shuffledWords = shuffleArray(ngWordsList);
 
-        updateData.players = Object.fromEntries(
-          Object.keys(updatedPlayers).map((uid, index) => [
-            uid,
-            {
-              isReady: false,
-              ngWord: [shuffledWords[index % shuffledWords.length]],
-              isAlive: true,
-              point: updatedPlayers[uid].point || 0,
-            }
-          ])
+        const finalPlayers = Object.fromEntries(
+            Object.keys(playersWithUpdatedPoints).map((uid, index) => [
+              uid,
+              {
+                isReady: false,
+                ngWord: [shuffledWords[index % shuffledWords.length]],
+                isAlive: true,
+                point: playersWithUpdatedPoints[uid].point || 0,
+              },
+            ]),
         );
+
+        updateData.players = finalPlayers;
       }
 
       transaction.update(currentGameRef, updateData);
