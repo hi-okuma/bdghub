@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function reportResult0002Handler(req, res) {
-  const {roomId, result, answerer} = req.body;
+  const {roomId, result, answererUid} = req.body;
 
-  if (!roomId || result === undefined || (result === true && !answerer)) {
+  if (!roomId || result === undefined || (result === true && !answererUid)) {
     return sendError(
         res,
         "InvalidArgument",
@@ -36,22 +36,21 @@ async function reportResult0002Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      let updatedPlayers = [...currentGameData.players];
+      const updatedPlayers = {...currentGameData.players};
       if (result === true) {
-        updatedPlayers = updatedPlayers.map((player) => {
-          if (player.nickname === answerer || player.nickname === currentGameData.currentPresenter) {
-            return {...player, point: (player.point || 0) + 1};
-          }
-          return player;
-        });
+        if (updatedPlayers[answererUid]) {
+          updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
+        }
+        if (updatedPlayers[currentGameData.currentPresenter]) {
+          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
+        }
       }
 
-      const currentIndex = updatedPlayers.findIndex(
-          (player) => player.nickname === currentGameData.currentPresenter,
-      );
-      const nextIndex = (currentIndex + 1) % updatedPlayers.length;
-      const nextPresenter = updatedPlayers[nextIndex].nickname;
-      const isOneRoundCompleted = updatedPlayers[nextIndex].isEverPresenter;
+      const playerUids = Object.keys(updatedPlayers);
+      const currentIndex = playerUids.findIndex((uid) => uid === currentGameData.currentPresenter);
+      const nextIndex = (currentIndex + 1) % playerUids.length;
+      const nextPresenter = playerUids[nextIndex];
+      const isOneRoundCompleted = updatedPlayers[nextPresenter].isEverPresenter;
 
       const topicsDoc = await transaction.get(
           db.collection("games").doc("0002")
@@ -77,19 +76,27 @@ async function reportResult0002Handler(req, res) {
           newTopic = selectNewTopic(topicsList, currentGameData.currentTopic);
         }
 
-        const firstPresenterIndex = (currentIndex + 1) % updatedPlayers.length;
-        const firstPresenter = updatedPlayers[firstPresenterIndex].nickname;
+        const playerUids = Object.keys(updatedPlayers);
+        const nextIndex = (currentIndex + 1) % playerUids.length;
+        const firstPresenter = playerUids[nextIndex];
+
+        const finalPlayers = Object.fromEntries(
+            Object.keys(updatedPlayers).map((uid) => [
+              uid,
+              {
+                isReady: false,
+                isEverPresenter: uid === firstPresenter,
+                point: updatedPlayers[uid].point || 0,
+              },
+            ]),
+        );
 
         updateData = {
           gameStatus: "waiting",
           currentTopic: newTopic,
           usedTopic: [...currentGameData.usedTopic, newTopic],
           currentPresenter: firstPresenter,
-          players: updatedPlayers.map((player) => ({
-            ...player,
-            isReady: false,
-            isEverPresenter: player.nickname === firstPresenter,
-          })),
+          players: finalPlayers,
         };
       } else {
         const unusedTopics = topicsList.filter(
@@ -104,12 +111,12 @@ async function reportResult0002Handler(req, res) {
         }
 
         updateData = {
-          players: updatedPlayers.map((player) => {
-            if (player.nickname === nextPresenter) {
-              return {...player, isEverPresenter: true};
-            }
-            return player;
-          }),
+          players: Object.fromEntries(
+              Object.entries(updatedPlayers).map(([uid, player]) => [
+                uid,
+                uid === nextPresenter ? {...player, isEverPresenter: true} : player,
+              ]),
+          ),
           currentPresenter: nextPresenter,
           currentTopic: nextTopic,
           usedTopic: [...currentGameData.usedTopic, nextTopic],
@@ -125,7 +132,7 @@ async function reportResult0002Handler(req, res) {
     logger.error(`結果報告エラー: ${error.message}`, {
       roomId,
       result,
-      answerer,
+      answererUid,
       error: error.stack,
     });
 

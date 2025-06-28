@@ -10,13 +10,13 @@ const {generateRoomId} = require("../../utils/idGenerator");
  * @param {object} res - レスポンスオブジェクト
  */
 async function createRoomHandler(req, res) {
-  const {nickname} = req.body;
+  const {nickname, uid} = req.body;
 
-  if (!nickname) {
+  if (!nickname || !uid) {
     return sendError(
         res,
         "InvalidArgument",
-        "部屋作成にはニックネームが必要です。",
+        "部屋作成に失敗しました。",
         400,
         {body: req.body},
     );
@@ -33,10 +33,10 @@ async function createRoomHandler(req, res) {
       );
     }
 
-    const roomData = createRoomData(nickname);
+    const roomData = createRoomData(nickname, uid);
 
     await db.collection("rooms").doc(roomId).set(roomData);
-    logger.info(`部屋作成成功: ${roomId}`, {nickname});
+    logger.info(`部屋作成成功: ${roomId}`, {nickname, uid});
 
     return sendSuccess(res, {
       roomId: roomId,
@@ -79,13 +79,16 @@ async function generateUniqueRoomId() {
 /**
  * 部屋データオブジェクトを作成する
  * @param {string} nickname - プレイヤーのニックネーム
+ * @param {string} uid - プレイヤーのUID
  * @return {object} 作成された部屋データオブジェクト
  */
-function createRoomData(nickname) {
+function createRoomData(nickname, uid) {
   return {
     status: "accepting",
-    players: [nickname],
-    hostPlayer: nickname,
+    players: {
+      [uid]: {nickname: nickname},
+    },
+    hostPlayer: uid,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };

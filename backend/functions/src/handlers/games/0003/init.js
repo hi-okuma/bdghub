@@ -2,11 +2,10 @@ const {db} = require("../../../config/firebase");
 
 /**
  * 水平思考ゲームのcurrentGameデータを生成する
- * @param {Array<string>} players - プレイヤーのニックネーム配列
+ * @param {Object} players - プレイヤー情報
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players) {
-  // puzzlesをドキュメントIDとして使用
   const questionsDoc = await db.collection("games").doc("0003")
       .collection("assets")
       .doc("puzzles")
@@ -20,19 +19,21 @@ async function createCurrentGame(players) {
   const randomIndex = Math.floor(Math.random() * questionsList.length);
   const firstQuestion = questionsList[randomIndex].question;
   const firstAnswer = questionsList[randomIndex].answer;
-  const randomPlayerIndex = Math.floor(Math.random() * players.length);
-  const firstQuestioner = players[randomPlayerIndex];
-
-  const playerData = players.map((nickname) => ({
-    nickname: nickname,
-    isReady: false,
-    isEverQuestioner: nickname === firstQuestioner,
-    point: 0,
-  }));
+  const playerUids = Object.keys(players);
+  const randomPlayerIndex = Math.floor(Math.random() * playerUids.length);
+  const firstQuestioner = playerUids[randomPlayerIndex];
+  const playersData = {};
+  playerUids.forEach((uid) => {
+    playersData[uid] = {
+      isReady: false,
+      isEverQuestioner: uid === firstQuestioner,
+      point: 0,
+    };
+  });
 
   return {
     gameStatus: "waiting",
-    players: playerData,
+    players: playersData,
     questioner: firstQuestioner,
     question: firstQuestion,
     answer: firstAnswer,

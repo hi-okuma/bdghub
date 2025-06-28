@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ボドゲハブ(仮) : エンハンス</title>
+        <link rel="stylesheet" href="styles/site.css" type="text/css" />
+        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+
+    <body class="theme-default aui-theme-default">
+        <div id="page">
+            <div id="main" class="aui-page-panel">
+                <div id="main-header">
+                    <div id="breadcrumb-section">
+                        <ol id="breadcrumbs">
+                            <li class="first">
+                                <span><a href="index.html">ボドゲハブ(仮)</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59408651.html">ボードゲームハブ(仮) Home</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506689.html">1.開発</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506796.html">0000.本体</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59605011.html">0000.設計</a></span>
+                            </li>
+                                                </ol>
+                    </div>
+                    <h1 id="title-heading" class="pagetitle">
+                                                <span id="title-text">
+                            ボドゲハブ(仮) : エンハンス
+                        </span>
+                    </h1>
+                </div>
+
+                <div id="content" class="view">
+                    <div class="page-metadata">
+                            
+        
+    
+        
+    
+        
+        
+            Created by <span class='author'> 大熊浩也</span>, last modified on 6月 28, 2025
+                        </div>
+                    <div id="main-content" class="wiki-content group">
+                    <p>
+
+    
+
+            
+
+
+
+
+    <span class="confluence-jim-macro jira-issue" data-jira-key="BODOGE-128" >
+                <a href="https://hiokumatech.atlassian.net/browse/BODOGE-128" class="jira-issue-key"><img class="icon" src="https://hiokumatech.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10318?size=medium" />BODOGE-128</a>
+                    -
+            <span class="summary">【セキュリティ】参加している部屋以外の情報を取得できないようにする</span>
+                                                            <span class="aui-lozenge aui-lozenge-subtle aui-lozenge-complete jira-macro-single-issue-export-pdf">To Do</span>
+            </span>
+ </p><ul><li><p>目的</p><ul><li><p>MVPでは、ユーザは参加している部屋の内部でのみ管理されるが、以下のセキュリティ要件・UX要件を満たす必要がある</p><ul><li><p>参加していない部屋の情報はアクセス不可<br/>→ 不正なアクセスや改ざんを防止</p></li><li><p>リロードやアプリ切り替え時でも部屋やゲームの状態を維持</p></li></ul></li></ul></li><li><p>採用方式</p><ul><li><p>Firebase匿名認証</p></li><li><p>Firestoreのセキュリティルール（実際のルールはFirebaseコンソールを参照）</p></li></ul></li><li><p>認証フロー</p></li><li><span class="confluence-embedded-file-wrapper image-center-wrapper confluence-embedded-manual-size"><img class="confluence-embedded-image image-center" alt="image-20250628-093455.png" width="659" loading="lazy" src="attachments/83886083/92930051.png?width=659" data-image-src="attachments/83886083/92930051.png" data-height="811" data-width="363" data-unresolved-comment-count="0" data-linked-resource-id="92930051" data-linked-resource-version="1" data-linked-resource-type="attachment" data-linked-resource-default-alias="image-20250628-093455.png" data-base-url="https://hiokumatech.atlassian.net/wiki" data-linked-resource-content-type="image/png" data-linked-resource-container-id="83886083" data-linked-resource-container-version="15" data-media-id="dad2202b-9015-4c3c-ac30-f7c950756473" data-media-type="file"></span></li><li><p>課題</p><ul><li><p>利用されていない匿名ユーザのクリーンアップ</p><ul><li><p><a class="external-link" href="https://firebase.google.com/docs/auth?hl=ja&amp;_gl=1*1u6e1sc*_up*MQ..*_ga*Mzg2NjIxNjQxLjE3NDk5NjUxMzE.*_ga_CW55HF8NVT*czE3NDk5NjUxMzEkbzEkZzAkdDE3NDk5NjY1MzUkajYwJGwwJGgw#identity-platform" rel="nofollow">アップグレードすると、30 日以上経過した匿名アカウントを自動で削除するオプションを使用できる</a></p></li><li><p>自前でスクリプトを用意すれば良さそう</p></li><li><p>しかし、ユーザのメタデータには、最後にサインインした日時程度しか記録されていない</p></li><li><p><strong>一旦、roomドキュメントを削除するタイミングでuidも削除する方針</strong></p></li></ul></li></ul></li><li><p>参考</p><ul><li><p>Firebase Auth</p><ul><li><p><a class="external-link" href="https://firebase.google.com/docs/auth/flutter/start?hl=ja&amp;_gl=1*14mrjn4*_up*MQ..*_ga*Mzg2NjIxNjQxLjE3NDk5NjUxMzE.*_ga_CW55HF8NVT*czE3NDk5NjUxMzEkbzEkZzAkdDE3NDk5NjUxMzEkajYwJGwwJGgw" rel="nofollow">スタートガイド</a></p><ul><li><p><a class="external-link" href="https://firebase.google.com/docs/auth/web/auth-state-persistence?hl=ja" rel="nofollow">認証の永続性</a></p><ul><li><p><a class="external-link" href="https://firebase.google.com/docs/auth/flutter/start?hl=ja&amp;_gl=1*14mrjn4*_up*MQ..*_ga*Mzg2NjIxNjQxLjE3NDk5NjUxMzE.*_ga_CW55HF8NVT*czE3NDk5NjUxMzEkbzEkZzAkdDE3NDk5NjUxMzEkajYwJGwwJGgw#persisting_authentication_state" rel="nofollow">アプリの再起動やページの再読み込み後もユーザーの認証状態を維持する機能がデフォルトでサポートされている。ウェブ プラットフォームの場合、ユーザーの認証状態は IndexedDB に保存される。</a></p></li><li><p>デフォルトは ”firebase.auth.Auth.Persistence.LOCAL”</p><ul><li><p><code>ブラウザ ウィンドウを閉じたり React Native でアクティビティが破棄されたりした場合でも、状態が維持されることを示します。この状態をクリアするには、明示的なログアウトが必要です。Firebase Auth のウェブ セッションは単一のホストを生成元とするため、単一のドメインでのみ永続化されることに注意してください。</code></p></li></ul></li></ul></li></ul></li><li><p><a class="external-link" href="https://firebase.google.com/docs/auth/limits?hl=ja&amp;_gl=1*1fmgriv*_up*MQ..*_ga*Mzg2NjIxNjQxLjE3NDk5NjUxMzE.*_ga_CW55HF8NVT*czE3NDk5NjUxMzEkbzEkZzAkdDE3NDk5NjY1MzUkajYwJGwwJGgw" rel="nofollow">使用制限</a></p></li></ul></li></ul></li></ul><p />
+                    </div>
+
+                                        <div class="pageSection group">
+                        <div class="pageSectionHeader">
+                            <h2 id="attachments" class="pageSectionTitle">Attachments:</h2>
+                        </div>
+
+                        <div class="greybox" align="left">
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/83886083/86933557.png">image-20250615-151808.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/83886083/89489409.png">image-20250621-063443.png</a> (image/png)
+                                <br/>
+                                                            <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/>
+                                <a href="attachments/83886083/92930051.png">image-20250628-093455.png</a> (image/png)
+                                <br/>
+                                                    </div>
+                    </div>
+                    
+                                                      
+                </div>             </div> 
+            <div id="footer" role="contentinfo">
+                <section class="footer-body">
+                    <p>Document generated by Confluence on 6月 28, 2025 18:37</p>
+                    <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
+                </section>
+            </div>
+        </div>     </body>
+</html>

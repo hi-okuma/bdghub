@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function determineAnswer0004Handler(req, res) {
-  const {roomId, nickname, imageIndex} = req.body;
+  const {roomId, uid, imageIndex} = req.body;
 
-  if (!roomId || !nickname || imageIndex === undefined || imageIndex < 0 || imageIndex > 4) {
+  if (!roomId || !uid || imageIndex === undefined || imageIndex < 0 || imageIndex > 4) {
     return sendError(
         res,
         "InvalidArgument",
@@ -36,7 +36,7 @@ async function determineAnswer0004Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      if (nickname !== currentGameData.currentParent) {
+      if (uid !== currentGameData.currentParent) {
         throw new Error("OnlyParentCandetermineAnswer");
       }
 
@@ -46,12 +46,12 @@ async function determineAnswer0004Handler(req, res) {
       });
     });
 
-    logger.info(`画像選択成功: roomId=${roomId}, nickname=${nickname}, imageIndex=${imageIndex}`);
+    logger.info(`画像選択成功: roomId=${roomId}, uid=${uid}, imageIndex=${imageIndex}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`画像選択エラー: ${error.message}`, {
       roomId,
-      nickname,
+      uid,
       imageIndex,
       error: error.stack,
     });
