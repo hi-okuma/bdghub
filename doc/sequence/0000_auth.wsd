@@ -7,35 +7,56 @@ participant Firestore
 
 == アプリケーション起動時 / リロード時 ==
 App -> Firestore: メンテ状態確認（認証不要）
-Firestore -> Firestore: serviceConfig/globalを読み取り
 App <-- Firestore: メンテナンス情報
+
 alt メンテナンス中の場合
     App -> App: メンテナンス画面表示
     note right: 以降の処理は行わない
 else 通常時
     App -> FirebaseAuth: 認証状態確認
-        alt 認証済み（匿名ユーザー存在）
-        App <-- FirebaseAuth: 認証トークン（uid）
-        App -> App: localStorageからroom_idを取得
-        alt room_idが存在する場合
-            App -> Firestore: 部屋情報取得リクエスト（room_id）
-            Firestore -> Firestore: 認証トークン検証
-            alt 指定した部屋に自分のuidが含まれる場合
-                App <-- Firestore: 部屋情報
-                App -> App: ゲーム画面を復元
-            else 指定した部屋に自分のuidが含まれない、または指定した部屋が存在しない場合
-                App <-- Firestore: エラー
-                App -> App: localStorageをクリア
-                App -> App: TOP画面表示
+    alt 認証済み
+        App <-- FirebaseAuth: 認証トークン(uid)
+    else 未認証
+        App <-- FirebaseAuth: null返却
+        App -> FirebaseAuth: signInAnonymously()コール
+        App <-- FirebaseAuth: 認証トークン(uid)
+    end
+    alt 参加用URLからアクセスしてきた場合
+        App -> App: URLからroomId取得
+        alt localStorageにroomIdが存在する場合
+            App -> App: localStorageからroomId取得
+            alt  URL/localStorageのroomIdが異なる場合
+                App -> APIgateway_Functions: 部屋退出
+                note right: 詳細は別シーケンス参照
+                App -> App: localStorageのroomId削除
+                App -> App: 部屋参加ダイアログ表示
+            else URL/localStorageのroomIdが同じ場合
+                App -> Firestore: 部屋情報取得リクエスト
+                alt 参加済み
+                    App <-- Firestore: 部屋情報
+                    App -> App: ゲーム画面復元
+                else 部屋が削除されている場合などの準正常系/異常系
+                    App <-- Firestore: エラー
+                    App -> App: localStorageクリア & TOP画面表示
+                end
             end
-        else room_idが存在しない場合
+        else 存在しない場合
+            App -> App: 部屋参加ダイアログ表示
+        end
+    else 通常起動の場合
+        alt localStorageにroomIdが存在する場合
+            App -> App: localStorageからroomId取得
+            App -> Firestore: 部屋情報取得リクエスト
+            alt 参加済み
+                App <-- Firestore: 部屋情報
+                App -> App: ゲーム画面復元
+            else 部屋が削除されている場合などの準正常系/異常系
+                App <-- Firestore: エラー
+                App -> App: localStorageクリア & TOP画面表示
+            end
+        else room_idがない場合
             App -> App: TOP画面表示
         end
-    else 未認証の場合
-        App -> FirebaseAuth: 匿名認証
-        FirebaseAuth -> FirebaseAuth: 匿名ユーザー作成
-        App <-- FirebaseAuth: 認証トークン（uid）
-        App -> App: TOP画面表示
     end
 end
 
