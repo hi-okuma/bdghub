@@ -5,7 +5,8 @@ import '/components/custom_widgets.dart';
 import '/models/user_state.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
-import '/providers/game_provider.dart'; // 追加
+import '/providers/game_provider.dart';
+import '/providers/game_state_provider.dart';
 
 class GameTitlePage extends ConsumerStatefulWidget {
   const GameTitlePage({Key? key}) : super(key: key);
@@ -76,6 +77,27 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
     final isHost = userState.isHost;
     final nickname = userState.nickname ?? '';
     final roomId = userState.roomId ?? '';
+
+    // ★ ゲーム状態監視の継続 ★
+    if (roomId.isNotEmpty) {
+      final gameStateAsync = ref.watch(roomGameStateProvider(roomId));
+
+      ref.listen(roomGameStateProvider(roomId), (previous, next) {
+        next.whenOrNull(
+          data: (status) {
+            // waiting状態になったらゲーム選択画面に戻る
+            if (status == GameStatus.waiting) {
+              print('🎮 ゲーム終了検知：ゲーム選択画面に戻ります');
+            }
+          },
+          error: (error, stackTrace) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('接続エラー: $error')),
+            );
+          },
+        );
+      });
+    }
 
     // ★ DB設計に基づくゲーム情報を動的に取得 ★
     final gameTitle = currentGame.title ?? 'NGワードゲーム';
@@ -261,7 +283,6 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
     );
   }
 
-  // DB設計に基づく準備完了状態の更新
   Future<void> _updateReadyStatus() async {
     final userState = ref.read(userProvider);
     final roomId = userState.roomId;
@@ -270,12 +291,16 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
     if (roomId == null || nickname == null) return;
 
     try {
-      // DB設計: rooms/{roomId}/currentGame/players 配列内の該当プレイヤーのisReadyをtrueに更新
-      // 実装はAPI経由で行う想定
+      // ★ DB設計に基づく準備完了状態の更新 ★
+      // API経由でrooms/{roomId}/currentGame/players内のisReadyを更新
       print('準備完了状態を更新: $nickname in room $roomId');
 
-      // TODO: API呼び出しを追加
+      // TODO: APIエンドポイントの実装
       // await ApiService.updatePlayerReady(roomId, nickname, true);
+
+      // 全員の準備が完了すると、Cloud Functionsにより
+      // gameStatus が 'waiting' → 'playing' に自動更新され、
+      // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
       print('準備完了状態の更新エラー: $e');
     }
@@ -310,9 +335,19 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
   }
 
   void _exitGame() {
-    // ★ ゲーム終了時にRiverpodの状態もクリア ★
+    // ★ ゲーム終了時の状態クリア ★
+    final userState = ref.read(userProvider);
+    if (userState.roomId != null) {
+      // ゲーム状態監視を停止
+      ref
+          .read(roomGameStateProvider(userState.roomId!).notifier)
+          .stopMonitoring();
+    }
+
+    // プロバイダーの状態をクリア
     ref.read(currentGameProvider.notifier).clearGame();
     ref.read(userProvider.notifier).leaveRoom();
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('ゲームを終了しました')),
     );

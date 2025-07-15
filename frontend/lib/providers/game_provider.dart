@@ -117,6 +117,35 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
     }
   }
 
+  // ★ シンプル：currentGameサブドキュメントから取得 ★
+  Future<void> loadFromCurrentGame(String roomId, String gameId) async {
+    final currentGameDoc = await FirebaseFirestore.instance
+        .collection('rooms')
+        .doc(roomId)
+        .collection('currentGame')
+        .doc(gameId)
+        .get();
+
+    if (!currentGameDoc.exists) {
+      throw Exception('currentGame document not found: $gameId');
+    }
+
+    final currentGameData = currentGameDoc.data()!;
+    
+    // ★ 基本情報はgamesコレクションから補完 ★
+    await loadGameFromFirestore(gameId);
+    
+    // ★ currentGameの情報で上書き ★
+    state = state.copyWith(
+      gameData: {
+        ...state.gameData ?? {},
+        ...currentGameData,
+      },
+    );
+
+    print('🎮 Game loaded from currentGame: $gameId');
+  }
+
   // 既存のgame_service.dartで取得したデータから設定（互換性維持）
   void setGameFromExistingData(Map<String, dynamic> gameData) {
     state = CurrentGameState(
