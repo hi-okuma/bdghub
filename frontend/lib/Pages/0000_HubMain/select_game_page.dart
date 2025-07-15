@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '/components/game_list_widget.dart';
 import '/components/custom_widgets.dart';
 import '/components/app_theme.dart';
@@ -11,7 +13,9 @@ import '/Pages/0000_HubMain/game_detail_page.dart';
 import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
+import '/providers/game_state_provider.dart';
 import 'package:bodogehub/models/user_state.dart';
+import '/services/navigation_service.dart';
 
 class SelectGamePage extends ConsumerStatefulWidget {
   const SelectGamePage({Key? key}) : super(key: key);
@@ -62,6 +66,11 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     });
 
     _fetchGames();
+
+    // ★ ゲーム状態監視の確実な開始 ★
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startGameStateMonitoring();
+    });
   }
 
   Future<void> _fetchGames() async {
@@ -84,8 +93,27 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     }
   }
 
+  // ★ ゲーム状態監視を確実に開始するメソッド ★
+  void _startGameStateMonitoring() {
+    final userState = ref.read(userProvider);
+    final roomId = userState.roomId;
+    
+    if (roomId == null || roomId.isEmpty) {
+      print('❌ roomIdが無効なため、ゲーム状態監視を開始できません');
+      return;
+    }
+
+    print('🔍 ゲーム状態監視を開始: $roomId');
+    
+    // プロバイダーを監視開始（これにより自動的にNotifierが初期化される）
+    ref.read(roomGameStateProvider(roomId));
+  }
+
   @override
   void dispose() {
+    // ★ 注意：dispose内ではrefを使用できません ★
+    // ゲーム状態監視の停止は UserNotifier.leaveRoom() で行われます
+    
     _tabController.dispose();
     super.dispose();
   }
@@ -124,8 +152,79 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   Widget build(BuildContext context) {
     final userState = ref.watch(userProvider);
     final roomId = userState.roomId ?? '';
-    final playersAsync =
-        ref.watch(roomStreamProvider(roomId)); // AsyncValue<DocumentSnapshot>
+    
+    // ★ デバッグ用：currentGameサブコレクションの直接確認 ★
+    if (roomId.isNotEmpty && kDebugMode) {
+      // currentGameサブコレクションを直接監視（デバッグ用）
+      final currentGameStream = FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(roomId)
+          .collection('currentGame')
+          .snapshots();
+      
+      // StreamBuilderでデバッグ情報を表示
+      StreamBuilder<QuerySnapshot>(
+        stream: currentGameStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            print('🔍 DEBUG: currentGame docs count: ${snapshot.data!.docs.length}');
+            for (var doc in snapshot.data!.docs) {
+              print('🔍 DEBUG: gameId=${doc.id}, data=${doc.data()}');
+            }
+          }
+          return const SizedBox.shrink(); // 非表示ウィジェット
+        },
+      );
+    }
+
+    // ★ ゲーム状態監視とリスナーの設定 ★
+    if (roomId.isNotEmpty) {
+      final gameStateAsync = ref.watch(roomGameStateProvider(roomId));
+
+      // デバッグ用：現在の状態をリアルタイム表示
+      gameStateAsync.whenOrNull(
+        data: (status) {
+          print('🎮 現在のゲーム状態: $status');
+          
+          // 子プレイヤーかどうかをログに出力
+          final isHost = ref.read(isHostProvider);
+          print('🎮 プレイヤー種別: ${isHost ? "ホスト" : "子プレイヤー"}');
+        },
+        loading: () => print('🔄 ゲーム状態読み込み中...'),
+        error: (error, _) => print('❌ ゲーム状態エラー: $error'),
+      );
+
+      // リスナーでナビゲーション確認
+      ref.listen(roomGameStateProvider(roomId), (previous, next) {
+        next.whenOrNull(
+          data: (status) {
+            final nickname = userState.nickname ?? "Unknown";
+            print('🎮 [$nickname] ゲーム状態変化: $previous → $status');
+            
+            if (status == GameStatus.playing) {
+              print('🎮 [$nickname] GameTitlePageに遷移します！');
+            }
+          },
+          error: (error, stackTrace) {
+            print('❌ [${userState.nickname}] ゲーム状態監視エラー: $error');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('ゲーム状態の監視エラー: $error')),
+            );
+          },
+        );
+      });
+    }
+
+    // ★ ユーザーが部屋に参加している場合の状態確認 ★
+    if (roomId.isNotEmpty) {
+      // 一定間隔でゲーム状態監視が動作しているか確認
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          final currentState = ref.read(roomGameStateProvider(roomId));
+          print('🔍 2秒後のゲーム状態確認: $currentState');
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -185,6 +284,30 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // デバッグ情報表示（開発時のみ）
+          if (kDebugMode && roomId.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.yellow[100],
+              child: Column(
+                children: [
+                  Text('🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
+                  Text('部屋: $roomId'),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final gameStateAsync = ref.watch(roomGameStateProvider(roomId));
+                      return gameStateAsync.when(
+                        data: (status) => Text('ゲーム状態: $status'),
+                        loading: () => const Text('ゲーム状態: 読み込み中...'),
+                        error: (error, _) => const Text('ゲーム状態: エラー'),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+          
           // 参加者エリア
           Container(
             padding: const EdgeInsets.all(AppSpacing.large),
@@ -196,56 +319,41 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   style: AppTextStyles.titleMedium,
                 ),
                 const SizedBox(height: AppSpacing.small),
-                // ★ ここを修正 ★
-                playersAsync.when(
-                  data: (snapshot) {
-                    if (!snapshot.exists) {
-                      return Text(
-                        '部屋が見つかりません',
-                        style: AppTextStyles.errorText,
-                      );
-                    }
-
-                    final data = snapshot.data() as Map<String, dynamic>?;
-                    final playersData =
-                        data?['players'] as List<dynamic>? ?? [];
-
-                    if (playersData.isEmpty) {
-                      return Text(
-                        '参加者がいません',
-                        style: AppTextStyles.body,
-                      );
-                    }
-
-                    final players = playersData.asMap().entries.map((entry) {
-                      return Player(
-                        nickname: entry.value.toString(),
-                        isHost: entry.key == 0,
-                      );
-                    }).toList();
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: players.map((player) {
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(right: AppSpacing.small),
-                            child: PlayerBadge(
-                              nickname: player.nickname,
-                              isHost: player.isHost,
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
+                Consumer(builder: (context, ref, _) {
+                  // roomIdが空の場合は playersProvider を watch しない
+                  if (roomId.isEmpty) {
+                    return Text(
+                      'ルームIDが見つかりません',
+                      style: AppTextStyles.errorText,
                     );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, stackTrace) => Text(
-                    'データの取得中にエラーが発生しました',
-                    style: AppTextStyles.errorText,
-                  ),
-                ),
+                  }
+
+                  final players = ref.watch(playersProvider(roomId));
+
+                  if (players.isEmpty) {
+                    return Text(
+                      '参加者がいません',
+                      style: AppTextStyles.body,
+                    );
+                  }
+
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: players.map((player) {
+                        return Padding(
+                          padding:
+                              const EdgeInsets.only(right: AppSpacing.small),
+                          child: PlayerBadge(
+                            nickname: player.nickname,
+                            isHost: player.isHost,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -353,8 +461,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       final Uri apiUrl = Uri.parse(
           'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
       final Map<String, dynamic> requestBody = {
-        'nickname': userState.nickname,
         'roomId': userState.roomId,
+        'uid': userState.uid,
       };
 
       final response = await http.post(

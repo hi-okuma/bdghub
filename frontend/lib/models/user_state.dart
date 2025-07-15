@@ -36,6 +36,7 @@ class Player {
 class UserState {
   final String? nickname;
   final String? roomId;
+  final String? uid;
   final bool isHost;
   final bool isConnected;
   final DateTime? joinTime;
@@ -43,6 +44,7 @@ class UserState {
   const UserState({
     this.nickname,
     this.roomId,
+    this.uid,
     this.isHost = false,
     this.isConnected = false,
     this.joinTime,
@@ -51,6 +53,7 @@ class UserState {
   UserState copyWith({
     String? nickname,
     String? roomId,
+    String? uid,
     bool? isHost,
     bool? isConnected,
     DateTime? joinTime,
@@ -58,6 +61,7 @@ class UserState {
     return UserState(
       nickname: nickname ?? this.nickname,
       roomId: roomId ?? this.roomId,
+      uid: uid ?? this.uid,
       isHost: isHost ?? this.isHost,
       isConnected: isConnected ?? this.isConnected,
       joinTime: joinTime ?? this.joinTime,
@@ -67,7 +71,7 @@ class UserState {
   // デバッグ用
   @override
   String toString() {
-    return 'UserState(nickname: $nickname, roomId: $roomId, isHost: $isHost, isConnected: $isConnected)';
+    return 'UserState(nickname: $nickname, roomId: $roomId, uid: $uid, isHost: $isHost, isConnected: $isConnected)';
   }
 
   // 空の状態かチェック

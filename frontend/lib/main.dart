@@ -9,6 +9,8 @@ import 'package:bodogehub/components/app_theme.dart';
 import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:bodogehub/services/navigation_service.dart';
+import 'package:bodogehub/services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +25,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Firebase Auth の初期化確認（オプション）
+  print('🔥 Firebase Auth 初期化完了');
+  if (AuthService.isAuthenticated()) {
+    print('🔐 既存の認証を確認: ${AuthService.getCurrentUID()}');
+  }
 
   // UIテスト用フラグ
   const bool testSpecificPage = false;
@@ -67,6 +75,8 @@ class MyApp extends StatelessWidget {
       title: 'ボードゲームハブ',
       // app_theme.dartで定義したテーマを使用
       theme: AppTheme.lightTheme,
+      // NavigationServiceのキーを設定
+      navigatorKey: NavigationService.navigatorKey,
       home: TopPage(roomId: roomId),
     );
   }

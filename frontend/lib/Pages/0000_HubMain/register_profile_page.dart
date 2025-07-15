@@ -4,6 +4,8 @@ import '../0000_HubMain/select_game_page.dart';
 import '../../components/custom_widgets.dart';
 import '../../components/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../services/navigation_service.dart';
 import '../../utils/error_handler.dart';
 import '../../utils/validation_utils.dart';
 import '/providers/user_provider.dart';
@@ -39,7 +41,8 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
 
   Future<void> _createRoom() async {
     // バリデーション
-    final nicknameValidation = ValidationUtils.validateNickname(_nicknameController.text);
+    final nicknameValidation =
+        ValidationUtils.validateNickname(_nicknameController.text);
     if (!nicknameValidation.isValid) {
       setState(() {
         _errorMessage = nicknameValidation.errorMessage;
@@ -48,7 +51,8 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
     }
 
     if (widget.isJoiningRoom) {
-      final roomIdValidation = ValidationUtils.validateRoomId(_roomIdController.text);
+      final roomIdValidation =
+          ValidationUtils.validateRoomId(_roomIdController.text);
       if (!roomIdValidation.isValid) {
         setState(() {
           _errorMessage = roomIdValidation.errorMessage;
@@ -63,19 +67,28 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
     });
 
     try {
+      // 匿名認証でUIDを取得
+      final uid = await AuthService.ensureAuthenticated();
+      print('🔐 認証完了、UID: $uid');
+
       final Map<String, dynamic> responseData;
 
       if (widget.isJoiningRoom) {
         responseData = await ApiService.joinRoom(
           _nicknameController.text,
           _roomIdController.text,
+          uid,
         );
       } else {
-        responseData = await ApiService.createRoom(_nicknameController.text);
+        responseData = await ApiService.createRoom(
+          _nicknameController.text,
+          uid,
+        );
       }
 
       // APIエラーレスポンスのチェック
-      if (responseData.containsKey('success') && responseData['success'] == false) {
+      if (responseData.containsKey('success') &&
+          responseData['success'] == false) {
         ApiErrorHandler.handleApiError(context, responseData, (error) {
           setState(() {
             _errorMessage = error;
@@ -90,16 +103,28 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
           : responseData['roomId'];
 
       // Riverpodにユーザー情報を保存
-      if (widget.isJoiningRoom) {
-        ref.read(userProvider.notifier).joinRoom(
-              nickname: _nicknameController.text,
-              roomId: roomId,
-            );
-      } else {
-        ref.read(userProvider.notifier).createRoom(
-              nickname: _nicknameController.text,
-              roomId: roomId,
-            );
+      try {
+        if (widget.isJoiningRoom) {
+          ref.read(userProvider.notifier).joinRoom(
+                nickname: _nicknameController.text,
+                roomId: roomId,
+                uid: uid,
+              );
+        } else {
+          ref.read(userProvider.notifier).createRoom(
+                nickname: _nicknameController.text,
+                roomId: roomId,
+                uid: uid,
+              );
+        }
+      } catch (e) {
+        print('⚠️ Provider状態更新エラー: $e');
+        if (!mounted) return;
+        setState(() {
+          _errorMessage = 'データの保存に失敗しました';
+          _isLoading = false;
+        });
+        return;
       }
 
       if (!mounted) return;

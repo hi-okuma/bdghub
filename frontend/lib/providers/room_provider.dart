@@ -9,21 +9,43 @@ final roomStreamProvider =
 
 // プレイヤーリストを派生状態として管理
 final playersProvider = Provider.family<List<Player>, String>((ref, roomId) {
-  final roomSnapshot = ref.watch(roomStreamProvider(roomId));
+  final roomAsyncValue = ref.watch(roomStreamProvider(roomId));
 
-  return roomSnapshot.when(
+  return roomAsyncValue.when(
     data: (snapshot) {
-      if (snapshot.exists) {
+      if (snapshot != null && snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
-        final playersData = data['players'] as List<dynamic>? ?? [];
 
-        return playersData.asMap().entries.map((entry) {
+        // 前提：roomドキュメントにホストのUIDを示す 'hostUid' フィールドが存在する
+        final hostPlayer = data['hostPlayer'] as String?;
+        // playersフィールドをMapとして取得
+        final playersMap = data['players'] as Map<String, dynamic>?;
+
+        // 必要なデータが揃っていない場合は空のリストを返す
+        if (playersMap == null || hostPlayer == null) {
+          return [];
+        }
+
+        // Mapのエントリーを List<Player> に変換
+        final playersList = playersMap.entries.map((entry) {
+          final uid = entry.key;
+          final playerData = entry.value as Map<String, dynamic>;
+          final nickname = playerData['nickname'] as String? ??
+              '名無し'; // nicknameがない場合のフォールバック
+
           return Player(
-            nickname: entry.value.toString(),
-            isHost: entry.key == 0,
+            nickname: nickname,
+            // プレイヤーのUIDがドキュメントのhostUidと一致するかでホストを判定
+            isHost: uid == hostPlayer,
           );
         }).toList();
+
+        // ホストをリストの先頭に並び替える（任意）
+        playersList.sort((a, b) => a.isHost ? -1 : 1);
+
+        return playersList;
       }
+      // データがない場合は空のリストを返す
       return [];
     },
     loading: () => [],

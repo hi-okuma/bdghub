@@ -40,6 +40,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
     });
 
     try {
+      // ★ シンプル：API呼び出しのみ ★
       final responseData = await ApiService.startGame(
         widget.roomId!,
         widget.gameId,
@@ -56,22 +57,11 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
         return;
       }
 
-      // ★ ゲーム情報をプロバイダーに保存 ★
-      // 既存のgame_service.dartから取得したデータを使用（互換性維持）
-      // ref.read(currentGameProvider.notifier).setGameFromExistingData(widget.game);
-
-      // または、より正確な情報が必要な場合はFirestoreから直接取得
-      await ref
-          .read(currentGameProvider.notifier)
-          .loadGameFromFirestore(widget.gameId);
-
       if (!mounted) return;
+      
+      // ★ 成功メッセージのみ表示（遷移はgame_state_providerが自動実行） ★
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ゲームを開始します')),
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const GameTitlePage()),
+        const SnackBar(content: Text('ゲームを開始しています...')),
       );
     } catch (e) {
       ApiErrorHandler.handleException(context, e, (error) {

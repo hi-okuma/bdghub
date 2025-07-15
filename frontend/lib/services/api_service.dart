@@ -5,17 +5,20 @@ class ApiService {
   static const String baseUrl =
       'https://asia-northeast1-bdghub-dev.cloudfunctions.net';
 
-  static Future<Map<String, dynamic>> createRoom(String nickname) async {
+  static Future<Map<String, dynamic>> createRoom(
+      String nickname, String uid) async {
     return _postRequest('/createRoom', {
       'nickname': nickname,
+      'uid': uid,
     });
   }
 
   static Future<Map<String, dynamic>> joinRoom(
-      String nickname, String roomId) async {
+      String nickname, String roomId, String uid) async {
     return _postRequest('/joinRoom', {
       'nickname': nickname,
       'roomId': roomId,
+      'uid': uid,
     });
   }
 
@@ -36,10 +39,11 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> leaveRoom(
-      String nickname, String roomId) async {
+      String nickname, String roomId, String uid) async {
     return _postRequest('/leaveRoom', {
       'nickname': nickname,
       'roomId': roomId,
+      'uid': uid,
     });
   }
 
