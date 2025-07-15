@@ -38,6 +38,18 @@ class ApiService {
     });
   }
 
+  static Future<Map<String, dynamic>> setReady(
+    String roomId,
+    String uid,
+    String gameId,
+  ) async {
+    return _postRequest('/setReady', {
+      'roomId': roomId,
+      'uid': uid,
+      'gameId': gameId,
+    });
+  }
+
   static Future<Map<String, dynamic>> leaveRoom(
       String nickname, String roomId, String uid) async {
     return _postRequest('/leaveRoom', {

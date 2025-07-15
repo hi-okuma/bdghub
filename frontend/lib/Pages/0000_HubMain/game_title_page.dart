@@ -7,6 +7,7 @@ import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/services/api_service.dart';
 
 class GameTitlePage extends ConsumerStatefulWidget {
   const GameTitlePage({Key? key}) : super(key: key);
@@ -17,7 +18,8 @@ class GameTitlePage extends ConsumerStatefulWidget {
 
 class _GameTitlePageState extends ConsumerState<GameTitlePage> {
   int _currentImageIndex = 0;
-  bool _isPreparationCompleted = false;
+  bool _isPreparationCompleted = false; // 準備完了状態
+  bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
   final PageController _pageController = PageController();
 
@@ -242,16 +244,26 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
                     width: double.infinity,
                     child: LoadingButton(
                       text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
-                      isLoading: false,
-                      onPressed: _isPreparationCompleted
-                          ? null
-                          : () {
+                      isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
+                      onPressed: _isPreparationCompleted || _isUpdatingReady
+                          ? null // ★準備完了済みまたは通信中は押せない
+                          : () async {
                               setState(() {
-                                _isPreparationCompleted = true;
+                                _isUpdatingReady = true; // ★通信開始
                               });
-                              // ここでDB設計に基づく準備完了処理を追加
-                              // rooms/{roomId}/currentGame/players/{player}/isReady = true
-                              _updateReadyStatus();
+
+                              try {
+                                await _updateReadyStatus(); // ★API呼び出し
+                                setState(() {
+                                  _isPreparationCompleted = true; // ★成功時のみtrue
+                                });
+                              } catch (e) {
+                                // エラー時は_isPreparationCompletedはfalseのまま
+                              } finally {
+                                setState(() {
+                                  _isUpdatingReady = false; // ★通信終了
+                                });
+                              }
                             },
                     ),
                   ),
@@ -285,24 +297,48 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
 
   Future<void> _updateReadyStatus() async {
     final userState = ref.read(userProvider);
+    final currentGame = ref.read(currentGameProvider);
+
     final roomId = userState.roomId;
     final nickname = userState.nickname;
+    final uid = userState.uid; // ★ uidを追加で取得
+    final gameId = currentGame.gameId; // ★ gameIdを取得
 
-    if (roomId == null || nickname == null) return;
+    if (roomId == null || nickname == null || uid == null || gameId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('準備完了の更新に失敗しました（必要な情報が不足しています）')),
+      );
+      return;
+    }
 
     try {
-      // ★ DB設計に基づく準備完了状態の更新 ★
-      // API経由でrooms/{roomId}/currentGame/players内のisReadyを更新
       print('準備完了状態を更新: $nickname in room $roomId');
 
-      // TODO: APIエンドポイントの実装
-      // await ApiService.updatePlayerReady(roomId, nickname, true);
+      // ★ API呼び出し実装
+      final response = await ApiService.setReady(roomId, uid, gameId);
+
+      print('準備完了状態の更新成功: $response');
+
+      // 成功時のフィードバック（オプション）
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('準備完了しました！')),
+      );
 
       // 全員の準備が完了すると、Cloud Functionsにより
       // gameStatus が 'waiting' → 'playing' に自動更新され、
       // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
       print('準備完了状態の更新エラー: $e');
+
+      // ★ エラー時の状態復旧
+      setState(() {
+        _isPreparationCompleted = false;
+      });
+
+      // エラーメッセージ表示
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('準備完了の更新に失敗しました: $e')),
+      );
     }
   }
 
