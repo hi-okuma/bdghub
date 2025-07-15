@@ -9,13 +9,13 @@ const {sendSuccess, sendError} = require("../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function leaveRoomHandler(req, res) {
-  const {roomId, nickname} = req.body;
+  const {roomId, uid} = req.body;
 
-  if (!roomId || !nickname) {
+  if (!roomId || !uid) {
     return sendError(
         res,
         "InvalidArgument",
-        "部屋退出には部屋IDとニックネームが必要です。",
+        "退出に失敗しました。",
         400,
         {body: req.body},
     );
@@ -36,21 +36,20 @@ async function leaveRoomHandler(req, res) {
     }
 
     const roomData = roomDoc.data();
-    const playerIndex = roomData.players.indexOf(nickname);
 
-    if (playerIndex === -1) {
+    if (!roomData.players[uid]) {
       return sendError(
           res,
           "PlayerNotFound",
           "指定されたプレイヤーが部屋内に存在しません。",
           404,
-          {roomId, nickname},
+          {roomId, uid},
       );
     }
 
-    await updateRoomWithTransaction(roomRef, nickname);
+    await updateRoomWithTransaction(roomRef, uid);
 
-    logger.info(`プレイヤー退出成功: ${nickname} from room ${roomId}`);
+    logger.info(`プレイヤー退出成功: uid=${uid} from room ${roomId}`);
     return sendSuccess(res, {});
   } catch (error) {
     return sendError(
@@ -58,7 +57,7 @@ async function leaveRoomHandler(req, res) {
         "Internal",
         "サーバーエラーが発生しました。",
         500,
-        {error: error.message, roomId, nickname},
+        {error: error.message, roomId, uid},
     );
   }
 }
@@ -66,22 +65,21 @@ async function leaveRoomHandler(req, res) {
 /**
  * トランザクションを使用して部屋データを更新する
  * @param {object} roomRef - 部屋のドキュメント参照
- * @param {string} nickname - 退出するプレイヤーのニックネーム
+ * @param {object} uid - プレイヤーのUID
  * @return {Promise} トランザクション処理のPromise
  */
-async function updateRoomWithTransaction(roomRef, nickname) {
+async function updateRoomWithTransaction(roomRef, uid) {
   return db.runTransaction(async (transaction) => {
     const latestRoomDoc = await transaction.get(roomRef);
     const latestRoomData = latestRoomDoc.data();
 
-    const updatedPlayers = latestRoomData.players.filter(
-        (playerName) => playerName !== nickname,
-    );
+    const updatedPlayers = {...latestRoomData.players};
+    delete updatedPlayers[uid];
 
     const updateData = prepareUpdateData(
         latestRoomData,
         updatedPlayers,
-        nickname,
+        uid,
     );
 
     transaction.update(roomRef, updateData);
@@ -91,23 +89,24 @@ async function updateRoomWithTransaction(roomRef, nickname) {
 /**
  * 部屋の更新データを準備する
  * @param {object} roomData - 部屋データ
- * @param {Array} updatedPlayers - 更新後のプレイヤーリスト
- * @param {string} removedNickname - 削除されたプレイヤーのニックネーム
+ * @param {Object} updatedPlayers - 更新後のプレイヤーオブジェクト
+ * @param {string} removedUid - 削除されたプレイヤーのUID
  * @return {object} 更新データオブジェクト
  */
-function prepareUpdateData(roomData, updatedPlayers, removedNickname) {
+function prepareUpdateData(roomData, updatedPlayers, removedUid) {
   const updateData = {
     players: updatedPlayers,
     updatedAt: FieldValue.serverTimestamp(),
   };
 
-  if (roomData.hostPlayer === removedNickname && updatedPlayers.length > 0) {
-    // ホストが退出した場合は、配列の最初のプレイヤーを新しいホストに設定
-    updateData.hostPlayer = updatedPlayers[0];
-    logger.info(`新しいホストプレイヤーを設定: ${updatedPlayers[0]}`);
+  const remainingPlayerUids = Object.keys(updatedPlayers);
+
+  if (roomData.hostPlayer === removedUid && remainingPlayerUids.length > 0) {
+    updateData.hostPlayer = remainingPlayerUids[0];
+    logger.info(`新しいホストプレイヤーを設定: ${remainingPlayerUids[0]}`);
   }
 
-  if (updatedPlayers.length === 0) {
+  if (remainingPlayerUids.length === 0) {
     updateData.status = "closed";
     logger.info(`部屋を閉鎖します: ${roomData.id}`);
   } else if (roomData.status === "full") {

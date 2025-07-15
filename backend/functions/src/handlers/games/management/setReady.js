@@ -9,9 +9,9 @@ const {getReadyTransitionStatus} = require("./statusTransitions");
  * @param {object} res - レスポンスオブジェクト
  */
 async function setReadyHandler(req, res) {
-  const {roomId, nickname, gameId} = req.body;
+  const {uid, roomId, gameId} = req.body;
 
-  if (!roomId || !nickname || !gameId) {
+  if (!uid || !roomId || !gameId) {
     return sendError(
         res,
         "InvalidArgument",
@@ -31,20 +31,24 @@ async function setReadyHandler(req, res) {
         throw new Error("GameNotFound");
       }
 
+      const roomDoc = await transaction.get(roomRef);
+
+      if (!roomDoc.data().players[uid]) {
+        throw new Error("PlayerNotFound");
+      }
+
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "waiting") {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.nickname === nickname) {
-          return {...player, isReady: true};
-        }
-        return player;
-      });
+      const updatedPlayers = {...currentGameData.players};
+      if (updatedPlayers[uid]) {
+        updatedPlayers[uid] = {...updatedPlayers[uid], isReady: true};
+      }
 
-      const allReady = updatedPlayers.every((player) => player.isReady);
+      const allReady = Object.values(updatedPlayers).every((player) => player.isReady);
 
       const updateData = {
         players: updatedPlayers,
@@ -52,21 +56,23 @@ async function setReadyHandler(req, res) {
 
       if (allReady) {
         updateData.gameStatus = getReadyTransitionStatus(gameId);
-        updateData.players = updatedPlayers.map((player) => ({
-          ...player,
-          isReady: false,
-        }));
+        updateData.players = Object.fromEntries(
+            Object.entries(updatedPlayers).map(([uid, player]) => [
+              uid,
+              {...player, isReady: false},
+            ]),
+        );
       }
 
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`準備完了設定成功: roomId=${roomId}, nickname=${nickname}, gameId=${gameId}`);
+    logger.info(`準備完了設定成功: roomId=${roomId}, uid=${uid}, gameId=${gameId}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`準備完了設定エラー: ${error.message}`, {
       roomId,
-      nickname,
+      uid,
       gameId,
       error: error.stack,
     });

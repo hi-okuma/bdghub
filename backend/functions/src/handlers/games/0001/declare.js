@@ -8,9 +8,9 @@ const {sendSuccess, sendError} = require("../../../utils/responseHandler");
  * @param {object} res - レスポンスオブジェクト
  */
 async function declare0001Handler(req, res) {
-  const {roomId, nickname} = req.body;
+  const {roomId, uid} = req.body;
 
-  if (!roomId || !nickname) {
+  if (!roomId || !uid) {
     return sendError(
         res,
         "InvalidArgument",
@@ -36,30 +36,28 @@ async function declare0001Handler(req, res) {
         throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
       }
 
-      const updatedPlayers = currentGameData.players.map((player) => {
-        if (player.nickname === nickname) {
-          return {...player, isAlive: false};
-        }
-        return player;
-      });
-
-      const alivePlayersCount = updatedPlayers.filter((player) => player.isAlive).length;
+      const updatedPlayers = {...currentGameData.players};
+      updatedPlayers[uid] = {...updatedPlayers[uid], isAlive: false};
+      const alivePlayersCount = Object.values(updatedPlayers).filter((player) => player.isAlive).length;
 
       const updateData = {
         players: updatedPlayers,
       };
 
       if (alivePlayersCount === 1) {
-        const winner = updatedPlayers.find((player) => player.isAlive);
-        updateData.players = updatedPlayers.map((player) => {
-          if (player.nickname === winner.nickname) {
-            return {
-              ...player,
-              point: (player.point || 0) + 1,
-            };
-          }
-          return player;
-        });
+        const winnerEntry = Object.entries(updatedPlayers).find(([uid, player]) => player.isAlive);
+
+        if (!winnerEntry) {
+          throw new Error("勝者が見つかりません");
+        }
+
+        const winnerUid = winnerEntry[0];
+        const playersWithUpdatedPoints = Object.fromEntries(
+            Object.entries(updatedPlayers).map(([uid, player]) => [
+              uid,
+              uid === winnerUid ? {...player, point: (player.point || 0) + 1} : {...player, point: player.point || 0},
+            ]),
+        );
 
         updateData.gameStatus = "waiting";
 
@@ -76,24 +74,30 @@ async function declare0001Handler(req, res) {
         const ngWordsList = ngWordsDoc.data().words;
         const shuffledWords = shuffleArray(ngWordsList);
 
-        updateData.players = updateData.players.map((player, index) => ({
-          nickname: player.nickname,
-          isReady: false,
-          ngWord: [shuffledWords[index % shuffledWords.length]],
-          isAlive: true,
-          point: player.point || 0,
-        }));
+        const finalPlayers = Object.fromEntries(
+            Object.keys(playersWithUpdatedPoints).map((uid, index) => [
+              uid,
+              {
+                isReady: false,
+                ngWord: [shuffledWords[index % shuffledWords.length]],
+                isAlive: true,
+                point: playersWithUpdatedPoints[uid].point || 0,
+              },
+            ]),
+        );
+
+        updateData.players = finalPlayers;
       }
 
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`申告成功: roomId=${roomId}, nickname=${nickname}`);
+    logger.info(`申告成功: roomId=${roomId}, uid=${uid}`);
     return sendSuccess(res, {}, "");
   } catch (error) {
     logger.error(`申告エラー: ${error.message}`, {
       roomId,
-      nickname,
+      uid,
       error: error.stack,
     });
 

@@ -2,7 +2,7 @@ const {db} = require("../../../config/firebase");
 
 /**
  * カタカナ禁止ゲームのcurrentGameデータを生成する
- * @param {Array<string>} players - プレイヤーのニックネーム配列
+ * @param {Object} players - プレイヤー情報
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players) {
@@ -17,20 +17,22 @@ async function createCurrentGame(players) {
 
   const topicsList = topicsDoc.data().topics;
   const shuffledTopics = shuffleArray(topicsList);
-  const randomIndex = Math.floor(Math.random() * players.length);
-  const firstPresenter = players[randomIndex];
+  const playerUids = Object.keys(players);
+  const randomIndex = Math.floor(Math.random() * playerUids.length);
+  const firstPresenter = playerUids[randomIndex];
   const firstTopic = shuffledTopics[0];
-
-  const playerData = players.map((nickname) => ({
-    nickname: nickname,
-    isReady: false,
-    isEverPresenter: nickname === firstPresenter,
-    point: 0,
-  }));
+  const playersData = {};
+  playerUids.forEach((uid) => {
+    playersData[uid] = {
+      isReady: false,
+      isEverPresenter: uid === firstPresenter,
+      point: 0,
+    };
+  });
 
   return {
     gameStatus: "waiting",
-    players: playerData,
+    players: playersData,
     currentPresenter: firstPresenter,
     currentTopic: firstTopic,
     usedTopic: [firstTopic],
