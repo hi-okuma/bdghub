@@ -125,12 +125,31 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
       appBar: AppBar(
         title: Text('$gameTitle - 部屋: $roomId'),
         actions: [
-          // デバッグ用：現在のユーザー情報表示
-          Chip(
-            label: Text('$nickname${isHost ? '(ホスト)' : ''}'),
-            backgroundColor: isHost ? AppTheme.hostBadgeColor : null,
-          ),
-          const SizedBox(width: 8),
+          if (isHost)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
+              child: ElevatedButton(
+                onPressed: () => _showExitGameDialog(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.warningColor,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.medium,
+                    horizontal: AppSpacing.small,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min, // 追加
+                  children: [
+                    Icon(Icons.close, color: AppTheme.errorColor),
+                    const SizedBox(width: AppSpacing.small), // アイコンとテキストの間隔
+                    Text(
+                      '終了',
+                      style: AppTextStyles.body,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
       body: SafeArea(
@@ -267,25 +286,6 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
                             },
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.large),
-
-                  // ★ ゲーム終了ボタン（ホストのみ表示） ★
-                  if (isHost)
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: () => _showExitGameDialog(),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppTheme.borderColor),
-                          padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.medium),
-                        ),
-                        child: Text(
-                          'ゲーム終了',
-                          style: AppTextStyles.body,
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -387,5 +387,6 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('ゲームを終了しました')),
     );
+    //   TODO:API処理を実装
   }
 }
