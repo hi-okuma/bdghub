@@ -80,7 +80,7 @@ class AppTheme {
       ),
 
       // Cardテーマ
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardColor,
         elevation: AppElevation.low,
         shape: RoundedRectangleBorder(
@@ -122,7 +122,7 @@ class AppTheme {
       ),
 
       // TabBarテーマ
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         labelColor: primaryColor,
         unselectedLabelColor: secondaryTextColor,
         indicator: BoxDecoration(
