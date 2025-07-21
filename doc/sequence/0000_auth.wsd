@@ -37,7 +37,7 @@ else 通常時
                     App -> App: ゲーム画面復元
                 else 部屋が削除されている場合などの準正常系/異常系
                     App <-- Firestore: エラー
-                    App -> App: localStorageクリア & TOP画面表示
+                    App -> App: localStorageクリア & \n部屋参加ダイアログ表示
                 end
             end
         else 存在しない場合
@@ -52,7 +52,7 @@ else 通常時
                 App -> App: ゲーム画面復元
             else 部屋が削除されている場合などの準正常系/異常系
                 App <-- Firestore: エラー
-                App -> App: localStorageクリア & TOP画面表示
+                App -> App: localStorageクリア & \nTOP画面表示
             end
         else room_idがない場合
             App -> App: TOP画面表示

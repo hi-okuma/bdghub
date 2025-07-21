@@ -40,14 +40,14 @@ async function proceedToNext0004Handler(req, res) {
       const isCorrect = currentGameData.parentSelectedIndex === currentGameData.answerImageIndex;
       const isParent = uid === currentGameData.currentParent;
 
-      if (isCorrect && isParent && !bestHintPlayerUid) {
+      if (isParent && !bestHintPlayerUid) {
         throw new Error("BestHintPlayerRequired");
       }
 
       const updateData = {};
       let updatedPlayers = {...currentGameData.players};
 
-      if (isCorrect && isParent && bestHintPlayerUid) {
+      if (isParent && bestHintPlayerUid) {
         if (bestHintPlayerUid === currentGameData.currentParent) {
           throw new Error("InvalidBestHintPlayer");
         }
@@ -62,7 +62,8 @@ async function proceedToNext0004Handler(req, res) {
                 return [playerUid, {...player, point: (player.point || 0) + 1}];
               }
               if (playerUid === currentGameData.currentParent) {
-                return [playerUid, {...player, point: (player.point || 0) + 1, isReady: true}];
+                const parentPoint = isCorrect ? (player.point || 0) + 1 : (player.point || 0);
+                return [playerUid, {...player, point: parentPoint, isReady: true}];
               }
               return [playerUid, player];
             }),
