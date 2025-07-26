@@ -59,6 +59,17 @@ class ApiService {
     });
   }
 
+  // NGワード申告処理
+  static Future<Map<String, dynamic>> declare0001(
+    String roomId,
+    String uid,
+  ) async {
+    return _postRequest('/declare0001', {
+      'roomId': roomId,
+      'uid': uid,
+    });
+  }
+
   static Future<Map<String, dynamic>> _postRequest(
     String endpoint,
     Map<String, dynamic> body,

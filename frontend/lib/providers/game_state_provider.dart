@@ -109,7 +109,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
       // ★ roomStatusがinProgressになった時点でcurrentGameサブコレクションの監視を開始 ★
       if (roomStatus == 'inProgress' && !_hasNavigatedToGameTitle) {
-        print('🎮 Room status is inProgress - Starting currentGame monitoring...');
+        print(
+            '🎮 Room status is inProgress - Starting currentGame monitoring...');
         _startCurrentGameCollectionMonitoring(roomId);
       }
 
@@ -211,11 +212,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _startGameDetailMonitoring(roomId, gameId);
   }
 
-  Future<void> _loadGameDataAndNavigate(String roomId, String gameId, Map<String, dynamic> gameData) async {
+  Future<void> _loadGameDataAndNavigate(
+      String roomId, String gameId, Map<String, dynamic> gameData) async {
     try {
       // ★ currentGameサブドキュメントからゲームデータを読み込み ★
-      await ref.read(currentGameProvider.notifier).loadFromCurrentGame(roomId, gameId);
-      
+      await ref
+          .read(currentGameProvider.notifier)
+          .loadFromCurrentGame(roomId, gameId);
+
       // ★ 読み込み成功後に遷移 ★
       if (!_hasNavigatedToGameTitle) {
         print('🎮 Game data loaded successfully - Navigating to GameTitle!');
@@ -228,7 +232,6 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       if (!_isDisposed) {
         state = AsyncValue.data(gameStatus);
       }
-
     } catch (e) {
       print('❌ Failed to load game data: $e');
       if (!_isDisposed) {
@@ -334,9 +337,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
       switch (status) {
         case GameStatus.playing:
-          // ★ GameTitlePageへの遷移はroomStatusがinProgressになった時点で行うため、ここでは何もしない ★
-          print(
-              '🎮 GameStatus.playing - GameTitle navigation already handled by roomStatus');
+          print('🎮 Navigating to PlayingPage with currentGame: $currentGame');
+          navigationService.navigateToPlayingPage();
           break;
         case GameStatus.childTurn:
           print('🎮 Navigating to ChildTurn');

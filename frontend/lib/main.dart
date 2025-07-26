@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/services/navigation_service.dart';
 import 'package:bodogehub/services/auth_service.dart';
+import 'test_UIscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +41,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      child: testSpecificPage ? TestApp() : MyApp(roomId: roomId),
+      child: testSpecificPage ? NgWordPlayingPage() : MyApp(roomId: roomId),
     ),
   );
 }
