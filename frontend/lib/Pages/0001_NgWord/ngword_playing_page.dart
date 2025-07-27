@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
+import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
-import 'package:bodogehub/models/user_state.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/error_handler.dart';
 
@@ -16,7 +16,7 @@ class NgWordPlayer {
   final int points;
   final String ngWord;
   final bool isCurrentUser;
-  final bool hasReported;
+  final bool isAlive;
   final bool isHost;
 
   NgWordPlayer({
@@ -25,7 +25,7 @@ class NgWordPlayer {
     required this.points,
     required this.ngWord,
     this.isCurrentUser = false,
-    this.hasReported = false,
+    this.isAlive = true,
     this.isHost = false,
   });
 }
@@ -145,8 +145,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
               _extractStringValue(roomPlayerData['nickname']) ?? '名無し';
           final points = _extractIntValue(gamePlayerData?['points']) ?? 0;
           final ngWord = _extractStringValue(gamePlayerData?['ngWord']) ?? '';
-          final hasReported =
-              _extractBoolValue(gamePlayerData?['hasReported']) ?? false;
+          final isAlive = _extractBoolValue(gamePlayerData?['isAlive']) ?? true;
 
           players.add(NgWordPlayer(
             uid: uid,
@@ -154,7 +153,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
             points: points,
             ngWord: ngWord,
             isCurrentUser: uid == currentUser.uid,
-            hasReported: hasReported,
+            isAlive: isAlive,
             isHost: uid == hostPlayer,
           ));
         }
@@ -184,7 +183,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
               child: ElevatedButton(
-                onPressed: _onExitGame,
+                onPressed: _showExitGameDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.warningColor,
                   padding: const EdgeInsets.symmetric(
@@ -366,38 +365,72 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
     });
   }
 
-  void _onExitGame() {
+  // void _onExitGame() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: Text('ゲーム終了'),
+  //       content: Text('ゲームを終了しますか？'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(),
+  //           child: Text('キャンセル'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             Navigator.of(context).pop(); // ダイアログを閉じる
+  //
+  //             // API経由でゲーム終了処理
+  //             final currentUser = ref.read(userProvider);
+  //             final roomId = currentUser.roomId;
+  //
+  //             if (roomId != null) {
+  //               await _endGameProcess(roomId);
+  //             }
+  //           },
+  //           child: Text('終了'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  void _showExitGameDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('ゲーム終了'),
-        content: Text('ゲームを終了しますか？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('キャンセル'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop(); // ダイアログを閉じる
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('ゲームを終了しますか？'),
+          content: const Text('ホストがゲームを終了すると、全参加者がタイトル画面に戻ります。'),
+          actions: [
+            LoadingButton(
+              text: 'キャンセル',
+              isLoading: false,
+              isElevated: false,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            LoadingButton(
+              text: 'ゲーム終了',
+              isLoading: false,
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // API経由でゲーム終了処理
+                final currentUser = ref.read(userProvider);
+                final roomId = currentUser.roomId;
 
-              // API経由でゲーム終了処理
-              final currentUser = ref.read(userProvider);
-              final roomId = currentUser.roomId;
-
-              if (roomId != null) {
-                await _endGameProcess(roomId);
-              }
-            },
-            child: Text('終了'),
-          ),
-        ],
-      ),
+                if (roomId != null) {
+                  await _exitGame(roomId);
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
   // API経由でゲーム終了処理
-  Future<void> _endGameProcess(String roomId) async {
+  Future<void> _exitGame(String roomId) async {
     try {
       // ローディング表示
       showDialog(
@@ -480,7 +513,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
       margin: EdgeInsets.only(bottom: AppSpacing.medium),
       padding: EdgeInsets.all(AppSpacing.medium),
       decoration: BoxDecoration(
-        color: player.hasReported
+        color: !player.isAlive
             ? AppTheme.hintTextColor.withOpacity(0.3)
             : (isTopPlayer
                 ? Colors.yellow.withOpacity(0.3)
@@ -545,28 +578,6 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
               ],
             ),
           ),
-
-          // 申告済み表示
-          if (player.hasReported) ...[
-            SizedBox(height: AppSpacing.small),
-            Row(
-              children: [
-                Icon(
-                  Icons.flag,
-                  size: 16,
-                  color: AppTheme.warningColor,
-                ),
-                SizedBox(width: AppSpacing.small),
-                Text(
-                  '申告済み',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppTheme.warningColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
