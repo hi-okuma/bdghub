@@ -12,7 +12,13 @@ enum GameStatus {
   playing, // ゲーム中（基本状態）
   childTurn, // 子ターン（0004のみ）
   parentTurn, // 親ターン（0004のみ）
-  result, // 正誤確認（0004のみ）
+}
+
+// ゲームの進行段階を管理する内部状態
+enum GamePhase {
+  initial, // 初期状態（ゲーム開始前）
+  started, // ゲーム開始済み
+  ended, // ゲーム終了済み
 }
 
 // rooms/{roomId}/currentGame サブコレクションを監視するNotifier
@@ -24,11 +30,19 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   String? _currentGameId; // 現在監視中のgameIdを保持
   bool _hasNavigatedToGameTitle = false; // GameTitlePageに遷移済みかどうかのフラグ
 
+  // 重複遷移防止のためのフラグ
+  GameStatus? _previousGameStatus;
+  GamePhase _currentGamePhase = GamePhase.initial;
+  bool _hasNavigatedToPlaying = false; // playingページに遷移済みかどうか
+
   @override
   Future<GameStatus> build(String roomId) async {
     print('🔍 RoomGameStateNotifier.build called with roomId: $roomId');
     _isDisposed = false;
-    _hasNavigatedToGameTitle = false; // 初期化時にリセット
+    _hasNavigatedToGameTitle = false;
+    _previousGameStatus = null;
+    _currentGamePhase = GamePhase.initial;
+    _hasNavigatedToPlaying = false;
 
     ref.onDispose(() {
       print('🔍 Disposing RoomGameStateNotifier');
@@ -84,7 +98,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       if (!doc.exists) {
         print('❌ Room document does not exist');
         _stopAllMonitoring();
-        _hasNavigatedToGameTitle = false; // リセット
+        _resetNavigationFlags();
         if (!_isDisposed) {
           state = const AsyncValue.data(GameStatus.waiting);
         }
@@ -100,14 +114,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       if (roomStatus != 'inProgress') {
         print('🔍 Room not in progress, stopping all monitoring');
         _stopAllMonitoring();
-        _hasNavigatedToGameTitle = false; // リセット
+        _resetNavigationFlags();
         if (!_isDisposed) {
           state = const AsyncValue.data(GameStatus.waiting);
         }
         return;
       }
 
-      // ★ roomStatusがinProgressになった時点でcurrentGameサブコレクションの監視を開始 ★
+      // roomStatusがinProgressになった時点でcurrentGameサブコレクションの監視を開始
       if (roomStatus == 'inProgress' && !_hasNavigatedToGameTitle) {
         print(
             '🎮 Room status is inProgress - Starting currentGame monitoring...');
@@ -127,7 +141,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
-  // ★ GameTitlePageへの遷移処理を分離 ★
+  // GameTitlePageへの遷移処理を分離
   void _navigateToGameTitle() {
     if (_isDisposed) {
       print('🔍 Notifier is disposed, skipping navigation to GameTitle');
@@ -142,7 +156,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
-  // ★ currentGameサブコレクション全体を監視 ★
+  // currentGameサブコレクション全体を監視
   void _startCurrentGameCollectionMonitoring(String roomId) {
     _currentGameCollectionSubscription?.cancel();
 
@@ -183,22 +197,36 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     print('🔍 currentGame documents count: ${querySnapshot.docs.length}');
 
     if (querySnapshot.docs.isEmpty) {
-      print('🔍 No currentGame documents found - game not started or ended');
+      print('🔍 No currentGame documents found');
       _stopGameMonitoring();
+
+      // ゲーム中からドキュメントが削除された場合は結果画面に遷移
+      if (_currentGamePhase == GamePhase.started) {
+        print(
+            '🔍 Game documents deleted during gameplay - navigating to result');
+        try {
+          final navigationService = ref.read(navigationServiceProvider);
+          navigationService.navigateToResult({});
+          _currentGamePhase = GamePhase.ended;
+        } catch (e) {
+          print('❌ Navigation error: $e');
+        }
+      }
+
       if (!_isDisposed) {
         state = const AsyncValue.data(GameStatus.waiting);
       }
       return;
     }
 
-    // ★ 最初のドキュメントのIDをgameIdとして使用 ★
+    // 最初のドキュメントのIDをgameIdとして使用
     final gameDoc = querySnapshot.docs.first;
     final gameId = gameDoc.id;
     final gameData = gameDoc.data() as Map<String, dynamic>;
 
     print('🔍 Found gameId: $gameId');
 
-    // ★ シンプル：ゲームデータを読み込んでから遷移 ★
+    // ゲームデータを読み込んでから遷移
     _loadGameDataAndNavigate(roomId, gameId, gameData);
 
     // 既に同じgameIdを監視中の場合はスキップ
@@ -215,12 +243,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   Future<void> _loadGameDataAndNavigate(
       String roomId, String gameId, Map<String, dynamic> gameData) async {
     try {
-      // ★ currentGameサブドキュメントからゲームデータを読み込み ★
+      // currentGameサブドキュメントからゲームデータを読み込み
       await ref
           .read(currentGameProvider.notifier)
           .loadFromCurrentGame(roomId, gameId);
 
-      // ★ 読み込み成功後に遷移 ★
+      // 読み込み成功後に遷移
       if (!_hasNavigatedToGameTitle) {
         print('🎮 Game data loaded successfully - Navigating to GameTitle!');
         _navigateToGameTitle();
@@ -240,7 +268,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
-  // ★ 特定のgameIdドキュメントの詳細監視（リアルタイム状態変化用） ★
+  // 特定のgameIdドキュメントの詳細監視（リアルタイム状態変化用）
   void _startGameDetailMonitoring(String roomId, String gameId) {
     _gameSubscription?.cancel();
 
@@ -279,6 +307,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     if (!doc.exists) {
       print('❌ Game detail document does not exist');
+      // ドキュメントが存在しない場合は前回の状態をリセット
+      _resetNavigationFlags();
       if (!_isDisposed) {
         state = const AsyncValue.data(GameStatus.waiting);
       }
@@ -295,9 +325,42 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     if (!_isDisposed) {
       state = AsyncValue.data(gameStatus);
-      // ナビゲーション処理
-      _handleGameStateChange(gameStatus, gameData);
+      // 重複チェック付きの状態変化処理
+      _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
     }
+  }
+
+  // 重複チェック付きの状態変化処理
+  void _handleGameStateChangeWithDuplicationCheck(
+      GameStatus currentStatus, Map<String, dynamic> currentGame) {
+    // 前回と同じ状態で、かつ特定の条件の場合はスキップ
+    if (_previousGameStatus == currentStatus) {
+      switch (currentStatus) {
+        case GameStatus.playing:
+          if (_hasNavigatedToPlaying) {
+            print('🔍 すでにplayingページに遷移済みのためスキップ');
+            return;
+          }
+          break;
+        case GameStatus.childTurn:
+        case GameStatus.parentTurn:
+          // ターン制ゲームの場合は毎回チェック（プレイヤーが変わる可能性があるため）
+          break;
+        case GameStatus.waiting:
+          // GamePhaseによる汎用的な判定のみ
+          if (_currentGamePhase != GamePhase.started) {
+            print('🔍 ゲーム開始前のwaitingのためスキップ');
+            return;
+          }
+          break;
+      }
+    }
+
+    // 前回の状態を更新
+    _previousGameStatus = currentStatus;
+
+    // 実際の遷移処理を実行
+    _handleGameStateChange(currentStatus, currentGame);
   }
 
   void _stopAllMonitoring() {
@@ -310,6 +373,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGameId = null;
   }
 
+  // ナビゲーションフラグのリセット
+  void _resetNavigationFlags() {
+    _hasNavigatedToGameTitle = false;
+    _previousGameStatus = null;
+    _currentGamePhase = GamePhase.initial;
+    _hasNavigatedToPlaying = false;
+  }
+
   GameStatus _parseGameStatus(dynamic status) {
     switch (status?.toString()) {
       case 'playing':
@@ -318,13 +389,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         return GameStatus.childTurn;
       case 'parentTurn':
         return GameStatus.parentTurn;
-      case 'result':
-        return GameStatus.result;
       default:
         return GameStatus.waiting;
     }
   }
 
+  // ゲーム状態変化に基づく遷移処理
   void _handleGameStateChange(
       GameStatus status, Map<String, dynamic> currentGame) {
     if (_isDisposed) {
@@ -339,21 +409,32 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         case GameStatus.playing:
           print('🎮 Navigating to PlayingPage with currentGame: $currentGame');
           navigationService.navigateToPlayingPage();
+          _hasNavigatedToPlaying = true;
+          _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
           break;
         case GameStatus.childTurn:
           print('🎮 Navigating to ChildTurn');
           navigationService.navigateToChildTurn(currentGame);
+          _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
           break;
         case GameStatus.parentTurn:
           print('🎮 Navigating to ParentTurn');
           navigationService.navigateToParentTurn(currentGame);
-          break;
-        case GameStatus.result:
-          print('🎮 Navigating to Result');
-          navigationService.navigateToResult(currentGame);
+          _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
           break;
         case GameStatus.waiting:
-          print('🎮 Game ended - staying in current state');
+          print(
+              '🎮 Waiting status detected - current phase: $_currentGamePhase');
+          if (_currentGamePhase == GamePhase.started) {
+            // ゲーム中からwaitingになった場合は必ず結果画面に遷移
+            print('🎮 Game ended - navigating to result');
+            navigationService.navigateToResult(currentGame);
+            _currentGamePhase = GamePhase.ended; // ゲーム終了段階に更新
+          } else {
+            // 初期状態やゲーム終了後のwaiting = ゲームタイトル画面への遷移（既に処理済みの場合はスキップ）
+            print(
+                '🎮 Initial waiting or post-game waiting - staying in current state');
+          }
           break;
       }
     } catch (e) {
@@ -366,7 +447,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGameCollectionSubscription?.cancel();
     _gameSubscription?.cancel();
     _currentGameId = null;
-    _hasNavigatedToGameTitle = false; // リセット
+    _resetNavigationFlags();
     if (!_isDisposed) {
       state = const AsyncValue.data(GameStatus.waiting);
     }
