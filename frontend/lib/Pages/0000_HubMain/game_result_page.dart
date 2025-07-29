@@ -9,38 +9,37 @@ import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/error_handler.dart';
 
-// NGワードゲーム画面用のプレイヤー表示データ
-class NgWordPlayer {
+// 全ゲーム共通の結果表示用プレイヤーデータ
+class ResultPlayer {
   final String uid;
   final String nickname;
   final int points;
-  final String ngWord;
   final bool isCurrentUser;
-  final bool isAlive;
   final bool isHost;
+  final int rank; // 順位
 
-  NgWordPlayer({
+  ResultPlayer({
     required this.uid,
     required this.nickname,
     required this.points,
-    required this.ngWord,
-    this.isCurrentUser = false,
-    this.isAlive = true,
-    this.isHost = false,
+    required this.isCurrentUser,
+    required this.isHost,
+    required this.rank,
   });
 }
 
-class NgWordPlayingPage extends ConsumerStatefulWidget {
-  const NgWordPlayingPage({super.key});
+class GameResultPage extends ConsumerStatefulWidget {
+  const GameResultPage({super.key});
 
   @override
-  ConsumerState<NgWordPlayingPage> createState() => _NgWordPlayingPageState();
+  ConsumerState<GameResultPage> createState() => _GameResultPageState();
 }
 
-class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
-  bool _hasReported = false;
-  bool _isWaitingForOthers = false;
-  String? _errorMessage; // エラーメッセージ用の状態
+class _GameResultPageState extends ConsumerState<GameResultPage> {
+  String? _errorMessage;
+  bool _isPreparationCompleted = false; // 準備完了状態
+  bool _isUpdatingReady = false; // ★API呼び出し中かどうか
+  bool _isLoading = true;
 
   // エラーメッセージを設定する関数（ApiErrorHandler用）
   void _setError(String message) {
@@ -76,23 +75,6 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
     return null;
   }
 
-  // 型安全なbool値取得関数
-  bool? _extractBoolValue(dynamic value) {
-    if (value == null) return null;
-    if (value is bool) return value;
-    if (value is String) {
-      return value.toLowerCase() == 'true';
-    }
-    if (value is int) return value != 0;
-    if (value is List && value.isNotEmpty) {
-      final firstValue = value.first;
-      if (firstValue is bool) return firstValue;
-      if (firstValue is String) return firstValue.toLowerCase() == 'true';
-      if (firstValue is int) return firstValue != 0;
-    }
-    return false;
-  }
-
   @override
   Widget build(BuildContext context) {
     // プロバイダーからデータを取得
@@ -114,13 +96,11 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
       );
     }
 
-    // NOTE: playersProvider (models/user_state.dart の Player クラス) は使用しない
-    // 理由: Player クラスにはUIDが含まれておらず、ゲームデータとの結合にはUIDが必要なため
-    // 代わりに roomStreamProvider から直接 Firestore の構造を使ってデータを取得
+    // 結果データの取得と順位計算
     final roomSnapshot = ref.watch(roomStreamProvider(roomId));
-    final gamePlayers = roomSnapshot.when(
+    final resultPlayers = roomSnapshot.when(
       data: (snapshot) {
-        if (!snapshot.exists) return <NgWordPlayer>[];
+        if (!snapshot.exists) return <ResultPlayer>[];
 
         final roomData = snapshot.data() as Map<String, dynamic>?;
         final roomPlayersMap =
@@ -132,29 +112,26 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
         final playersGameData =
             gameData?['players'] as Map<String, dynamic>? ?? {};
 
-        List<NgWordPlayer> players = [];
+        List<ResultPlayer> players = [];
 
-        // UIDベースでデータを結合（型安全な関数を使用）
+        // UIDベースでデータを結合
         for (final entry in roomPlayersMap.entries) {
           final uid = entry.key;
           final roomPlayerData = entry.value as Map<String, dynamic>;
           final gamePlayerData = playersGameData[uid] as Map<String, dynamic>?;
 
-          // 型安全なデータ取得関数を使用
+          // 型安全なデータ取得
           final nickname =
               _extractStringValue(roomPlayerData['nickname']) ?? '名無し';
           final points = _extractIntValue(gamePlayerData?['point']) ?? 0;
-          final ngWord = _extractStringValue(gamePlayerData?['ngWord']) ?? '';
-          final isAlive = _extractBoolValue(gamePlayerData?['isAlive']) ?? true;
 
-          players.add(NgWordPlayer(
+          players.add(ResultPlayer(
             uid: uid,
             nickname: nickname,
             points: points,
-            ngWord: ngWord,
             isCurrentUser: uid == currentUser.uid,
-            isAlive: isAlive,
             isHost: uid == hostPlayer,
+            rank: 1, // 一時的に1を設定、後で正しい順位を計算
           ));
         }
 
@@ -169,14 +146,43 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
           return 0; // その他は元の順序
         });
 
-        return players;
+        // 順位を計算
+        List<ResultPlayer> rankedPlayers = [];
+        int currentRank = 1;
+        for (int i = 0; i < players.length; i++) {
+          // 前のプレイヤーと同じポイントでない場合、順位を更新
+          if (i > 0 && players[i].points != players[i - 1].points) {
+            currentRank = i + 1;
+          }
+
+          rankedPlayers.add(ResultPlayer(
+            uid: players[i].uid,
+            nickname: players[i].nickname,
+            points: players[i].points,
+            isCurrentUser: players[i].isCurrentUser,
+            isHost: players[i].isHost,
+            rank: currentRank,
+          ));
+        }
+
+        return rankedPlayers;
       },
-      loading: () => <NgWordPlayer>[],
-      error: (_, __) => <NgWordPlayer>[],
+      loading: () => <ResultPlayer>[],
+      error: (_, __) => <ResultPlayer>[],
     );
+
+    // 最高ポイントの計算
+    final maxPoints = resultPlayers.isNotEmpty
+        ? resultPlayers.map((p) => p.points).reduce((a, b) => a > b ? a : b)
+        : 0;
 
     return Scaffold(
       appBar: AppBar(
+        title: Text(
+          '結果発表',
+          style: AppTextStyles.titleLarge,
+        ),
+        centerTitle: true,
         actions: [
           // ホストプレイヤーのみ終了ボタンを表示
           if (isHost)
@@ -225,7 +231,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
                 ).createShader(bounds);
               },
               blendMode: BlendMode.dstOut,
-              child: gamePlayers.isEmpty
+              child: resultPlayers.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -240,22 +246,18 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
                       ),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.only(
-                        left: AppSpacing.medium,
-                        right: AppSpacing.medium,
-                        top: AppSpacing.medium,
-                        bottom: AppSpacing.xxxLarge,
-                      ),
-                      itemCount: gamePlayers.length,
+                      padding: EdgeInsets.all(AppSpacing.medium),
+                      itemCount: resultPlayers.length,
                       itemBuilder: (context, index) {
-                        final player = gamePlayers[index];
-                        return _buildPlayerCard(player, gamePlayers);
+                        final player = resultPlayers[index];
+                        final isWinner = player.points == maxPoints;
+                        return _buildPlayerResultCard(player, isWinner);
                       },
                     ),
             ),
           ),
 
-          // 申告ボタン（画面下部固定）
+          // もう一度遊ぶボタン（画面下部固定）
           Container(
             width: double.infinity,
             padding: EdgeInsets.all(AppSpacing.medium),
@@ -265,24 +267,31 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
             child: Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _hasReported ? null : _onReportPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _hasReported
-                          ? AppTheme.hintTextColor
-                          : AppTheme.errorColor,
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.large),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppBorderRadius.medium),
-                      ),
-                    ),
-                    child: Text(
-                      _isWaitingForOthers ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: LoadingButton(
+                      text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
+                      isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
+                      onPressed: _isPreparationCompleted || _isUpdatingReady
+                          ? null // ★準備完了済みまたは通信中は押せない
+                          : () async {
+                              setState(() {
+                                _isUpdatingReady = true; // ★通信開始
+                              });
+
+                              try {
+                                await _updateReadyStatus(); // ★API呼び出し
+                                setState(() {
+                                  _isPreparationCompleted = true; // ★成功時のみtrue
+                                });
+                              } catch (e) {
+                                // エラー時は_isPreparationCompletedはfalseのまま
+                              } finally {
+                                setState(() {
+                                  _isUpdatingReady = false; // ★通信終了
+                                });
+                              }
+                            },
                     ),
                   ),
                 ),
@@ -294,75 +303,51 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
     );
   }
 
-  void _onReportPressed() {
-    setState(() {
-      _hasReported = true;
-      _isWaitingForOthers = true;
-    });
+  Future<void> _updateReadyStatus() async {
+    final userState = ref.read(userProvider);
+    final currentGame = ref.read(currentGameProvider);
 
-    // API経由で申告情報を送信
-    final currentUser = ref.read(userProvider);
-    final roomId = currentUser.roomId;
+    final roomId = userState.roomId;
+    final nickname = userState.nickname;
+    final uid = userState.uid; // ★ uidを追加で取得
+    final gameId = currentGame.gameId; // ★ gameIdを取得
 
-    if (roomId != null && currentUser.uid != null) {
-      _submitReport(roomId, currentUser.uid!);
+    if (roomId == null || nickname == null || uid == null || gameId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('準備完了の更新に失敗しました（必要な情報が不足しています）')),
+      );
+      return;
     }
 
-    // 一時的な処理（実際は他プレイヤーの状態変化を監視）
-    Future.delayed(Duration(seconds: 2), () {
-      if (mounted) {
-        // TODO: 結果画面への遷移処理
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ResultScreen()));
-      }
-    });
-  }
-
-  // API経由で申告情報を送信する処理
-  Future<void> _submitReport(String roomId, String uid) async {
     try {
-      final result = await ApiService.declare0001(roomId, uid);
+      print('準備完了状態を更新: $nickname in room $roomId');
 
-      if (result['success'] == true) {
-        print('✅ 申告情報を送信しました: $uid');
+      // ★ API呼び出し実装
+      final response = await ApiService.setReady(roomId, uid, gameId);
 
-        // 成功時のスナックバー表示
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('申告を受け付けました'),
-              backgroundColor: AppTheme.successColor,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        // APIからの失敗レスポンス
-        if (mounted) {
-          ApiErrorHandler.handleApiError(context, result, _setError);
-          _resetReportState();
-        }
-      }
+      print('準備完了状態の更新成功: $response');
+
+      // 成功時のフィードバック（オプション）
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('準備完了しました！')),
+      );
+
+      // 全員の準備が完了すると、Cloud Functionsにより
+      // gameStatus が 'waiting' → 'playing' に自動更新され、
+      // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
-      print('❌ 申告情報の送信に失敗: $e');
+      print('準備完了状態の更新エラー: $e');
 
-      if (mounted) {
-        // http.Response型のエラーかどうかで処理を分ける
-        if (e is http.Response) {
-          ApiErrorHandler.handleHttpError(context, e, _setError);
-        } else {
-          ApiErrorHandler.handleException(context, e, _setError);
-        }
-        _resetReportState();
-      }
+      // ★ エラー時の状態復旧
+      setState(() {
+        _isPreparationCompleted = false;
+      });
+
+      // エラーメッセージ表示
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('準備完了の更新に失敗しました: $e')),
+      );
     }
-  }
-
-  // 申告ボタンの状態をリセット
-  void _resetReportState() {
-    setState(() {
-      _hasReported = false;
-      _isWaitingForOthers = false;
-    });
   }
 
   void _showExitGameDialog() {
@@ -469,74 +454,72 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
     }
   }
 
-  Widget _buildPlayerCard(NgWordPlayer player, List<NgWordPlayer> allPlayers) {
-    // 現在のユーザーの場合は何も表示しない
-    if (player.isCurrentUser) {
-      return SizedBox.shrink();
-    }
-
+  Widget _buildPlayerResultCard(ResultPlayer player, bool isWinner) {
     return Container(
       margin: EdgeInsets.only(bottom: AppSpacing.medium),
-      padding: EdgeInsets.all(AppSpacing.medium),
+      padding: EdgeInsets.all(AppSpacing.large),
       decoration: BoxDecoration(
-        color: !player.isAlive
-            ? AppTheme.hintTextColor.withValues(alpha: 0.3)
+        // 最高ポイントプレイヤーは黄色背景
+        color: isWinner
+            ? Colors.amber.shade100.withValues(alpha: 0.3)
             : AppTheme.cardColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(AppBorderRadius.large),
         border: Border.all(
-          color: AppTheme.borderColor,
-          width: 1,
+          color: isWinner ? Colors.amber.shade300 : AppTheme.borderColor,
+          width: isWinner ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: AppElevation.low,
-            offset: Offset(0, 2),
+            color: isWinner
+                ? Colors.amber.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: AppElevation.medium,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // プレイヤー名とポイント
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    player.nickname,
-                    style: AppTextStyles.titleSmall,
-                  ),
-                ],
-              ),
-              Text(
-                '${player.points}点',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w600,
+          // 順位表示
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: _getRankColor(player.rank),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '${player.rank}',
+                style: AppTextStyles.titleSmall.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
+            ),
           ),
 
-          SizedBox(height: AppSpacing.small),
+          SizedBox(width: AppSpacing.medium),
 
-          // NGワード表示
-          RichText(
-            text: TextSpan(
-              style: AppTextStyles.body,
+          // プレイヤー情報
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextSpan(
-                  text: 'NGワード：',
-                  style: TextStyle(color: AppTheme.secondaryTextColor),
-                ),
-                TextSpan(
-                  text: player.ngWord.isEmpty ? '読み込み中...' : player.ngWord,
-                  style: TextStyle(
-                    color: player.ngWord.isEmpty
-                        ? AppTheme.hintTextColor
-                        : AppTheme.errorColor,
+                Text(
+                  player.nickname,
+                  style: AppTextStyles.titleMedium.copyWith(
                     fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: AppSpacing.small),
+                Text(
+                  '${player.points}点',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isWinner
+                        ? Colors.amber.shade700
+                        : AppTheme.primaryColor,
                   ),
                 ),
               ],
@@ -545,5 +528,18 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
         ],
       ),
     );
+  }
+
+  Color _getRankColor(int rank) {
+    switch (rank) {
+      case 1:
+        return Colors.amber; // 金
+      case 2:
+        return Colors.grey.shade400; // 銀
+      case 3:
+        return Colors.brown.shade400; // 銅
+      default:
+        return AppTheme.accentColor; // その他
+    }
   }
 }

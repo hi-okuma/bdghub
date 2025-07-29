@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../Pages/0000_HubMain/game_title_page.dart';
 import '../Pages/0000_HubMain/select_game_page.dart';
+import '../Pages/0000_HubMain/game_result_page.dart';
 
 class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey =
@@ -112,42 +113,12 @@ class NavigationService {
   void navigateToResult(Map<String, dynamic> currentGame) {
     if (_navigator == null) return;
 
-    final gameId = _ref.read(currentGameProvider).gameId ?? '0001';
-
-    switch (gameId) {
-      case '0001': // NGワード - 結果発表画面
-        _navigator!.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('NGワード', '結果発表'),
-          ),
-        );
-        break;
-      case '0002': // カタカナ語禁止 - 結果発表画面
-        _navigator!.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) =>
-                _buildPlaceholderGameScreen('カタカナ語禁止', '結果発表'),
-          ),
-        );
-        break;
-      case '0003': // 水平思考 - 結果発表画面
-        _navigator!.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('水平思考', '結果発表'),
-          ),
-        );
-        break;
-      case '0004': // 偏見プロフィール - 正誤確認画面
-        _navigator!.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) =>
-                _buildPlaceholderGameScreen('偏見プロフィール', '正誤確認'),
-          ),
-        );
-        break;
-      default:
-        navigateToGameTitle();
-    }
+    // 全ゲーム共通でGameResultPageに遷移
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const GameResultPage(),
+      ),
+    );
   }
 
   void navigateToSelectGame() {
