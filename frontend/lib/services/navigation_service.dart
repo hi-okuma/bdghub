@@ -1,3 +1,4 @@
+import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
@@ -22,6 +23,24 @@ class NavigationService {
         builder: (context) => const GameTitlePage(),
       ),
     );
+  }
+
+  void navigateToPlayingPage() {
+    if (_navigator == null) return;
+
+    final gameId = _ref.read(currentGameProvider).gameId ?? '0001';
+
+    switch (gameId) {
+      case '0001': // NGワード
+        _navigator!.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const NgWordPlayingPage(),
+          ),
+        );
+        break;
+      default:
+        navigateToGameTitle();
+    }
   }
 
   void navigateToChildTurn(Map<String, dynamic> currentGame) {
@@ -106,7 +125,8 @@ class NavigationService {
       case '0002': // カタカナ語禁止 - 結果発表画面
         _navigator!.pushReplacement(
           MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('カタカナ語禁止', '結果発表'),
+            builder: (context) =>
+                _buildPlaceholderGameScreen('カタカナ語禁止', '結果発表'),
           ),
         );
         break;
@@ -120,7 +140,8 @@ class NavigationService {
       case '0004': // 偏見プロフィール - 正誤確認画面
         _navigator!.pushReplacement(
           MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('偏見プロフィール', '正誤確認'),
+            builder: (context) =>
+                _buildPlaceholderGameScreen('偏見プロフィール', '正誤確認'),
           ),
         );
         break;
