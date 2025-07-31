@@ -121,14 +121,22 @@ class NavigationService {
     );
   }
 
+  /// ゲーム選択画面に遷移（ゲーム終了時）
   void navigateToSelectGame() {
-    if (_navigator == null) return;
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      print('❌ Navigation context is null for navigateToSelectGame');
+      return;
+    }
 
-    _navigator!.pushAndRemoveUntil(
+    print('🎮 Navigating to SelectGamePage');
+
+    // 現在のスタックをクリアしてゲーム選択画面に遷移
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => const SelectGamePage(),
       ),
-      (route) => false,
+      (route) => false, // 全ての前のルートを削除
     );
   }
 

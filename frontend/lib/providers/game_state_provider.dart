@@ -35,6 +35,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   GamePhase _currentGamePhase = GamePhase.initial;
   bool _hasNavigatedToPlaying = false; // playingページに遷移済みかどうか
 
+  // ★ 追加: roomのstatusを保持 ★
+  String? _currentRoomStatus;
+  String? _previousRoomStatus; // ★ 前回のroom statusを保持
+
   @override
   Future<GameStatus> build(String roomId) async {
     print('🔍 RoomGameStateNotifier.build called with roomId: $roomId');
@@ -43,6 +47,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
+    _currentRoomStatus = null;
+    _previousRoomStatus = null; // ★ 初期化
 
     ref.onDispose(() {
       print('🔍 Disposing RoomGameStateNotifier');
@@ -108,7 +114,33 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       final data = doc.data() as Map<String, dynamic>?;
       final roomStatus = data?['status'] as String?;
 
-      print('🔍 Room status: $roomStatus');
+      // ★ room statusの変化を検知 ★
+      _previousRoomStatus = _currentRoomStatus;
+      _currentRoomStatus = roomStatus;
+      print('🔍 Room status: $roomStatus (previous: $_previousRoomStatus)');
+
+      // ★ 重要: inProgressからwaitingへの変化を検知 ★
+      if (_previousRoomStatus == 'inProgress' && roomStatus == 'accepting') {
+        print('🎮 ゲーム終了検知: inProgress → accepting');
+
+        // 全ての監視を停止
+        _stopAllMonitoring();
+        _resetNavigationFlags();
+
+        // ゲーム選択画面に遷移
+        if (!_isDisposed) {
+          try {
+            final navigationService = ref.read(navigationServiceProvider);
+            navigationService.navigateToSelectGame();
+            print('🎮 ゲーム選択画面への遷移完了');
+          } catch (e) {
+            print('❌ Navigation error: $e');
+          }
+
+          state = const AsyncValue.data(GameStatus.waiting);
+        }
+        return;
+      }
 
       // 部屋のステータスチェック
       if (roomStatus != 'inProgress') {
@@ -200,18 +232,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       print('🔍 No currentGame documents found');
       _stopGameMonitoring();
 
-      // ゲーム中からドキュメントが削除された場合は結果画面に遷移
-      if (_currentGamePhase == GamePhase.started) {
-        print(
-            '🔍 Game documents deleted during gameplay - navigating to result');
-        try {
-          final navigationService = ref.read(navigationServiceProvider);
-          navigationService.navigateToResult({});
-          _currentGamePhase = GamePhase.ended;
-        } catch (e) {
-          print('❌ Navigation error: $e');
-        }
-      }
+      // ★ 削除: ここでのゲーム選択画面遷移は行わない ★
+      // room.statusの変化で遷移するため、ここでの遷移は不要
 
       if (!_isDisposed) {
         state = const AsyncValue.data(GameStatus.waiting);
@@ -219,7 +241,6 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       return;
     }
 
-    // 最初のドキュメントのIDをgameIdとして使用
     final gameDoc = querySnapshot.docs.first;
     final gameId = gameDoc.id;
     final gameData = gameDoc.data() as Map<String, dynamic>;
@@ -373,12 +394,13 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGameId = null;
   }
 
-  // ナビゲーションフラグのリセット
+  // ★ 追加: より確実なリセット処理 ★
   void _resetNavigationFlags() {
     _hasNavigatedToGameTitle = false;
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
+    _currentGameId = null;
   }
 
   GameStatus _parseGameStatus(dynamic status) {

@@ -6,8 +6,10 @@ import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/error_handler.dart';
+import 'package:bodogehub/utils/game_exit_handler.dart';
 
 // 全ゲーム共通の結果表示用プレイヤーデータ
 class ResultPlayer {
@@ -35,14 +37,15 @@ class GameResultPage extends ConsumerStatefulWidget {
   ConsumerState<GameResultPage> createState() => _GameResultPageState();
 }
 
-class _GameResultPageState extends ConsumerState<GameResultPage> {
+class _GameResultPageState extends ConsumerState<GameResultPage> with GameExitHandler {
   String? _errorMessage;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
 
-  // エラーメッセージを設定する関数（ApiErrorHandler用）
-  void _setError(String message) {
+  // エラーメッセージを設定する関数（GameExitHandler用）
+  @override
+  void setError(String message) {
     if (mounted) {
       setState(() {
         _errorMessage = message;
@@ -189,7 +192,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
               child: ElevatedButton(
-                onPressed: _showExitGameDialog,
+                onPressed: showExitGameDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.warningColor,
                   padding: const EdgeInsets.symmetric(
@@ -347,110 +350,6 @@ class _GameResultPageState extends ConsumerState<GameResultPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('準備完了の更新に失敗しました: $e')),
       );
-    }
-  }
-
-  void _showExitGameDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('ゲームを終了しますか？'),
-          content: const Text('ホストがゲームを終了すると、全参加者がタイトル画面に戻ります。'),
-          actions: [
-            LoadingButton(
-              text: 'キャンセル',
-              isLoading: false,
-              isElevated: false,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            LoadingButton(
-              text: 'ゲーム終了',
-              isLoading: false,
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // API経由でゲーム終了処理
-                final currentUser = ref.read(userProvider);
-                final roomId = currentUser.roomId;
-
-                if (roomId != null) {
-                  await _exitGame(roomId);
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // API経由でゲーム終了処理
-  Future<void> _exitGame(String roomId) async {
-    try {
-      // ローディング表示
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.large),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.medium),
-                  Text(
-                    'ゲームを終了しています...',
-                    style: AppTextStyles.body,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final result = await ApiService.endGame(roomId);
-
-      if (mounted) {
-        Navigator.of(context).pop(); // ローディングダイアログを閉じる
-      }
-
-      if (result['success'] == true) {
-        print('✅ ゲーム終了処理が完了しました');
-
-        // 成功時：ゲーム選択画面に戻る
-        if (mounted) {
-          Navigator.of(context).pop(); // ゲーム画面を閉じる
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('ゲームを終了しました'),
-              backgroundColor: AppTheme.successColor,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        // APIからの失敗レスポンス
-        if (mounted) {
-          ApiErrorHandler.handleApiError(context, result, _setError);
-        }
-      }
-    } catch (e) {
-      print('❌ ゲーム終了処理に失敗: $e');
-
-      if (mounted) {
-        Navigator.of(context).pop(); // ローディングダイアログを閉じる（エラー時）
-
-        // http.Response型のエラーかどうかで処理を分ける
-        if (e is http.Response) {
-          ApiErrorHandler.handleHttpError(context, e, _setError);
-        } else {
-          ApiErrorHandler.handleException(context, e, _setError);
-        }
-      }
     }
   }
 
