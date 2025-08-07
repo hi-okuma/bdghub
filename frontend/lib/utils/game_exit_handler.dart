@@ -114,7 +114,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('ゲームを終了しますか？'),
-          content: const Text('ホストがゲームを終了すると、全参加者がゲーム選択画面に戻ります。'),
+          content: const Text('ゲームを終了すると、参加者全員がゲーム選択画面に戻ります。'),
           actions: [
             LoadingButton(
               text: 'キャンセル',

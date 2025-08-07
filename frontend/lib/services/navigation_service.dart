@@ -2,6 +2,7 @@ import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
+import '../providers/user_provider.dart';
 import '../Pages/0000_HubMain/game_title_page.dart';
 import '../Pages/0000_HubMain/select_game_page.dart';
 import '../Pages/0000_HubMain/game_result_page.dart';
@@ -137,6 +138,51 @@ class NavigationService {
         builder: (context) => const SelectGamePage(),
       ),
       (route) => false, // 全ての前のルートを削除
+    );
+
+    // 遷移完了後にダイアログ表示（少し遅延を入れる）
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _showGameEndedDialogIfNeeded();
+    });
+  }
+
+  /// 子プレイヤーにゲーム終了ダイアログを表示
+  void _showGameEndedDialogIfNeeded() {
+    final currentContext = navigatorKey.currentContext;
+    if (currentContext == null) {
+      print('❌ Context is null for dialog');
+      return;
+    }
+
+    // ホスト判定
+    final isHost = _ref.read(isHostProvider);
+
+    // ホストの場合はダイアログを表示しない
+    if (isHost) {
+      print('🎮 Host player - no dialog needed');
+      return;
+    }
+
+    // 子プレイヤーの場合はダイアログを表示
+    print('🎮 Showing game ended dialog for child player');
+
+    showDialog(
+      context: currentContext,
+      barrierDismissible: false, // 背景タップで閉じない
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('ゲーム終了'),
+          content: const Text('ホストによってゲームが終了されました'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // ダイアログを閉じる
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
     );
   }
 
