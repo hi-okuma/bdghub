@@ -75,28 +75,35 @@ class UserNotifier extends StateNotifier<UserState> {
     print('🚪 部屋退出前の状態: $state');
     final currentRoomId = state.roomId;
 
-    // 状態をクリア
-    state = const UserState();
-    print('🚪 部屋退出後の状態: $state');
-
-    // 関連プロバイダーのクリーンアップ
+    // 関連プロバイダーのクリーンアップ（状態クリア前に実行）
     if (currentRoomId != null) {
       try {
-        // RoomGameStateNotifierの監視を停止
+        // ★ 修正1: RoomGameStateNotifierの監視を完全停止 ★
         final gameStateNotifier =
             _ref.read(roomGameStateProvider(currentRoomId).notifier);
         gameStateNotifier.stopMonitoring();
         print('🔄 ゲーム状態監視を停止: $currentRoomId');
 
-        // Providerをinvalidateして新しいインスタンスを強制作成
-        _ref.invalidate(roomStreamProvider(currentRoomId));
-        _ref.invalidate(playersProvider(currentRoomId));
-        _ref.invalidate(roomGameStateProvider(currentRoomId));
-        print('🔄 関連プロバイダーをクリア: $currentRoomId');
+        // ★ 修正2: 少し待機してから invalidate を実行 ★
+        Future.delayed(Duration(milliseconds: 100), () {
+          try {
+            // Providerをinvalidateして新しいインスタンスを強制作成
+            _ref.invalidate(roomStreamProvider(currentRoomId));
+            _ref.invalidate(playersProvider(currentRoomId));
+            _ref.invalidate(roomGameStateProvider(currentRoomId));
+            print('🔄 関連プロバイダーをクリア: $currentRoomId');
+          } catch (e) {
+            print('⚠️ 遅延プロバイダークリーンアップエラー: $e');
+          }
+        });
       } catch (e) {
         print('⚠️ プロバイダークリーンアップエラー: $e');
       }
     }
+
+    // ★ 修正3: 状態をクリア（invalidate後に実行） ★
+    state = const UserState();
+    print('🚪 部屋退出後の状態: $state');
   }
 
   void disconnect() {

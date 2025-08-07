@@ -42,13 +42,34 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   @override
   Future<GameStatus> build(String roomId) async {
     print('🔍 RoomGameStateNotifier.build called with roomId: $roomId');
+
+    // ★ 修正: ユーザー状態をチェック ★
+    try {
+      final userState = ref.read(userProvider);
+
+      // uidが無効な場合は監視を開始しない
+      if (userState.uid == null || userState.uid!.isEmpty) {
+        print('🔍 Invalid user state - skipping monitoring');
+        return GameStatus.waiting;
+      }
+
+      // roomIdが無効な場合も監視を開始しない
+      if (roomId.isEmpty) {
+        print('🔍 Invalid roomId - skipping monitoring');
+        return GameStatus.waiting;
+      }
+    } catch (e) {
+      print('🔍 Error reading user state - skipping monitoring: $e');
+      return GameStatus.waiting;
+    }
+
     _isDisposed = false;
     _hasNavigatedToGameTitle = false;
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
     _currentRoomStatus = null;
-    _previousRoomStatus = null; // ★ 初期化
+    _previousRoomStatus = null;
 
     ref.onDispose(() {
       print('🔍 Disposing RoomGameStateNotifier');
@@ -65,6 +86,25 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
   void _startMonitoring(String roomId) {
     print('🔍 Starting room monitoring for roomId: $roomId');
+
+    // ★ 修正: disposed状態チェック ★
+    if (_isDisposed) {
+      print('🔍 Already disposed - skipping monitoring');
+      return;
+    }
+
+    // ★ 修正: ユーザー状態の再チェック ★
+    try {
+      final userState = ref.read(userProvider);
+      if (userState.uid == null || userState.uid!.isEmpty) {
+        print('🔍 Invalid user state in _startMonitoring - aborting');
+        return;
+      }
+    } catch (e) {
+      print('🔍 Error reading user state in _startMonitoring: $e');
+      return;
+    }
+
     _roomSubscription?.cancel();
 
     // まず部屋の基本状態を監視
@@ -76,6 +116,13 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       (doc) {
         try {
           print('🔍 Room document update received');
+
+          // ★ 修正: 処理中にdisposed状態チェック ★
+          if (_isDisposed) {
+            print('🔍 Disposed during room update - stopping');
+            return;
+          }
+
           _handleRoomUpdate(roomId, doc);
         } catch (e, stackTrace) {
           print('❌ Exception in room listen callback: $e');
@@ -465,14 +512,35 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   }
 
   void stopMonitoring() {
+    print('🔄 Stopping all monitoring...');
+
+    // ★ 修正: disposed フラグを設定して新しい監視を防ぐ ★
+    _isDisposed = true;
+
+    // 全ての監視を停止
     _roomSubscription?.cancel();
+    _roomSubscription = null;
+
     _currentGameCollectionSubscription?.cancel();
+    _currentGameCollectionSubscription = null;
+
     _gameSubscription?.cancel();
+    _gameSubscription = null;
+
+    // 状態をリセット
     _currentGameId = null;
     _resetNavigationFlags();
-    if (!_isDisposed) {
-      state = const AsyncValue.data(GameStatus.waiting);
+
+    // 最終状態を設定（disposed状態でない場合のみ）
+    try {
+      if (!_isDisposed) {
+        state = const AsyncValue.data(GameStatus.waiting);
+      }
+    } catch (e) {
+      print('⚠️ Error setting final state: $e');
     }
+
+    print('🔄 All monitoring stopped');
   }
 }
 
