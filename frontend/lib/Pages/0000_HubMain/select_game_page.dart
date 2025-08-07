@@ -9,13 +9,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '/components/game_list_widget.dart';
 import '/components/custom_widgets.dart';
 import '/components/app_theme.dart';
+import 'top_page.dart';
 import '/Pages/0000_HubMain/game_detail_page.dart';
 import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_state_provider.dart';
-import 'package:bodogehub/models/user_state.dart';
-import '/services/navigation_service.dart';
 
 class SelectGamePage extends ConsumerStatefulWidget {
   const SelectGamePage({Key? key}) : super(key: key);
@@ -509,7 +508,6 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
 
         if (responseData.containsKey('success') &&
             responseData['success'] == false) {
-          // エラーハンドリング
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(responseData['message'] ?? 'エラーが発生しました')),
           );
@@ -518,15 +516,17 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
 
         print('🚪 API退出成功');
 
-        // 画面遷移を先に実行
-        if (!mounted) return;
-        Navigator.of(context).pop();
-
-        // Firestoreの更新完了を待つ方法（オプション）
-        await ref.read(roomStreamProvider(userState.roomId!).future);
-
-        // ★ 状態クリアは最後に実行 ★
+        // 状態クリアを先に実行
         ref.read(userProvider.notifier).leaveRoom();
+
+        // ★ 修正: TopPageに直接遷移（全スタッククリア） ★
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const TopPage(),
+          ),
+          (route) => false, // 全ての前のルートを削除
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -535,14 +535,12 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         }
       } else {
         print('🚪 API退出失敗: ${response.statusCode}');
-        // HTTPエラーハンドリング
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('退出に失敗しました: ${response.statusCode}')),
         );
       }
     } catch (e) {
       print('🚪 退出エラー: $e');
-      // 通信エラーハンドリング
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('通信エラー: $e')),
       );
