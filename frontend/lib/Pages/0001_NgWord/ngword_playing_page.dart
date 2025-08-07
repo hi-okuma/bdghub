@@ -6,8 +6,10 @@ import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/error_handler.dart';
+import 'package:bodogehub/utils/game_exit_handler.dart';
 
 // NGワードゲーム画面用のプレイヤー表示データ
 class NgWordPlayer {
@@ -37,13 +39,14 @@ class NgWordPlayingPage extends ConsumerStatefulWidget {
   ConsumerState<NgWordPlayingPage> createState() => _NgWordPlayingPageState();
 }
 
-class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
+class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with GameExitHandler {
   bool _hasReported = false;
   bool _isWaitingForOthers = false;
   String? _errorMessage; // エラーメッセージ用の状態
 
-  // エラーメッセージを設定する関数（ApiErrorHandler用）
-  void _setError(String message) {
+  // エラーメッセージを設定する関数（GameExitHandler用）
+  @override
+  void setError(String message) {
     if (mounted) {
       setState(() {
         _errorMessage = message;
@@ -183,7 +186,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
               child: ElevatedButton(
-                onPressed: _showExitGameDialog,
+                onPressed: showExitGameDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.warningColor,
                   padding: const EdgeInsets.symmetric(
@@ -338,7 +341,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
       } else {
         // APIからの失敗レスポンス
         if (mounted) {
-          ApiErrorHandler.handleApiError(context, result, _setError);
+          ApiErrorHandler.handleApiError(context, result, setError);
           _resetReportState();
         }
       }
@@ -348,9 +351,9 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
       if (mounted) {
         // http.Response型のエラーかどうかで処理を分ける
         if (e is http.Response) {
-          ApiErrorHandler.handleHttpError(context, e, _setError);
+          ApiErrorHandler.handleHttpError(context, e, setError);
         } else {
-          ApiErrorHandler.handleException(context, e, _setError);
+          ApiErrorHandler.handleException(context, e, setError);
         }
         _resetReportState();
       }
@@ -363,110 +366,6 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
       _hasReported = false;
       _isWaitingForOthers = false;
     });
-  }
-
-  void _showExitGameDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('ゲームを終了しますか？'),
-          content: const Text('ホストがゲームを終了すると、全参加者がタイトル画面に戻ります。'),
-          actions: [
-            LoadingButton(
-              text: 'キャンセル',
-              isLoading: false,
-              isElevated: false,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            LoadingButton(
-              text: 'ゲーム終了',
-              isLoading: false,
-              onPressed: () async {
-                Navigator.of(context).pop();
-                // API経由でゲーム終了処理
-                final currentUser = ref.read(userProvider);
-                final roomId = currentUser.roomId;
-
-                if (roomId != null) {
-                  await _exitGame(roomId);
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // API経由でゲーム終了処理
-  Future<void> _exitGame(String roomId) async {
-    try {
-      // ローディング表示
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.large),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.medium),
-                  Text(
-                    'ゲームを終了しています...',
-                    style: AppTextStyles.body,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final result = await ApiService.endGame(roomId);
-
-      if (mounted) {
-        Navigator.of(context).pop(); // ローディングダイアログを閉じる
-      }
-
-      if (result['success'] == true) {
-        print('✅ ゲーム終了処理が完了しました');
-
-        // 成功時：ゲーム選択画面に戻る
-        if (mounted) {
-          Navigator.of(context).pop(); // ゲーム画面を閉じる
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('ゲームを終了しました'),
-              backgroundColor: AppTheme.successColor,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        // APIからの失敗レスポンス
-        if (mounted) {
-          ApiErrorHandler.handleApiError(context, result, _setError);
-        }
-      }
-    } catch (e) {
-      print('❌ ゲーム終了処理に失敗: $e');
-
-      if (mounted) {
-        Navigator.of(context).pop(); // ローディングダイアログを閉じる（エラー時）
-
-        // http.Response型のエラーかどうかで処理を分ける
-        if (e is http.Response) {
-          ApiErrorHandler.handleHttpError(context, e, _setError);
-        } else {
-          ApiErrorHandler.handleException(context, e, _setError);
-        }
-      }
-    }
   }
 
   Widget _buildPlayerCard(NgWordPlayer player, List<NgWordPlayer> allPlayers) {

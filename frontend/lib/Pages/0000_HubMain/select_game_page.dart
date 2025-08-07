@@ -39,6 +39,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     Tab(text: '協力'),
   ];
 
+  bool _isFromGameExit = false; // ★追加: ゲーム終了からの遷移かどうか
+
   @override
   void initState() {
     super.initState();
@@ -67,9 +69,9 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
 
     _fetchGames();
 
-    // ★ ゲーム状態監視の確実な開始 ★
+    // ★修正: ゲーム状態監視の開始を条件付きに ★
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startGameStateMonitoring();
+      _startGameStateMonitoringConditionally();
     });
   }
 
@@ -93,27 +95,49 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     }
   }
 
-  // ★ ゲーム状態監視を確実に開始するメソッド ★
-  void _startGameStateMonitoring() {
+  // ★追加: 条件付きでゲーム状態監視を開始 ★
+  void _startGameStateMonitoringConditionally() {
     final userState = ref.read(userProvider);
     final roomId = userState.roomId;
-    
+
     if (roomId == null || roomId.isEmpty) {
       print('❌ roomIdが無効なため、ゲーム状態監視を開始できません');
       return;
     }
 
-    print('🔍 ゲーム状態監視を開始: $roomId');
-    
-    // プロバイダーを監視開始（これにより自動的にNotifierが初期化される）
-    ref.read(roomGameStateProvider(roomId));
+    // ★追加: room statusをチェックしてから監視開始 ★
+    FirebaseFirestore.instance
+        .collection('rooms')
+        .doc(roomId)
+        .get()
+        .then((doc) {
+      if (!doc.exists) {
+        print('❌ 部屋が存在しないため、ゲーム状態監視を開始しません');
+        return;
+      }
+
+      final data = doc.data() as Map<String, dynamic>?;
+      final roomStatus = data?['status'] as String?;
+
+      print('🔍 Room status確認: $roomStatus');
+
+      // inProgressの場合のみ監視開始
+      if (roomStatus == 'inProgress') {
+        print('🔍 ゲーム状態監視を開始: $roomId');
+        ref.read(roomGameStateProvider(roomId));
+      } else {
+        print('🔍 Room status is $roomStatus - ゲーム状態監視は開始しません');
+      }
+    }).catchError((error) {
+      print('❌ Room status確認エラー: $error');
+    });
   }
 
   @override
   void dispose() {
     // ★ 注意：dispose内ではrefを使用できません ★
     // ゲーム状態監視の停止は UserNotifier.leaveRoom() で行われます
-    
+
     _tabController.dispose();
     super.dispose();
   }
@@ -152,7 +176,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   Widget build(BuildContext context) {
     final userState = ref.watch(userProvider);
     final roomId = userState.roomId ?? '';
-    
+
     // ★ デバッグ用：currentGameサブコレクションの直接確認 ★
     if (roomId.isNotEmpty && kDebugMode) {
       // currentGameサブコレクションを直接監視（デバッグ用）
@@ -161,13 +185,14 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
           .doc(roomId)
           .collection('currentGame')
           .snapshots();
-      
+
       // StreamBuilderでデバッグ情報を表示
       StreamBuilder<QuerySnapshot>(
         stream: currentGameStream,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            print('🔍 DEBUG: currentGame docs count: ${snapshot.data!.docs.length}');
+            print(
+                '🔍 DEBUG: currentGame docs count: ${snapshot.data!.docs.length}');
             for (var doc in snapshot.data!.docs) {
               print('🔍 DEBUG: gameId=${doc.id}, data=${doc.data()}');
             }
@@ -177,7 +202,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       );
     }
 
-    // ★ ゲーム状態監視とリスナーの設定 ★
+    // ★修正: ゲーム状態監視とリスナーの設定 ★
     if (roomId.isNotEmpty) {
       final gameStateAsync = ref.watch(roomGameStateProvider(roomId));
 
@@ -185,8 +210,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       gameStateAsync.whenOrNull(
         data: (status) {
           print('🎮 現在のゲーム状態: $status');
-          
-          // 子プレイヤーかどうかをログに出力
+
           final isHost = ref.read(isHostProvider);
           print('🎮 プレイヤー種別: ${isHost ? "ホスト" : "子プレイヤー"}');
         },
@@ -194,15 +218,33 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         error: (error, _) => print('❌ ゲーム状態エラー: $error'),
       );
 
-      // リスナーでナビゲーション確認
+      // ★修正: リスナーで適切な状態変化のみ処理 ★
       ref.listen(roomGameStateProvider(roomId), (previous, next) {
+        // previousがnullの場合（初回読み込み）はスキップ
+        if (previous == null) {
+          print('🎮 初回読み込みのためリスナーをスキップ');
+          return;
+        }
+
         next.whenOrNull(
           data: (status) {
             final nickname = userState.nickname ?? "Unknown";
             print('🎮 [$nickname] ゲーム状態変化: $previous → $status');
-            
+
+            // ★修正: 実際に状態が変化した場合のみ処理 ★
+            final previousStatus = previous?.valueOrNull;
+            if (previousStatus == status) {
+              print('🎮 [$nickname] 同じ状態のため処理をスキップ: $status');
+              return;
+            }
+
+            // playingになった場合のみGameTitlePageに遷移
             if (status == GameStatus.playing) {
               print('🎮 [$nickname] GameTitlePageに遷移します！');
+              // NavigationServiceで自動遷移される
+            } else if (status == GameStatus.waiting &&
+                previousStatus != GameStatus.waiting) {
+              print('🎮 [$nickname] ゲーム終了を検知しましたが、既にSelectGamePageにいるためスキップ');
             }
           },
           error: (error, stackTrace) {
@@ -212,17 +254,6 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
             );
           },
         );
-      });
-    }
-
-    // ★ ユーザーが部屋に参加している場合の状態確認 ★
-    if (roomId.isNotEmpty) {
-      // 一定間隔でゲーム状態監視が動作しているか確認
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          final currentState = ref.read(roomGameStateProvider(roomId));
-          print('🔍 2秒後のゲーム状態確認: $currentState');
-        }
       });
     }
 
@@ -291,11 +322,13 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               color: Colors.yellow[100],
               child: Column(
                 children: [
-                  Text('🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
+                  Text(
+                      '🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
                   Text('部屋: $roomId'),
                   Consumer(
                     builder: (context, ref, _) {
-                      final gameStateAsync = ref.watch(roomGameStateProvider(roomId));
+                      final gameStateAsync =
+                          ref.watch(roomGameStateProvider(roomId));
                       return gameStateAsync.when(
                         data: (status) => Text('ゲーム状態: $status'),
                         loading: () => const Text('ゲーム状態: 読み込み中...'),
@@ -307,7 +340,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               ),
             ),
           ],
-          
+
           // 参加者エリア
           Container(
             padding: const EdgeInsets.all(AppSpacing.large),

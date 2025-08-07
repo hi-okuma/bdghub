@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
@@ -16,7 +17,9 @@ class GameTitlePage extends ConsumerStatefulWidget {
   ConsumerState<GameTitlePage> createState() => _GameTitlePageState();
 }
 
-class _GameTitlePageState extends ConsumerState<GameTitlePage> {
+class _GameTitlePageState extends ConsumerState<GameTitlePage>
+    with GameExitHandler {
+  String? _errorMessage;
   int _currentImageIndex = 0;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
@@ -27,6 +30,15 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
   void initState() {
     super.initState();
     _loadGameData();
+  }
+
+  @override
+  void setError(String message) {
+    if (mounted) {
+      setState(() {
+        _errorMessage = message;
+      });
+    }
   }
 
   // ゲームデータを確実に読み込む
@@ -129,7 +141,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
               child: ElevatedButton(
-                onPressed: () => _showExitGameDialog(),
+                onPressed: showExitGameDialog,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.warningColor,
                   padding: const EdgeInsets.symmetric(
@@ -340,53 +352,5 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage> {
         SnackBar(content: Text('準備完了の更新に失敗しました: $e')),
       );
     }
-  }
-
-  void _showExitGameDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('ゲームを終了しますか？'),
-          content: const Text('ホストがゲームを終了すると、全参加者がタイトル画面に戻ります。'),
-          actions: [
-            LoadingButton(
-              text: 'キャンセル',
-              isLoading: false,
-              isElevated: false,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            LoadingButton(
-              text: 'ゲーム終了',
-              isLoading: false,
-              onPressed: () {
-                Navigator.of(context).pop();
-                _exitGame();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _exitGame() {
-    // ★ ゲーム終了時の状態クリア ★
-    final userState = ref.read(userProvider);
-    if (userState.roomId != null) {
-      // ゲーム状態監視を停止
-      ref
-          .read(roomGameStateProvider(userState.roomId!).notifier)
-          .stopMonitoring();
-    }
-
-    // プロバイダーの状態をクリア
-    ref.read(currentGameProvider.notifier).clearGame();
-    ref.read(userProvider.notifier).leaveRoom();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ゲームを終了しました')),
-    );
-    //   TODO:API処理を実装
   }
 }
