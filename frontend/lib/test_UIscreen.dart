@@ -1,76 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
-import 'package:bodogehub/models/user_state.dart';
+import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/game_state_provider.dart';
+import 'package:bodogehub/services/api_service.dart';
+import 'package:bodogehub/utils/error_handler.dart';
+import 'package:bodogehub/utils/game_exit_handler.dart';
+import 'package:bodogehub/utils/validation_utils.dart';
 
-// プレイヤーのデータモデル（NGワードゲーム用）
-class NgWordPlayer {
-  final String nickname;
-  final int points;
-  final String ngWord;
-  final bool isCurrentUser;
-  final bool hasReported;
-  final bool isHost;
-
-  NgWordPlayer({
-    required this.nickname,
-    required this.points,
-    required this.ngWord,
-    this.isCurrentUser = false,
-    this.hasReported = false,
-    this.isHost = false,
-  });
-}
-
-class NgWordPlayingPage extends ConsumerStatefulWidget {
-  const NgWordPlayingPage({super.key});
+class testBiasProfileChildrenTurnPage extends ConsumerStatefulWidget {
+  const testBiasProfileChildrenTurnPage({super.key});
 
   @override
-  ConsumerState<NgWordPlayingPage> createState() => _NgWordPlayingPageState();
+  ConsumerState<testBiasProfileChildrenTurnPage> createState() =>
+      _testBiasProfileChildrenTurnPageState();
 }
 
-class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
-  bool _hasReported = false;
-  bool _isWaitingForOthers = false;
+class _testBiasProfileChildrenTurnPageState
+    extends ConsumerState<testBiasProfileChildrenTurnPage>
+    with GameExitHandler {
+  // エラーメッセージを設定する関数（GameExitHandler用）
+  @override
+  void setError(String message) {
+    if (mounted) {
+      setState(() {
+        _errorMessage = message;
+      });
+    }
+  }
+
+  bool isHost = true;
+  bool isSubmitted = false;
+  final TextEditingController _profileController = TextEditingController();
+  String? _errorMessage;
+
+  void _onProfileChanged(String value) {
+    if (_errorMessage != null) {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
+
+    final validation = ValidationUtils.validateProfile(value);
+    if (!validation.isValid && value.isNotEmpty) {
+      setState(() {
+        _errorMessage = validation.errorMessage;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // プロバイダーからデータを取得
-    final currentUser = ref.watch(userProvider);
-    final currentGame = ref.watch(currentGameProvider);
-    final isHost = ref.watch(isHostProvider);
-
-    final roomId = currentUser.roomId;
-
-    // 部屋情報がない場合のエラーハンドリング
-    if (roomId == null) {
-      return MaterialApp(
-        theme: AppTheme.lightTheme,
-        home: Scaffold(
-          body: Center(
-            child: Text(
-              '部屋情報が見つかりません',
-              style: AppTextStyles.bodyLarge,
-            ),
-          ),
-        ),
-      );
-    }
-
-    // 部屋のプレイヤー情報を取得
-    final roomPlayers = ref.watch(playersProvider(roomId));
-
-    // NGワードゲーム用のプレイヤーデータを構築
-    final gamePlayers = _buildGamePlayers(
-      roomPlayers,
-      currentGame,
-      currentUser.nickname,
-    );
-
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: Scaffold(
         appBar: AppBar(
@@ -80,7 +66,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
                 child: ElevatedButton(
-                  onPressed: _onExitGame,
+                  onPressed: showExitGameDialog,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.warningColor,
                     padding: const EdgeInsets.symmetric(
@@ -104,332 +90,122 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> {
           ],
         ),
         backgroundColor: AppTheme.backgroundColor,
-        body: Column(
-          children: [
-            Expanded(
-              child: ShaderMask(
-                shaderCallback: (Rect bounds) {
-                  return LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    stops: [0.0, 0.9, 0.95, 0.98],
-                    colors: [
-                      Color.fromARGB(0, 255, 255, 255),
-                      Color.fromARGB(50, 255, 255, 255),
-                      Color.fromARGB(128, 255, 255, 255),
-                      Color.fromARGB(255, 255, 255, 255),
-                    ],
-                  ).createShader(bounds);
-                },
-                blendMode: BlendMode.dstOut,
-                child: gamePlayers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: AppSpacing.medium),
-                            Text(
-                              'プレイヤー情報を読み込み中...',
-                              style: AppTextStyles.body,
+        body: isHost
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'あなたは親プレイヤーです',
+                      style: AppTextStyles.titleLarge,
+                    ),
+                    Text(
+                      '子プレイヤーが偏見を入力するまでお待ちください',
+                      style: AppTextStyles.body,
+                    )
+                  ],
+                ),
+              )
+            : Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: <Widget>[
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'あなたは子プレイヤーです',
+                          style: AppTextStyles.titleLarge,
+                        ),
+                        SizedBox(
+                          height: AppSpacing.small,
+                        ),
+                        Text(
+                          '人物の見た目から勝手に想像して\n指定されたプロフィールを入力してください',
+                          style: AppTextStyles.body,
+                          textAlign: TextAlign.center,
+                        )
+                      ],
+                    ),
+                    Placeholder(
+                      child: Container(
+                        width: 180,
+                        height: 270,
+                        child: Text('ここにお題画像'),
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ニックネーム入力
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.medium),
+                          child: TextField(
+                            maxLength: AppLayout.maxProfileLength,
+                            controller: _profileController,
+                            decoration: InputDecoration(
+                              labelText:
+                                  'ここにお題プロフィールを表示（${AppLayout.maxProfileLength}文字以内）',
+                              hintText: '偏見を入力してください',
+                              helperText: '※ \' \" ; - = / * は使用できません',
                             ),
-                          ],
+                            onChanged: _onProfileChanged,
+                          ),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.only(
-                          left: AppSpacing.medium,
-                          right: AppSpacing.medium,
-                          top: AppSpacing.medium,
-                          bottom: AppSpacing.xxxLarge,
-                        ),
-                        itemCount: gamePlayers.length,
-                        itemBuilder: (context, index) {
-                          final player = gamePlayers[index];
-                          return _buildPlayerCard(player);
-                        },
-                      ),
-              ),
-            ),
-
-            // 申告ボタン（画面下部固定）
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(AppSpacing.medium),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _hasReported ? null : _onReportPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _hasReported
-                            ? AppTheme.hintTextColor
-                            : AppTheme.errorColor,
-                        padding:
-                            EdgeInsets.symmetric(vertical: AppSpacing.large),
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppBorderRadius.medium),
-                        ),
-                      ),
-                      child: Text(
-                        _isWaitingForOthers ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
-                        style: AppTextStyles.bodyLarge.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                        // エラー表示
+                        if (_errorMessage != null)
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(top: AppSpacing.small),
+                            child: Text(
+                              _errorMessage!,
+                              style: AppTextStyles.errorText,
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // プロバイダーのデータからNGワードゲーム用のプレイヤーリストを構築
-  List<NgWordPlayer> _buildGamePlayers(
-    List<Player> roomPlayers,
-    CurrentGameState currentGame,
-    String? currentUserNickname,
-  ) {
-    // ゲームデータからプレイヤー固有の情報を取得
-    final gameData = currentGame.gameData;
-    final playersGameData = gameData?['players'] as Map<String, dynamic>?;
-    final ngWords = gameData?['ngWords'] as Map<String, dynamic>?;
-    final points = gameData?['points'] as Map<String, dynamic>?;
-    final reportedPlayers = gameData?['reportedPlayers'] as List<dynamic>?;
-
-    // room_provider.dartのPlayerから、NGワードゲーム用のNgWordPlayerに変換
-    List<NgWordPlayer> gamePlayers = roomPlayers.map((roomPlayer) {
-      // プレイヤー固有のゲームデータを取得
-      final playerData =
-          playersGameData?[roomPlayer.nickname] as Map<String, dynamic>?;
-
-      return NgWordPlayer(
-        nickname: roomPlayer.nickname,
-        // ゲームデータからポイントを取得、なければデフォルト値0
-        points: playerData?['points'] ?? points?[roomPlayer.nickname] ?? 0,
-        // ゲームデータからNGワードを取得、なければデフォルト値空文字
-        ngWord: playerData?['ngWord'] ?? ngWords?[roomPlayer.nickname] ?? '',
-        // 現在のユーザーかどうかを判定
-        isCurrentUser: roomPlayer.nickname == currentUserNickname,
-        // 申告済みかどうかを判定
-        hasReported: reportedPlayers?.contains(roomPlayer.nickname) ??
-            playerData?['hasReported'] ??
-            false,
-        // ホストかどうか
-        isHost: roomPlayer.isHost,
-      );
-    }).toList();
-
-    // ポイント順でソート（高い順 → 同点の場合は元の順序）
-    gamePlayers.sort((a, b) {
-      if (a.points != b.points) {
-        return b.points.compareTo(a.points); // ポイント降順
-      }
-      // 同点の場合は元の順序を維持（ホストが先頭になるように）
-      return roomPlayers
-          .indexWhere((p) => p.nickname == a.nickname)
-          .compareTo(roomPlayers.indexWhere((p) => p.nickname == b.nickname));
-    });
-
-    return gamePlayers;
-  }
-
-  void _onReportPressed() {
-    setState(() {
-      _hasReported = true;
-      _isWaitingForOthers = true;
-    });
-
-    // TODO: 実際の実装では、Firestoreに申告情報を送信
-    // 例: ゲーム状態プロバイダーを通じて申告処理を行う
-
-    // 一時的な処理（実際は他プレイヤーの状態変化を監視）
-    Future.delayed(Duration(seconds: 2), () {
-      if (mounted) {
-        // TODO: 結果画面への遷移処理
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ResultScreen()));
-      }
-    });
-  }
-
-  void _onExitGame() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('ゲーム終了'),
-        content: Text('ゲームを終了しますか？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('キャンセル'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: ゲーム終了処理をプロバイダー経由で実行
-              // ゲーム選択画面に戻る
-              Navigator.of(context).pop();
-            },
-            child: Text('終了'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlayerCard(NgWordPlayer player) {
-    // 最高ポイントかどうかを判定
-    final gamePlayers = _buildGamePlayers(
-      ref.read(playersProvider(ref.read(userProvider).roomId!)),
-      ref.read(currentGameProvider),
-      ref.read(userProvider).nickname,
-    );
-    final maxPoints = gamePlayers.isNotEmpty ? gamePlayers.first.points : 0;
-    final isTopPlayer = player.points == maxPoints && maxPoints > 0;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.medium),
-      padding: EdgeInsets.all(AppSpacing.medium),
-      decoration: BoxDecoration(
-        color: player.hasReported
-            ? AppTheme.hintTextColor.withOpacity(0.3)
-            : (isTopPlayer
-                ? Colors.yellow.withOpacity(0.3)
-                : AppTheme.cardColor),
-        borderRadius: BorderRadius.circular(AppBorderRadius.large),
-        border: Border.all(
-          color: AppTheme.borderColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: AppElevation.low,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // プレイヤー名とポイント
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    player.nickname,
-                    style: AppTextStyles.titleSmall,
-                  ),
-                  if (player.isHost) ...[
-                    SizedBox(width: AppSpacing.small),
                     Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.small,
-                        vertical: 2,
-                      ),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(AppSpacing.medium),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.2),
-                        borderRadius:
-                            BorderRadius.circular(AppBorderRadius.small),
+                        color: AppTheme.surfaceColor,
                       ),
-                      child: Text(
-                        'ホスト',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  isSubmitted = true;
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isSubmitted
+                                    ? AppTheme.hintTextColor
+                                    : AppTheme.errorColor,
+                                padding: EdgeInsets.symmetric(
+                                    vertical: AppSpacing.large),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      AppBorderRadius.medium),
+                                ),
+                              ),
+                              child: Text(
+                                isSubmitted ? '他プレイヤー待ち' : '提出',
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                  if (player.isCurrentUser) ...[
-                    SizedBox(width: AppSpacing.small),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.small,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.successColor.withOpacity(0.2),
-                        borderRadius:
-                            BorderRadius.circular(AppBorderRadius.small),
-                      ),
-                      child: Text(
-                        '自分',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppTheme.successColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              Text(
-                '${player.points}点',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
-
-          SizedBox(height: AppSpacing.small),
-
-          // NGワード表示
-          RichText(
-            text: TextSpan(
-              style: AppTextStyles.body,
-              children: [
-                TextSpan(
-                  text: 'NGワード：',
-                  style: TextStyle(color: AppTheme.secondaryTextColor),
-                ),
-                TextSpan(
-                  text: player.ngWord.isEmpty ? '読み込み中...' : player.ngWord,
-                  style: TextStyle(
-                    color: player.ngWord.isEmpty
-                        ? AppTheme.hintTextColor
-                        : AppTheme.errorColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // 申告済み表示
-          if (player.hasReported) ...[
-            SizedBox(height: AppSpacing.small),
-            Row(
-              children: [
-                Icon(
-                  Icons.flag,
-                  size: 16,
-                  color: AppTheme.warningColor,
-                ),
-                SizedBox(width: AppSpacing.small),
-                Text(
-                  '申告済み',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppTheme.warningColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
       ),
     );
   }

@@ -34,14 +34,16 @@ Future<void> main() async {
   }
 
   // UIテスト用フラグ
-  const bool testSpecificPage = false;
+  const bool testSpecificPage = true;
 
   // URLから部屋IDを取得
   final String? roomId = _getRoomIdFromUrl();
 
   runApp(
     ProviderScope(
-      child: testSpecificPage ? NgWordPlayingPage() : MyApp(roomId: roomId),
+      child: testSpecificPage
+          ? testBiasProfileChildrenTurnPage()
+          : MyApp(roomId: roomId),
     ),
   );
 }
