@@ -13,7 +13,8 @@ class ValidationResult {
 
 class ValidationUtils {
   static ValidationResult validateNickname(String value) {
-    if (value.isEmpty) {
+    final trimmedValue = value.trim();
+    if (trimmedValue.isEmpty) {
       return ValidationResult.invalid('ニックネームを入力してください');
     }
 
@@ -35,7 +36,8 @@ class ValidationUtils {
   }
 
   static ValidationResult validateRoomId(String value) {
-    if (value.isEmpty) {
+    final trimmedValue = value.trim();
+    if (trimmedValue.isEmpty) {
       return ValidationResult.invalid('部屋コードを入力してください');
     }
 
@@ -43,7 +45,8 @@ class ValidationUtils {
   }
 
   static ValidationResult validateProfile(String value) {
-    if (value.isEmpty) {
+    final trimmedValue = value.trim();
+    if (trimmedValue.isEmpty) {
       return ValidationResult.invalid('偏見を入力してください');
     }
 

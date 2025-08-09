@@ -35,20 +35,33 @@ class _BiasProfileChildTurnPageState
   final TextEditingController _profileController = TextEditingController();
   String? _errorMessage;
   bool _isSubmitting = false;
+  bool _isValidInput = false;
 
   void _onProfileChanged(String value) {
+    print('🔍 入力値: "$value"'); // デバッグ用
+
+    // エラーメッセージをクリア
     if (_errorMessage != null) {
       setState(() {
         _errorMessage = null;
       });
     }
 
+    // バリデーション実行
     final validation = ValidationUtils.validateProfile(value);
-    if (!validation.isValid && value.isNotEmpty) {
-      setState(() {
+    print('🔍 バリデーション結果: ${validation.isValid}'); // デバッグ用
+
+    // ★重要：バリデーション結果に関わらず毎回setStateで更新
+    setState(() {
+      _isValidInput = validation.isValid; // クラスフィールドを更新
+
+      // エラーがある場合のみエラーメッセージを設定
+      if (!validation.isValid && value.isNotEmpty) {
         _errorMessage = validation.errorMessage;
-      });
-    }
+      }
+    });
+
+    print('🔍 _isValidInput: $_isValidInput'); // デバッグ用
   }
 
   @override
@@ -252,7 +265,8 @@ class _BiasProfileChildTurnPageState
                             text: hasSubmittedHint ? '他プレイヤー待ち' : '提出',
                             isLoading: _isSubmitting,
                             onPressed: (hasSubmittedHint ||
-                                    _isSubmitting) // 条件を修正
+                                    _isSubmitting ||
+                                    !_isValidInput) // 条件を修正
                                 ? null
                                 : () async {
                                     // asyncを追加
