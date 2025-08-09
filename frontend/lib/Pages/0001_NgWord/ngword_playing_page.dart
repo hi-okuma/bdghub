@@ -39,9 +39,11 @@ class NgWordPlayingPage extends ConsumerStatefulWidget {
   ConsumerState<NgWordPlayingPage> createState() => _NgWordPlayingPageState();
 }
 
-class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with GameExitHandler {
+class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
+    with GameExitHandler {
   bool _hasReported = false;
   bool _isWaitingForOthers = false;
+  bool _isSubmittingReport = false; // 追加
   String? _errorMessage; // エラーメッセージ用の状態
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -268,25 +270,10 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with Game
             child: Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
+                  child: LoadingButton(
+                    text: _hasReported ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
+                    isLoading: _isSubmittingReport,
                     onPressed: _hasReported ? null : _onReportPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _hasReported
-                          ? AppTheme.hintTextColor
-                          : AppTheme.errorColor,
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.large),
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppBorderRadius.medium),
-                      ),
-                    ),
-                    child: Text(
-                      _isWaitingForOthers ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -301,6 +288,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with Game
     setState(() {
       _hasReported = true;
       _isWaitingForOthers = true;
+      _isSubmittingReport = true; // 追加
     });
 
     // API経由で申告情報を送信
@@ -310,14 +298,6 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with Game
     if (roomId != null && currentUser.uid != null) {
       _submitReport(roomId, currentUser.uid!);
     }
-
-    // 一時的な処理（実際は他プレイヤーの状態変化を監視）
-    Future.delayed(Duration(seconds: 2), () {
-      if (mounted) {
-        // TODO: 結果画面への遷移処理
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ResultScreen()));
-      }
-    });
   }
 
   // API経由で申告情報を送信する処理
@@ -327,6 +307,12 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with Game
 
       if (result['success'] == true) {
         print('✅ 申告情報を送信しました: $uid');
+
+        setState(() {
+          _hasReported = true;
+          _isWaitingForOthers = true;
+          _isSubmittingReport = false; // 追加
+        });
 
         // 成功時のスナックバー表示
         if (mounted) {
@@ -365,6 +351,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage> with Game
     setState(() {
       _hasReported = false;
       _isWaitingForOthers = false;
+      _isSubmittingReport = false; // 追加
     });
   }
 

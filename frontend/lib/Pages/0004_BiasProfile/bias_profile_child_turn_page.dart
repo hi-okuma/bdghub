@@ -34,6 +34,7 @@ class _BiasProfileChildTurnPageState
 
   final TextEditingController _profileController = TextEditingController();
   String? _errorMessage;
+  bool _isSubmitting = false;
 
   void _onProfileChanged(String value) {
     if (_errorMessage != null) {
@@ -247,10 +248,14 @@ class _BiasProfileChildTurnPageState
                     child: Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: hasSubmittedHint
+                          child: LoadingButton(
+                            text: hasSubmittedHint ? '他プレイヤー待ち' : '提出',
+                            isLoading: _isSubmitting,
+                            onPressed: (hasSubmittedHint ||
+                                    _isSubmitting) // 条件を修正
                                 ? null
-                                : () {
+                                : () async {
+                                    // asyncを追加
                                     // バリデーション
                                     final profileText =
                                         _profileController.text.trim();
@@ -273,31 +278,64 @@ class _BiasProfileChildTurnPageState
 
                                     setState(() {
                                       _errorMessage = null;
+                                      _isSubmitting = true; // 追加
                                     });
 
-                                    ApiService.submitHint0004(
-                                        roomId, currentUser.uid!, profileText);
+                                    // API呼び出しのエラーハンドリング追加
+                                    try {
+                                      final result =
+                                          await ApiService.submitHint0004(
+                                              roomId,
+                                              currentUser.uid!,
+                                              profileText);
 
-                                    print('💡 ヒント提出: $profileText');
+                                      if (result['success'] == true) {
+                                        print('💡 ヒント提出: $profileText');
+
+                                        // 成功時のスナックバー表示
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text('提出を受け付けました'),
+                                              backgroundColor:
+                                                  AppTheme.successColor,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        // APIからの失敗レスポンス
+                                        if (mounted) {
+                                          ApiErrorHandler.handleApiError(
+                                              context, result, setError);
+                                          setState(() {
+                                            _isSubmitting = false;
+                                          });
+                                        }
+                                      }
+                                    } catch (e) {
+                                      print('❌ ヒント提出に失敗: $e');
+
+                                      if (mounted) {
+                                        // http.Response型のエラーかどうかで処理を分ける
+                                        if (e is http.Response) {
+                                          ApiErrorHandler.handleHttpError(
+                                              context, e, setError);
+                                        } else {
+                                          ApiErrorHandler.handleException(
+                                              context, e, setError);
+                                        }
+                                        setState(() {
+                                          _isSubmitting = false;
+                                        });
+                                      }
+                                    } finally {
+                                      setState(() {
+                                        _isSubmitting = false; // ★通信終了
+                                      });
+                                    }
                                   },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: hasSubmittedHint
-                                  ? AppTheme.hintTextColor
-                                  : AppTheme.errorColor,
-                              padding: EdgeInsets.symmetric(
-                                  vertical: AppSpacing.large),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    AppBorderRadius.medium),
-                              ),
-                            ),
-                            child: Text(
-                              hasSubmittedHint ? '他プレイヤー待ち' : '提出',
-                              style: AppTextStyles.bodyLarge.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                           ),
                         ),
                       ],

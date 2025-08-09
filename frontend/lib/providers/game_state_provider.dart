@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import '../providers/user_provider.dart';
 import '../providers/game_provider.dart';
 import '../services/navigation_service.dart';
@@ -33,15 +32,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   // 重複遷移防止のためのフラグ
   GameStatus? _previousGameStatus;
   GamePhase _currentGamePhase = GamePhase.initial;
-  bool _hasNavigatedToPlaying = false; // playingページに遷移済みかどうか
+  bool _hasNavigatedToPlaying = false; // Playingページに遷移済みかどうか
+  bool _hasNavigatedToChildTurn = false; // ChildTurnページに遷移済みかどうか
 
   // ★ 追加: roomのstatusを保持 ★
   String? _currentRoomStatus;
   String? _previousRoomStatus; // ★ 前回のroom statusを保持
-
-  String? _previousCurrentParent; // 前回の親プレイヤーを記録
-  DateTime? _lastTransitionTime; // 最後の遷移時刻を記録
-  Map<String, dynamic>? _previousGameData; // 前回のゲームデータを記録
 
   @override
   Future<GameStatus> build(String roomId) async {
@@ -72,6 +68,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
+    _hasNavigatedToChildTurn = false;
     _currentRoomStatus = null;
     _previousRoomStatus = null;
 
@@ -405,16 +402,6 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   // 重複チェック付きの状態変化処理を改善
   void _handleGameStateChangeWithDuplicationCheck(
       GameStatus currentStatus, Map<String, dynamic> currentGame) {
-    final now = DateTime.now();
-    final currentParent = currentGame['currentParent'] as String?;
-
-    // API操作直後の短時間重複遷移を防ぐ（500ms以内）
-    if (_lastTransitionTime != null &&
-        now.difference(_lastTransitionTime!).inMilliseconds < 500) {
-      print('🔍 API操作直後の重複遷移をスキップ');
-      return;
-    }
-
     // 前回と同じ状態で、かつ特定の条件の場合はスキップ
     if (_previousGameStatus == currentStatus) {
       switch (currentStatus) {
@@ -425,13 +412,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           }
           break;
         case GameStatus.childTurn:
-        case GameStatus.parentTurn:
-          // ★ 修正: 同じ親プレイヤーかつ同じゲーム状態の場合はスキップ
-          if (_previousCurrentParent == currentParent &&
-              _isSameGameData(_previousGameData, currentGame)) {
-            print('🔍 同じ親プレイヤー・同じゲーム状態のためスキップ');
+          if (_hasNavigatedToChildTurn) {
+            print('🔍 すでにchildTurnページに遷移済みのためスキップ');
             return;
           }
+          break;
+        case GameStatus.parentTurn:
           break;
         case GameStatus.waiting:
           if (_currentGamePhase != GamePhase.started) {
@@ -444,33 +430,9 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     // 前回の状態を更新
     _previousGameStatus = currentStatus;
-    _previousCurrentParent = currentParent;
-    _previousGameData = Map<String, dynamic>.from(currentGame);
-    _lastTransitionTime = now;
 
     // 実際の遷移処理を実行
     _handleGameStateChange(currentStatus, currentGame);
-  }
-
-  // ゲームデータの重要な部分が同じかどうかを判定
-  bool _isSameGameData(
-      Map<String, dynamic>? previous, Map<String, dynamic> current) {
-    if (previous == null) return false;
-
-    // 重要な状態が変わっていないかチェック
-    final prevParent = previous['currentParent'];
-    final currParent = current['currentParent'];
-
-    final prevHints = previous['hints'] as Map<String, dynamic>? ?? {};
-    final currHints = current['hints'] as Map<String, dynamic>? ?? {};
-
-    final prevAnswerIndex = previous['answerImageIndex'];
-    final currAnswerIndex = current['answerImageIndex'];
-
-    // 親プレイヤー、ヒント数、回答画像インデックスが同じ場合は同じ状態と判定
-    return prevParent == currParent &&
-        prevHints.length == currHints.length &&
-        prevAnswerIndex == currAnswerIndex;
   }
 
   void _stopAllMonitoring() {
@@ -490,9 +452,6 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
     _currentGameId = null;
-    _previousCurrentParent = null; // ★ 追加
-    _lastTransitionTime = null; // ★ 追加
-    _previousGameData = null; // ★ 追加
   }
 
   GameStatus _parseGameStatus(dynamic status) {
@@ -529,6 +488,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         case GameStatus.childTurn:
           print('🎮 Navigating to ChildTurn');
           navigationService.navigateToChildTurn(currentGame);
+          _hasNavigatedToChildTurn = true;
           _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
           break;
         case GameStatus.parentTurn:
