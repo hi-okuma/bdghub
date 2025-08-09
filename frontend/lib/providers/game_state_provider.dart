@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
 import '../providers/user_provider.dart';
 import '../providers/game_provider.dart';
 import '../services/navigation_service.dart';
@@ -33,7 +32,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   // 重複遷移防止のためのフラグ
   GameStatus? _previousGameStatus;
   GamePhase _currentGamePhase = GamePhase.initial;
-  bool _hasNavigatedToPlaying = false; // playingページに遷移済みかどうか
+  bool _hasNavigatedToPlaying = false; // Playingページに遷移済みかどうか
+  bool _hasNavigatedToChildTurn = false; // ChildTurnページに遷移済みかどうか
 
   // ★ 追加: roomのstatusを保持 ★
   String? _currentRoomStatus;
@@ -68,6 +68,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
+    _hasNavigatedToChildTurn = false;
     _currentRoomStatus = null;
     _previousRoomStatus = null;
 
@@ -398,7 +399,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
-  // 重複チェック付きの状態変化処理
+  // 重複チェック付きの状態変化処理を改善
   void _handleGameStateChangeWithDuplicationCheck(
       GameStatus currentStatus, Map<String, dynamic> currentGame) {
     // 前回と同じ状態で、かつ特定の条件の場合はスキップ
@@ -411,11 +412,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           }
           break;
         case GameStatus.childTurn:
+          if (_hasNavigatedToChildTurn) {
+            print('🔍 すでにchildTurnページに遷移済みのためスキップ');
+            return;
+          }
+          break;
         case GameStatus.parentTurn:
-          // ターン制ゲームの場合は毎回チェック（プレイヤーが変わる可能性があるため）
           break;
         case GameStatus.waiting:
-          // GamePhaseによる汎用的な判定のみ
           if (_currentGamePhase != GamePhase.started) {
             print('🔍 ゲーム開始前のwaitingのためスキップ');
             return;
@@ -441,7 +445,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGameId = null;
   }
 
-  // ★ 追加: より確実なリセット処理 ★
+  // リセット処理にも追加
   void _resetNavigationFlags() {
     _hasNavigatedToGameTitle = false;
     _previousGameStatus = null;
@@ -484,6 +488,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         case GameStatus.childTurn:
           print('🎮 Navigating to ChildTurn');
           navigationService.navigateToChildTurn(currentGame);
+          _hasNavigatedToChildTurn = true;
           _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
           break;
         case GameStatus.parentTurn:

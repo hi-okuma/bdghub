@@ -251,6 +251,7 @@ class AppLayout {
   static const int maxGameDescriptionLines = 3;
   static const int maxNicknameLength = 10;
   static const int minNicknameLength = 2;
+  static const int maxProfileLength = 100;
 }
 
 // アニメーション定数

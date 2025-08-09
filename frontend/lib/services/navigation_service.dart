@@ -1,4 +1,5 @@
 import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
+import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
@@ -69,7 +70,7 @@ class NavigationService {
       case '0004': // 偏見プロフィール
         _navigator!.pushReplacement(
           MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('偏見プロフィール', '子'),
+            builder: (context) => const BiasProfileChildTurnPage(),
           ),
         );
         break;

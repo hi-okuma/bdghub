@@ -41,7 +41,9 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      child: testSpecificPage ? NgWordPlayingPage() : MyApp(roomId: roomId),
+      child: testSpecificPage
+          ? testBiasProfileChildTurnPage()
+          : MyApp(roomId: roomId),
     ),
   );
 }
