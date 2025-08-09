@@ -12,17 +12,16 @@ import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/validation_utils.dart';
 
-class testBiasProfileChildrenTurnPage extends ConsumerStatefulWidget {
-  const testBiasProfileChildrenTurnPage({super.key});
+class testBiasProfileChildTurnPage extends ConsumerStatefulWidget {
+  const testBiasProfileChildTurnPage({super.key});
 
   @override
-  ConsumerState<testBiasProfileChildrenTurnPage> createState() =>
-      _testBiasProfileChildrenTurnPageState();
+  ConsumerState<testBiasProfileChildTurnPage> createState() =>
+      _testBiasProfileChildTurnPageState();
 }
 
-class _testBiasProfileChildrenTurnPageState
-    extends ConsumerState<testBiasProfileChildrenTurnPage>
-    with GameExitHandler {
+class _testBiasProfileChildTurnPageState
+    extends ConsumerState<testBiasProfileChildTurnPage> with GameExitHandler {
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {
@@ -33,7 +32,9 @@ class _testBiasProfileChildrenTurnPageState
     }
   }
 
-  bool isHost = true;
+  final String imageUrl =
+      'https://firebasestorage.googleapis.com/v0/b/bdghub-dev.firebasestorage.app/o/0004%2F000.jpg?alt=media&token=a5241f16-211f-430e-bc0f-71250dd6e86d';
+  bool isHost = false;
   bool isSubmitted = false;
   final TextEditingController _profileController = TextEditingController();
   String? _errorMessage;
@@ -108,7 +109,7 @@ class _testBiasProfileChildrenTurnPageState
               )
             : Center(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: <Widget>[
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -127,11 +128,47 @@ class _testBiasProfileChildrenTurnPageState
                         )
                       ],
                     ),
-                    Placeholder(
-                      child: Container(
-                        width: 180,
-                        height: 270,
-                        child: Text('ここにお題画像'),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.55,
+                        maxHeight: MediaQuery.of(context).size.height *
+                            0.55, // 画面高さの55%以下
+                      ),
+                      child: AspectRatio(
+                        aspectRatio: 7 / 10, // 現在の比率 210:300 を維持
+                        child: imageUrl.isEmpty
+                            ? Center(
+                                child: CircularProgressIndicator(),
+                              )
+                            : Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Text(
+                                      '画像の読み込みに\n失敗しました',
+                                      style: AppTextStyles.body,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ),
                     Column(

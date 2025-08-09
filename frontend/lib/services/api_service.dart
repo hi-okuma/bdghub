@@ -70,6 +70,19 @@ class ApiService {
     });
   }
 
+  // ヒント提出処理
+  static Future<Map<String, dynamic>> submitHint0004(
+    String roomId,
+    String uid,
+    String hint,
+  ) async {
+    return _postRequest('/submitHint0004', {
+      'roomId': roomId,
+      'uid': uid,
+      'hint': hint,
+    });
+  }
+
   static Future<Map<String, dynamic>> _postRequest(
     String endpoint,
     Map<String, dynamic> body,

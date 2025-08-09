@@ -59,7 +59,7 @@ class ValidationUtils {
         value.contains('=') ||
         value.contains('/') ||
         value.contains('*')) {
-      return ValidationResult.invalid('\' \" ; - = / * は使用できません');
+      return ValidationResult.invalid('使用できない文字が含まれています。');
     }
 
     return ValidationResult.valid;
