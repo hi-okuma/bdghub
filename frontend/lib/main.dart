@@ -34,7 +34,7 @@ Future<void> main() async {
   }
 
   // UIテスト用フラグ
-  const bool testSpecificPage = false;
+  const bool testSpecificPage = true;
 
   // URLから部屋IDを取得
   final String? roomId = _getRoomIdFromUrl();
@@ -42,7 +42,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       child: testSpecificPage
-          ? testBiasProfileChildTurnPage()
+          ? testBiasProfileParentTurnPage()
           : MyApp(roomId: roomId),
     ),
   );
