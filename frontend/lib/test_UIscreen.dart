@@ -22,7 +22,7 @@ class testBiasProfileParentTurnPage extends ConsumerStatefulWidget {
 
 class _BiasProfileParentTurnPageState
     extends ConsumerState<testBiasProfileParentTurnPage> {
-  // TODO 本番ページでは以下のmixinを設定
+  // 本番ページでは以下のmixinを設定
   // with GameExitHandler
   // // エラーメッセージを設定する関数（GameExitHandler用）
   // @override
@@ -154,27 +154,34 @@ class _BiasProfileParentTurnPageState
                     Expanded(
                       child: Container(
                         height: MediaQuery.of(context).size.height * 0.5,
+                        // TODO ListView.builderで表示させている画像は currentImages に格納されている配列から取得
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           padding: EdgeInsets.symmetric(
                               horizontal: AppSpacing.medium),
                           itemCount: 5,
                           itemBuilder: (context, index) {
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                right: index < 4 ? AppSpacing.small : 0,
-                              ),
-                              child: AspectRatio(
-                                aspectRatio: 7 / 10,
-                                child: Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4.0),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Image.network(
-                                    'https://picsum.photos/200/300',
-                                    fit: BoxFit.cover,
+                            return InkWell(
+                              onTap: () {
+                                //   TODO API(determineAPI004)に渡す画像を選択する処理 一度に選択できるのは１つの画像のみ
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  right: index < 4 ? AppSpacing.small : 0,
+                                ),
+                                child: AspectRatio(
+                                  aspectRatio: 7 / 10,
+                                  child: Card(
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4.0),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Image.network(
+                                      // TODO currentImagesに格納されている画像を表示
+                                      'https://picsum.photos/200/300',
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -205,6 +212,7 @@ class _BiasProfileParentTurnPageState
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
+                                    // TODO topics に格納されているお題を表示
                                     Text('ここにお題プロフィールを表示'),
                                     Icon(Icons.arrow_forward),
                                   ],
@@ -226,7 +234,10 @@ class _BiasProfileParentTurnPageState
                           children: [
                             Expanded(
                                 child: ElevatedButton(
-                                    onPressed: () {}, child: Text('この人物に決定'))),
+                                    onPressed: () {
+                                      //   ここでAPI(determineAnswer0004)を叩く
+                                    },
+                                    child: Text('この人物に決定'))),
                           ],
                         ),
                       )
