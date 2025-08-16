@@ -42,7 +42,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       child: testSpecificPage
-          ? testBiasProfileChildTurnPage()
+          ? testBiasProfileParentTurnPage()
           : MyApp(roomId: roomId),
     ),
   );

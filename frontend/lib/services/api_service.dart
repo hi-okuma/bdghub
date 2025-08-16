@@ -83,6 +83,32 @@ class ApiService {
     });
   }
 
+  // 回答決定
+  static Future<Map<String, dynamic>> determineAnswer0004(
+    String roomId,
+    String uid,
+    String imageIndex,
+  ) async {
+    return _postRequest('/determineAnswer0004', {
+      'roomId': roomId,
+      'uid': uid,
+      'imageIndex': imageIndex,
+    });
+  }
+
+  // 回答決定
+  static Future<Map<String, dynamic>> proceedToNext0004(
+    String roomId,
+    String uid,
+    String bestHintPlayerUid,
+  ) async {
+    return _postRequest('/proceedToNext0004', {
+      'roomId': roomId,
+      'uid': uid,
+      'bestHintPlayerUid': bestHintPlayerUid,
+    });
+  }
+
   static Future<Map<String, dynamic>> _postRequest(
     String endpoint,
     Map<String, dynamic> body,
