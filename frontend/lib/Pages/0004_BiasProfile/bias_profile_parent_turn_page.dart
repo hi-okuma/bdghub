@@ -101,17 +101,24 @@ class _BiasProfileParentTurnPageState
               children: [
                 Text('${_getNicknameByUid(uid)}のヒント'),
                 SizedBox(height: AppSpacing.small),
-                Container(
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8.0),
-                        color: AppTheme.backgroundColor),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.large),
-                      child: Text(
-                        '${hint}',
-                        style: AppTextStyles.bodyLarge,
-                      ),
-                    )),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Container(
+                          decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8.0),
+                              color: AppTheme.backgroundColor),
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.large),
+                            child: Text(
+                              '${hint}',
+                              style: AppTextStyles.bodyLarge,
+                            ),
+                          )),
+                    ),
+                  ],
+                ),
               ],
             ),
             actions: [
@@ -216,7 +223,7 @@ class _BiasProfileParentTurnPageState
                                 borderRadius: BorderRadius.circular(4.0),
                                 side: _selectedImageIndex == index
                                     ? BorderSide(
-                                        width: 3.0,
+                                        width: 8.0,
                                         color: AppTheme.primaryColor)
                                     : BorderSide.none,
                               ),
@@ -319,14 +326,50 @@ class _BiasProfileParentTurnPageState
                           child: ElevatedButton(
                             onPressed: _selectedImageIndex != null
                                 ? () async {
+                                    // API呼び出しのエラーハンドリング追加
                                     try {
-                                      await ApiService.determineAnswer0004(
+                                      final result =
+                                          await ApiService.determineAnswer0004(
                                         roomId,
                                         currentUser.uid!,
                                         _selectedImageIndex.toString(),
                                       );
+
+                                      if (result['success'] == true) {
+                                        print('💡 回答を提出: $_selectedImageIndex');
+
+                                        // 成功時のスナックバー表示
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text('回答を送信しました'),
+                                              backgroundColor:
+                                                  AppTheme.successColor,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        // APIからの失敗レスポンス
+                                        if (mounted) {
+                                          ApiErrorHandler.handleApiError(
+                                              context, result, setError);
+                                        }
+                                      }
                                     } catch (e) {
-                                      setError('回答の決定に失敗しました: $e');
+                                      print('❌ 回答にに失敗: $e');
+
+                                      if (mounted) {
+                                        // http.Response型のエラーかどうかで処理を分ける
+                                        if (e is http.Response) {
+                                          ApiErrorHandler.handleHttpError(
+                                              context, e, setError);
+                                        } else {
+                                          ApiErrorHandler.handleException(
+                                              context, e, setError);
+                                        }
+                                      }
                                     }
                                   }
                                 : null,
