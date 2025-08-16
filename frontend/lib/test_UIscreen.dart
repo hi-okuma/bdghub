@@ -12,16 +12,16 @@ import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/validation_utils.dart';
 
-class testBiasProfileParentTurnPage extends ConsumerStatefulWidget {
-  const testBiasProfileParentTurnPage({super.key});
+class testBiasProfileCheckAnswerPage extends ConsumerStatefulWidget {
+  const testBiasProfileCheckAnswerPage({super.key});
 
   @override
-  ConsumerState<testBiasProfileParentTurnPage> createState() =>
-      _BiasProfileParentTurnPageState();
+  ConsumerState<testBiasProfileCheckAnswerPage> createState() =>
+      _testBiasProfileCheckAnswerPageState();
 }
 
-class _BiasProfileParentTurnPageState
-    extends ConsumerState<testBiasProfileParentTurnPage> {
+class _testBiasProfileCheckAnswerPageState
+    extends ConsumerState<testBiasProfileCheckAnswerPage> {
   // 本番ページでは以下のmixinを設定
   // with GameExitHandler
   // // エラーメッセージを設定する関数（GameExitHandler用）
@@ -42,9 +42,10 @@ class _BiasProfileParentTurnPageState
     // final isHost = ref.watch(isHostProvider);
     // final roomId = currentUser.roomId;
 
-    final isCurrentParent = false;
+    final isCurrentParent = true;
     final isHost = true;
     final roomId = 'dummyRoom';
+    final isRight = false; // TODO 親の選択した画像のindexと正解のindexが一致するかを判定
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
@@ -82,149 +83,177 @@ class _BiasProfileParentTurnPageState
     return MaterialApp(
       theme: AppTheme.lightTheme,
       home: Scaffold(
-          appBar: AppBar(
-            actions: [
-              // ホストプレイヤーのみ終了ボタンを表示
-              if (isHost)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    // showExitGameDialog,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.warningColor,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppSpacing.medium,
-                        horizontal: AppSpacing.small,
-                      ),
+        appBar: AppBar(
+          actions: [
+            // ホストプレイヤーのみ終了ボタンを表示
+            if (isHost)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
+                child: ElevatedButton(
+                  onPressed: () {},
+                  // showExitGameDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.warningColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.medium,
+                      horizontal: AppSpacing.small,
                     ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, color: AppTheme.errorColor),
+                      const SizedBox(width: AppSpacing.small),
+                      Text(
+                        '終了',
+                        style: AppTextStyles.body.copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+        backgroundColor: AppTheme.backgroundColor,
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            isRight
+                ? Flexible(
+                    flex: 1,
+                    child: Text(
+                      '正解！',
+                      style: AppTextStyles.titleLarge,
+                    ),
+                  )
+                : Flexible(
+                    flex: 1,
+                    child: Text(
+                      '不正解...',
+                      style: AppTextStyles.titleLarge,
+                    ),
+                  ),
+            Flexible(
+              flex: 2,
+              child: Row(
+                children: [
+                  Expanded(
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.close, color: AppTheme.errorColor),
-                        const SizedBox(width: AppSpacing.small),
-                        Text(
-                          '終了',
-                          style:
-                              AppTextStyles.body.copyWith(color: Colors.white),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'お題',
+                              style: AppTextStyles.body,
+                            ),
+                            Container(
+                              height: MediaQuery.of(context).size.height * 0.3,
+                              child: AspectRatio(
+                                aspectRatio: 7 / 10,
+                                child: Card(
+                                  elevation: 4,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4.0),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    // TODO currentImagesの正解画像を表示
+                                    'https://picsum.photos/200/300',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              '親が選んだ人物',
+                              style: AppTextStyles.body,
+                            ),
+                            Container(
+                              height: MediaQuery.of(context).size.height * 0.3,
+                              child: AspectRatio(
+                                aspectRatio: 7 / 10,
+                                child: Card(
+                                  elevation: 4,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4.0),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    // TODO 親が選択した画像のindexの画像を表示
+                                    'https://picsum.photos/200/300',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ),
-            ],
-          ),
-          backgroundColor: AppTheme.backgroundColor,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                isCurrentParent
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'あなたは親プレイヤーです',
-                            style: AppTextStyles.titleLarge,
-                          ),
-                          Text(
-                            '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
-                            style: AppTextStyles.body,
-                            textAlign: TextAlign.center,
-                          )
-                        ],
-                      )
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'あなたは子プレイヤーです',
-                            style: AppTextStyles.titleLarge,
-                          ),
-                          Text(
-                            '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
-                            style: AppTextStyles.body,
-                            textAlign: TextAlign.center,
-                          )
-                        ],
-                      ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        // TODO ListView.builderで表示させている画像は currentImages に格納されている配列から取得
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.medium),
-                          itemCount: 5,
-                          itemBuilder: (context, index) {
-                            return InkWell(
-                              onTap: () {
-                                //   TODO API(determineAPI004)に渡す画像を選択する処理 一度に選択できるのは１つの画像のみ
-                              },
-                              child: Padding(
-                                padding: EdgeInsets.only(
-                                  right: index < 4 ? AppSpacing.small : 0,
-                                ),
-                                child: AspectRatio(
-                                  aspectRatio: 7 / 10,
+                ],
+              ),
+            ),
+            Flexible(
+              flex: 2,
+              child: isCurrentParent
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Text('わかるde賞を選ぼう', style: AppTextStyles.titleMedium),
+                        Text(
+                          'もっとも「わかる！」と共感できたヒントを選ぼう\n選ばれたプレイヤーには1ポイントが与えられます',
+                          textAlign: TextAlign.center,
+                        ),
+                        Expanded(
+                          child: ListView.builder(
+                              itemCount: 5,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.medium),
                                   child: Card(
-                                    elevation: 4,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4.0),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: Image.network(
-                                      // TODO currentImagesに格納されている画像を表示
-                                      'https://picsum.photos/200/300',
-                                      fit: BoxFit.cover,
+                                    margin: EdgeInsets.fromLTRB(
+                                        0, 0, 0, AppSpacing.medium),
+                                    child: InkWell(
+                                      onTap: () {
+                                        // final topicKey = topics.keys.elementAt(index);
+                                        // final topic = topicsValue[index];
+                                        // final hint = hints[topicKey] as String?;
+                                        // _showTopicDialog(topic, hint, topicKey);
+                                      },
+                                      child: Padding(
+                                        padding:
+                                            EdgeInsets.all(AppSpacing.medium),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text('ここにお題が表示されます'),
+                                            // Text(topicsValue[index]),
+                                            Icon(Icons.arrow_forward),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                Flexible(
-                  child: Container(
-                    height: MediaQuery.of(context).size.height * 0.3,
-                    child: ListView.builder(
-                        scrollDirection: Axis.vertical,
-                        shrinkWrap: true,
-                        itemCount: 5,
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.medium),
-                            child: Card(
-                              margin: EdgeInsets.fromLTRB(
-                                  0, 0, 0, AppSpacing.medium),
-                              child: Padding(
-                                padding: EdgeInsets.all(AppSpacing.medium),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    // TODO topics に格納されているお題を表示
-                                    Text('ここにお題プロフィールを表示'),
-                                    Icon(Icons.arrow_forward),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        }),
-                  ),
-                ),
-                isCurrentParent
-                    ? Container(
+                                );
+                              }),
+                        )
+                      ],
+                    )
+                  : Center(
+                      child: Container(
                         width: double.infinity,
                         padding: EdgeInsets.all(AppSpacing.medium),
                         decoration: BoxDecoration(
@@ -234,19 +263,15 @@ class _BiasProfileParentTurnPageState
                           children: [
                             Expanded(
                                 child: ElevatedButton(
-                                    onPressed: () {
-                                      //   ここでAPI(determineAnswer0004)を叩く
-                                    },
-                                    child: Text('この人物に決定'))),
+                                    onPressed: () {}, child: Text('次に進む')))
                           ],
                         ),
-                      )
-                    : SizedBox(
-                        height: MediaQuery.of(context).size.width * 0.1,
-                      )
-              ],
-            ),
-          )),
+                      ),
+                    ),
+            )
+          ],
+        ),
+      ),
     );
   }
 }
