@@ -11,6 +11,7 @@ enum GameStatus {
   playing, // ゲーム中（基本状態）
   childTurn, // 子ターン（0004のみ）
   parentTurn, // 親ターン（0004のみ）
+  result,
 }
 
 // ゲームの進行段階を管理する内部状態
@@ -419,6 +420,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           break;
         case GameStatus.parentTurn:
           break;
+        case GameStatus.result:
+          break;
         case GameStatus.waiting:
           if (_currentGamePhase != GamePhase.started) {
             print('🔍 ゲーム開始前のwaitingのためスキップ');
@@ -462,6 +465,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         return GameStatus.childTurn;
       case 'parentTurn':
         return GameStatus.parentTurn;
+      case 'result':
+        return GameStatus.result;
       default:
         return GameStatus.waiting;
     }
@@ -495,6 +500,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           print('🎮 Navigating to ParentTurn');
           navigationService.navigateToParentTurn(currentGame);
           _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
+          break;
+        case GameStatus.result:
+          print('🎮 Navigating to CheckAnswer');
+          navigationService.navigateToCheckAnswer(currentGame);
           break;
         case GameStatus.waiting:
           print(

@@ -337,7 +337,7 @@ class _BiasProfileParentTurnPageState
                                             .determineAnswer0004(
                                           roomId,
                                           currentUser.uid!,
-                                          _selectedImageIndex.toString(),
+                                          _selectedImageIndex!,
                                         );
 
                                         if (result['success'] == true) {

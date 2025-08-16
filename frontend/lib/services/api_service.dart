@@ -87,7 +87,7 @@ class ApiService {
   static Future<Map<String, dynamic>> determineAnswer0004(
     String roomId,
     String uid,
-    String imageIndex,
+    int imageIndex,
   ) async {
     return _postRequest('/determineAnswer0004', {
       'roomId': roomId,

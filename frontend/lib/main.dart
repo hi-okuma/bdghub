@@ -34,7 +34,7 @@ Future<void> main() async {
   }
 
   // UIテスト用フラグ
-  const bool testSpecificPage = true;
+  const bool testSpecificPage = false;
 
   // URLから部屋IDを取得
   final String? roomId = _getRoomIdFromUrl();
