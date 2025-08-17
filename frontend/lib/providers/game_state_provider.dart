@@ -35,6 +35,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   GamePhase _currentGamePhase = GamePhase.initial;
   bool _hasNavigatedToPlaying = false; // Playingページに遷移済みかどうか
   bool _hasNavigatedToChildTurn = false; // ChildTurnページに遷移済みかどうか
+  bool _hasNavigatedToResult = false; // CheckAnsewrページに遷移済みかどうか
 
   // ★ 追加: roomのstatusを保持 ★
   String? _currentRoomStatus;
@@ -421,6 +422,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         case GameStatus.parentTurn:
           break;
         case GameStatus.result:
+          if (_hasNavigatedToResult) {
+            print('🔍 すでにCheckAnswerページに遷移済みのためスキップ');
+            return;
+          }
           break;
         case GameStatus.waiting:
           if (_currentGamePhase != GamePhase.started) {
@@ -503,6 +508,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           break;
         case GameStatus.result:
           print('🎮 Navigating to CheckAnswer');
+          _hasNavigatedToResult = true;
           navigationService.navigateToCheckAnswer(currentGame);
           break;
         case GameStatus.waiting:

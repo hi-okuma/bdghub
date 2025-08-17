@@ -62,7 +62,35 @@ class _BiasProfileParentTurnPageState
 
     // 現在の部屋のお題を取得
     final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
-    final topicsValue = topics.values.toList();
+
+    final roomSnapshot = ref.watch(roomStreamProvider(roomId));
+    Map<String, dynamic> players = {};
+    List<MapEntry<String, String>> sortedTopics = [];
+
+    roomSnapshot.when(
+      data: (snapshot) {
+        if (snapshot.exists) {
+          final data = snapshot.data() as Map<String, dynamic>?;
+          players = data?['players'] as Map<String, dynamic>? ?? {};
+
+          final playerUids = players.keys.toList();
+          sortedTopics = playerUids
+              .where((uid) => topics.containsKey(uid))
+              .map((uid) => MapEntry(uid, topics[uid] as String))
+              .toList();
+        }
+      },
+      loading: () {
+        sortedTopics = topics.entries
+            .map((e) => MapEntry(e.key, e.value as String))
+            .toList();
+      },
+      error: (_, __) {
+        sortedTopics = topics.entries
+            .map((e) => MapEntry(e.key, e.value as String))
+            .toList();
+      },
+    );
 
     // 現在の部屋の回答を取得
     final hints = gameData?['hints'] as Map<String, dynamic>? ?? {};
@@ -287,7 +315,7 @@ class _BiasProfileParentTurnPageState
             Expanded(
               flex: 2,
               child: ListView.builder(
-                  itemCount: topics.length,
+                  itemCount: sortedTopics.length,
                   itemBuilder: (context, index) {
                     return Padding(
                       padding:
@@ -296,8 +324,9 @@ class _BiasProfileParentTurnPageState
                         margin: EdgeInsets.fromLTRB(0, 0, 0, AppSpacing.medium),
                         child: InkWell(
                           onTap: () {
-                            final topicKey = topics.keys.elementAt(index);
-                            final topic = topicsValue[index];
+                            final topicEntry = sortedTopics[index];
+                            final topicKey = topicEntry.key;
+                            final topic = topicEntry.value;
                             final hint = hints[topicKey] as String?;
                             _showTopicDialog(topic, hint, topicKey);
                           },
@@ -306,7 +335,7 @@ class _BiasProfileParentTurnPageState
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(topicsValue[index]),
+                                Text(sortedTopics[index].value),
                                 Icon(Icons.arrow_forward),
                               ],
                             ),

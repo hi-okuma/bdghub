@@ -24,6 +24,8 @@ class _BiasProfileCheckAnswerPageState
     extends ConsumerState<BiasProfileCheckAnswerPage> with GameExitHandler {
   String? _errorMessage;
   int? parentSelectedIndex;
+  bool isLoading = false;
+  bool hasProceeded = false;
 
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
@@ -64,7 +66,35 @@ class _BiasProfileCheckAnswerPageState
 
     // 現在の部屋のお題を取得
     final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
-    final topicsValue = topics.values.toList();
+
+    final roomSnapshot = ref.watch(roomStreamProvider(roomId));
+    Map<String, dynamic> players = {};
+    List<MapEntry<String, String>> sortedTopics = [];
+
+    roomSnapshot.when(
+      data: (snapshot) {
+        if (snapshot.exists) {
+          final data = snapshot.data() as Map<String, dynamic>?;
+          players = data?['players'] as Map<String, dynamic>? ?? {};
+
+          final playerUids = players.keys.toList();
+          sortedTopics = playerUids
+              .where((uid) => topics.containsKey(uid))
+              .map((uid) => MapEntry(uid, topics[uid] as String))
+              .toList();
+        }
+      },
+      loading: () {
+        sortedTopics = topics.entries
+            .map((e) => MapEntry(e.key, e.value as String))
+            .toList();
+      },
+      error: (_, __) {
+        sortedTopics = topics.entries
+            .map((e) => MapEntry(e.key, e.value as String))
+            .toList();
+      },
+    );
 
     // 現在の部屋の回答を取得
     final hints = gameData?['hints'] as Map<String, dynamic>? ?? {};
@@ -76,62 +106,135 @@ class _BiasProfileCheckAnswerPageState
     final isRight = answerImageIndex == parentSelectedIndex;
 
     String _getNicknameByUid(String uid) {
-      // ユーザー情報はroomのplayersフィールドから取得
-
-      final roomSnapshot = ref.read(roomStreamProvider(roomId));
-
-      return roomSnapshot.when(
-        data: (snapshot) {
-          if (!snapshot.exists) return 'Unknown';
-
-          final data = snapshot.data() as Map<String, dynamic>?;
-          final players = data?['players'] as Map<String, dynamic>? ?? {};
-
-          return players[uid]?['nickname'] ?? 'Unknown';
-        },
-        loading: () => 'Loading...',
-        error: (_, __) => 'Unknown',
-      );
+      return players[uid]?['nickname'] ?? 'Unknown';
     }
 
     void _showTopicDialog(String topic, String? hint, String uid) {
       showDialog(
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(topic),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${_getNicknameByUid(uid)}のヒント'),
-                SizedBox(height: AppSpacing.small),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+          bool dialogIsLoading = false;
+
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: Text(topic),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Container(
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8.0),
-                              color: AppTheme.backgroundColor),
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.large),
-                            child: Text(
-                              '${hint}',
-                              style: AppTextStyles.bodyLarge,
-                            ),
-                          )),
+                    Text('${_getNicknameByUid(uid)}のヒント'),
+                    SizedBox(height: AppSpacing.small),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  color: AppTheme.backgroundColor),
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.large),
+                                child: Text(
+                                  '${hint}',
+                                  style: AppTextStyles.bodyLarge,
+                                ),
+                              )),
+                        ),
+                      ],
                     ),
+                    if (dialogIsLoading) ...[
+                      SizedBox(height: AppSpacing.medium),
+                      Center(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: AppSpacing.medium),
+                              child: SizedBox(
+                                width: 30,
+                                height: 30,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            Text('他プレイヤー待ち...', style: AppTextStyles.body),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('閉じる'),
-              ),
-            ],
+                actions: [
+                  dialogIsLoading
+                      ? SizedBox.shrink()
+                      : TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('閉じる'),
+                        ),
+                  dialogIsLoading
+                      ? SizedBox.shrink()
+                      : TextButton(
+                          onPressed: () async {
+                            setDialogState(() {
+                              dialogIsLoading = true;
+                            });
+
+                            // API呼び出しのエラーハンドリング追加
+                            try {
+                              final result = await ApiService.proceedToNext0004(
+                                roomId,
+                                currentUser.uid!,
+                                uid,
+                              );
+
+                              if (result['success'] == true) {
+                                print(
+                                    '💡 わかるde賞を提出: ${_getNicknameByUid(uid)}の回答');
+
+                                // 成功時のスナックバー表示
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('わかるde賞を提出しました'),
+                                      backgroundColor: AppTheme.successColor,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                // APIからの失敗レスポンス
+                                if (mounted) {
+                                  ApiErrorHandler.handleApiError(
+                                      context, result, setError);
+                                }
+                                setDialogState(() {
+                                  dialogIsLoading = false;
+                                });
+                              }
+                            } catch (e) {
+                              print('❌ 送信に失敗: $e');
+
+                              if (mounted) {
+                                // http.Response型のエラーかどうかで処理を分ける
+                                if (e is http.Response) {
+                                  ApiErrorHandler.handleHttpError(
+                                      context, e, setError);
+                                } else {
+                                  ApiErrorHandler.handleException(
+                                      context, e, setError);
+                                }
+                              }
+                              setDialogState(() {
+                                dialogIsLoading = false;
+                              });
+                            }
+                          },
+                          child: Text('わかるde賞に決定')),
+                ],
+              );
+            },
           );
         },
       );
@@ -269,7 +372,7 @@ class _BiasProfileCheckAnswerPageState
                       ),
                       Expanded(
                         child: ListView.builder(
-                            itemCount: topics.length,
+                            itemCount: sortedTopics.length,
                             itemBuilder: (context, index) {
                               return Padding(
                                 padding: EdgeInsets.symmetric(
@@ -279,9 +382,9 @@ class _BiasProfileCheckAnswerPageState
                                       0, 0, 0, AppSpacing.medium),
                                   child: InkWell(
                                     onTap: () {
-                                      final topicKey =
-                                          topics.keys.elementAt(index);
-                                      final topic = topicsValue[index];
+                                      final topicEntry = sortedTopics[index];
+                                      final topicKey = topicEntry.key;
+                                      final topic = topicEntry.value;
                                       final hint = hints[topicKey] as String?;
                                       _showTopicDialog(topic, hint, topicKey);
                                     },
@@ -292,7 +395,7 @@ class _BiasProfileCheckAnswerPageState
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(topicsValue[index]),
+                                          Text(sortedTopics[index].value),
                                           Icon(Icons.arrow_forward),
                                         ],
                                       ),
@@ -314,8 +417,69 @@ class _BiasProfileCheckAnswerPageState
                       child: Row(
                         children: [
                           Expanded(
-                              child: ElevatedButton(
-                                  onPressed: () {}, child: Text('次に進む')))
+                              child: LoadingButton(
+                            text: hasProceeded ? '他プレイヤー待ち' : '次に進む',
+                            isLoading: isLoading,
+                            onPressed: hasProceeded
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      isLoading = true;
+                                    });
+
+                                    // API呼び出しのエラーハンドリング追加
+                                    try {
+                                      final result =
+                                          await ApiService.proceedToNext0004(
+                                              roomId,
+                                              currentUser.uid!,
+                                              ''); // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
+                                      if (result['success'] == true) {
+                                        print('プレイヤー${currentUser.uid} 準備完了');
+
+                                        // 成功時のスナックバー表示
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text('準備完了！'),
+                                              backgroundColor:
+                                                  AppTheme.successColor,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        // APIからの失敗レスポンス
+                                        if (mounted) {
+                                          ApiErrorHandler.handleApiError(
+                                              context, result, setError);
+                                        }
+                                      }
+                                    } catch (e) {
+                                      print('❌ 準備完了に失敗: $e');
+
+                                      if (mounted) {
+                                        // http.Response型のエラーかどうかで処理を分ける
+                                        if (e is http.Response) {
+                                          ApiErrorHandler.handleHttpError(
+                                              context, e, setError);
+                                        } else {
+                                          ApiErrorHandler.handleException(
+                                              context, e, setError);
+                                        }
+                                        setState(() {
+                                          hasProceeded = false;
+                                        });
+                                      }
+                                    } finally {
+                                      setState(() {
+                                        isLoading = false;
+                                        hasProceeded = true;
+                                      });
+                                    }
+                                  },
+                          ))
                         ],
                       ),
                     ),
