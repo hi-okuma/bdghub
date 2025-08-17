@@ -62,7 +62,35 @@ class _BiasProfileParentTurnPageState
 
     // 現在の部屋のお題を取得
     final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
-    final topicsValue = topics.values.toList();
+
+    final roomSnapshot = ref.watch(roomStreamProvider(roomId));
+    Map<String, dynamic> players = {};
+    List<MapEntry<String, String>> sortedTopics = [];
+
+    roomSnapshot.when(
+      data: (snapshot) {
+        if (snapshot.exists) {
+          final data = snapshot.data() as Map<String, dynamic>?;
+          players = data?['players'] as Map<String, dynamic>? ?? {};
+
+          final playerUids = players.keys.toList();
+          sortedTopics = playerUids
+              .where((uid) => topics.containsKey(uid))
+              .map((uid) => MapEntry(uid, topics[uid] as String))
+              .toList();
+        }
+      },
+      loading: () {
+        sortedTopics = topics.entries
+            .map((e) => MapEntry(e.key, e.value as String))
+            .toList();
+      },
+      error: (_, __) {
+        sortedTopics = topics.entries
+            .map((e) => MapEntry(e.key, e.value as String))
+            .toList();
+      },
+    );
 
     // 現在の部屋の回答を取得
     final hints = gameData?['hints'] as Map<String, dynamic>? ?? {};
@@ -166,221 +194,230 @@ class _BiasProfileParentTurnPageState
       backgroundColor: AppTheme.backgroundColor,
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             isCurrentParent
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'あなたは親プレイヤーです',
-                        style: AppTextStyles.titleLarge,
-                      ),
-                      Text(
-                        '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
-                        style: AppTextStyles.body,
-                        textAlign: TextAlign.center,
-                      )
-                    ],
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'あなたは子プレイヤーです',
-                        style: AppTextStyles.titleLarge,
-                      ),
-                      Text(
-                        '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
-                        style: AppTextStyles.body,
-                        textAlign: TextAlign.center,
-                      )
-                    ],
-                  ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Container(
-                    height: MediaQuery.of(context).size.height * 0.5,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: AppSpacing.medium),
-                      itemCount: currentImages.length,
-                      itemBuilder: (context, index) {
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            right: index < currentImages.length
-                                ? AppSpacing.small
-                                : 0,
-                          ),
-                          child: AspectRatio(
-                            aspectRatio: 7 / 10,
-                            child: Card(
-                              elevation: 4,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4.0),
-                                side: _selectedImageIndex == index
-                                    ? BorderSide(
-                                        width: 8.0,
-                                        color: AppTheme.primaryColor)
-                                    : BorderSide.none,
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: InkWell(
-                                onTap: isCurrentParent
-                                    ? () {
-                                        setState(() {
-                                          _selectedImageIndex = index;
-                                        });
-                                      }
-                                    : null,
-                                child: Image.network(
-                                  currentImages[index],
-                                  fit: BoxFit.cover,
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Center(
-                                      child: Text(
-                                        '画像の読み込みに\n失敗しました',
-                                        style: AppTextStyles.body,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Flexible(
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.3,
-                child: ListView.builder(
-                    scrollDirection: Axis.vertical,
-                    shrinkWrap: true,
-                    itemCount: topics.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: AppSpacing.medium),
-                        child: Card(
-                          margin:
-                              EdgeInsets.fromLTRB(0, 0, 0, AppSpacing.medium),
-                          child: InkWell(
-                            onTap: () {
-                              final topicKey = topics.keys.elementAt(index);
-                              final topic = topicsValue[index];
-                              final hint = hints[topicKey] as String?;
-                              _showTopicDialog(topic, hint, topicKey);
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.all(AppSpacing.medium),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(topicsValue[index]),
-                                  Icon(Icons.arrow_forward),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-              ),
-            ),
-            isCurrentParent
-                ? Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(AppSpacing.medium),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceColor,
-                    ),
-                    child: Row(
+                ? Flexible(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _selectedImageIndex != null
-                                ? () async {
-                                    // API呼び出しのエラーハンドリング追加
-                                    try {
-                                      final result =
-                                          await ApiService.determineAnswer0004(
-                                        roomId,
-                                        currentUser.uid!,
-                                        _selectedImageIndex.toString(),
-                                      );
-
-                                      if (result['success'] == true) {
-                                        print('💡 回答を提出: $_selectedImageIndex');
-
-                                        // 成功時のスナックバー表示
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text('回答を送信しました'),
-                                              backgroundColor:
-                                                  AppTheme.successColor,
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        // APIからの失敗レスポンス
-                                        if (mounted) {
-                                          ApiErrorHandler.handleApiError(
-                                              context, result, setError);
-                                        }
-                                      }
-                                    } catch (e) {
-                                      print('❌ 回答にに失敗: $e');
-
-                                      if (mounted) {
-                                        // http.Response型のエラーかどうかで処理を分ける
-                                        if (e is http.Response) {
-                                          ApiErrorHandler.handleHttpError(
-                                              context, e, setError);
-                                        } else {
-                                          ApiErrorHandler.handleException(
-                                              context, e, setError);
-                                        }
-                                      }
-                                    }
-                                  }
-                                : null,
-                            child: Text('この人物に決定'),
-                          ),
+                        Text(
+                          'あなたは親プレイヤーです',
+                          style: AppTextStyles.titleLarge,
                         ),
+                        Text(
+                          '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
+                          style: AppTextStyles.body,
+                          textAlign: TextAlign.center,
+                        )
                       ],
                     ),
                   )
-                : SizedBox(
-                    height: MediaQuery.of(context).size.width * 0.1,
+                : Flexible(
+                    flex: 1,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'あなたは子プレイヤーです',
+                          style: AppTextStyles.titleLarge,
+                        ),
+                        Text(
+                          '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
+                          style: AppTextStyles.body,
+                          textAlign: TextAlign.center,
+                        )
+                      ],
+                    ),
+                  ),
+            Flexible(
+              flex: 4,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding:
+                            EdgeInsets.symmetric(horizontal: AppSpacing.medium),
+                        itemCount: currentImages.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              right: index < currentImages.length
+                                  ? AppSpacing.small
+                                  : 0,
+                            ),
+                            child: AspectRatio(
+                              aspectRatio: 7 / 10,
+                              child: Card(
+                                elevation: 4,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4.0),
+                                  side: _selectedImageIndex == index
+                                      ? BorderSide(
+                                          width: 8.0,
+                                          color: AppTheme.primaryColor)
+                                      : BorderSide.none,
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: InkWell(
+                                  onTap: isCurrentParent
+                                      ? () {
+                                          setState(() {
+                                            _selectedImageIndex = index;
+                                          });
+                                        }
+                                      : null,
+                                  child: Image.network(
+                                    currentImages[index],
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          value: loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Center(
+                                        child: Text(
+                                          '画像の読み込みに\n失敗しました',
+                                          style: AppTextStyles.body,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: ListView.builder(
+                  itemCount: sortedTopics.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: AppSpacing.medium),
+                      child: Card(
+                        margin: EdgeInsets.fromLTRB(0, 0, 0, AppSpacing.medium),
+                        child: InkWell(
+                          onTap: () {
+                            final topicEntry = sortedTopics[index];
+                            final topicKey = topicEntry.key;
+                            final topic = topicEntry.value;
+                            final hint = hints[topicKey] as String?;
+                            _showTopicDialog(topic, hint, topicKey);
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(AppSpacing.medium),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(sortedTopics[index].value),
+                                Icon(Icons.arrow_forward),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+            ),
+            isCurrentParent
+                ? Flexible(
+                    flex: 1,
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(AppSpacing.medium),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _selectedImageIndex != null
+                                  ? () async {
+                                      // API呼び出しのエラーハンドリング追加
+                                      try {
+                                        final result = await ApiService
+                                            .determineAnswer0004(
+                                          roomId,
+                                          currentUser.uid!,
+                                          _selectedImageIndex!,
+                                        );
+
+                                        if (result['success'] == true) {
+                                          print(
+                                              '💡 回答を提出: $_selectedImageIndex');
+
+                                          // 成功時のスナックバー表示
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text('回答を送信しました'),
+                                                backgroundColor:
+                                                    AppTheme.successColor,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          // APIからの失敗レスポンス
+                                          if (mounted) {
+                                            ApiErrorHandler.handleApiError(
+                                                context, result, setError);
+                                          }
+                                        }
+                                      } catch (e) {
+                                        print('❌ 回答にに失敗: $e');
+
+                                        if (mounted) {
+                                          // http.Response型のエラーかどうかで処理を分ける
+                                          if (e is http.Response) {
+                                            ApiErrorHandler.handleHttpError(
+                                                context, e, setError);
+                                          } else {
+                                            ApiErrorHandler.handleException(
+                                                context, e, setError);
+                                          }
+                                        }
+                                      }
+                                    }
+                                  : null,
+                              child: Text('この人物に決定'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : Flexible(
+                    flex: 1,
+                    child: SizedBox(),
                   )
           ],
         ),

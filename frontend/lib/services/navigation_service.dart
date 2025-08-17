@@ -1,6 +1,7 @@
 import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
+import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
@@ -111,6 +112,16 @@ class NavigationService {
       default:
         navigateToGameTitle();
     }
+  }
+
+  void navigateToCheckAnswer(Map<String, dynamic> currentGame) {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const BiasProfileCheckAnswerPage(),
+      ),
+    );
   }
 
   void navigateToResult(Map<String, dynamic> currentGame) {
