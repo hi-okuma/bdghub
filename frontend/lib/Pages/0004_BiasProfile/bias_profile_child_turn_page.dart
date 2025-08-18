@@ -60,8 +60,6 @@ class _BiasProfileChildTurnPageState
         _errorMessage = validation.errorMessage;
       }
     });
-
-    print('🔍 _isValidInput: $_isValidInput'); // デバッグ用
   }
 
   @override
@@ -104,6 +102,9 @@ class _BiasProfileChildTurnPageState
     // 既に提出済みかどうかの確認
     final hints = gameData?['hints'] as Map<String, dynamic>? ?? {};
     final hasSubmittedHint = hints.containsKey(currentUser.uid);
+
+    bool isSoftwareKeyboardVisible =
+        MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -157,31 +158,33 @@ class _BiasProfileChildTurnPageState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  Flexible(
-                    flex: 1,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'あなたは子プレイヤーです',
-                          style: AppTextStyles.titleLarge,
+                  isSoftwareKeyboardVisible
+                      ? SizedBox.shrink()
+                      : Flexible(
+                          flex: 1,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'あなたは子プレイヤーです',
+                                style: AppTextStyles.titleLarge,
+                              ),
+                              SizedBox(
+                                height: AppSpacing.small,
+                              ),
+                              Text(
+                                '人物の見た目から勝手に想像して\n指定されたプロフィールを入力してください',
+                                style: AppTextStyles.body,
+                                textAlign: TextAlign.center,
+                              )
+                            ],
+                          ),
                         ),
-                        SizedBox(
-                          height: AppSpacing.small,
-                        ),
-                        Text(
-                          '人物の見た目から勝手に想像して\n指定されたプロフィールを入力してください',
-                          style: AppTextStyles.body,
-                          textAlign: TextAlign.center,
-                        )
-                      ],
-                    ),
-                  ),
                   Flexible(
-                    flex: 4,
+                    flex: isSoftwareKeyboardVisible ? 2 : 4,
                     child: Center(
                       child: Container(
-                        height: MediaQuery.of(context).size.height * 0.6,
+                        height: MediaQuery.of(context).size.height * 0.45,
                         child: AspectRatio(
                           aspectRatio: 7 / 10,
                           child: answerImage.isEmpty
