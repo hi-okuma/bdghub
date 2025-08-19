@@ -195,10 +195,9 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
           TextField(
             controller: _nicknameController,
             decoration: InputDecoration(
-              labelText:
-                  'ニックネームを入力（${AppLayout.minNicknameLength}〜${AppLayout.maxNicknameLength}文字）',
+              labelText: 'ニックネームを入力',
               hintText: '例：ボドゲハブ',
-              helperText: '※「/」と「.」は使用できません',
+              // helperText: '※「/」と「.」は使用できません',
             ),
             onChanged: _onNicknameChanged,
           ),

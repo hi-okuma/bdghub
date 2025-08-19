@@ -47,11 +47,14 @@ class _BiasProfileCheckAnswerPageState
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            '部屋情報が見つかりません',
-            style: AppTextStyles.bodyLarge,
+      return PopScope(
+        canPop: false,
+        child: Scaffold(
+          body: Center(
+            child: Text(
+              '部屋情報が見つかりません',
+              style: AppTextStyles.bodyLarge,
+            ),
           ),
         ),
       );
@@ -240,252 +243,256 @@ class _BiasProfileCheckAnswerPageState
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          // ホストプレイヤーのみ終了ボタンを表示
-          if (isHost)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-              child: ElevatedButton(
-                onPressed: showExitGameDialog,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.warningColor,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.medium,
-                    horizontal: AppSpacing.small,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.close, color: AppTheme.errorColor),
-                    const SizedBox(width: AppSpacing.small),
-                    Text(
-                      '終了',
-                      style: AppTextStyles.body.copyWith(color: Colors.white),
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            // ホストプレイヤーのみ終了ボタンを表示
+            if (isHost)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
+                child: ElevatedButton(
+                  onPressed: showExitGameDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.warningColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.medium,
+                      horizontal: AppSpacing.small,
                     ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          isRight
-              ? Flexible(
-                  flex: 1,
-                  child: Text(
-                    '正解！',
-                    style: AppTextStyles.titleLarge,
                   ),
-                )
-              : Flexible(
-                  flex: 1,
-                  child: Text(
-                    '不正解...',
-                    style: AppTextStyles.titleLarge,
-                  ),
-                ),
-          Flexible(
-            flex: 2,
-            child: Row(
-              children: [
-                Expanded(
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'お題',
-                            style: AppTextStyles.body,
-                          ),
-                          Container(
-                            height: MediaQuery.of(context).size.height * 0.3,
-                            child: AspectRatio(
-                              aspectRatio: 7 / 10,
-                              child: Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4.0),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Image.network(
-                                  currentImages[answerImageIndex],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            '親が選んだ人物',
-                            style: AppTextStyles.body,
-                          ),
-                          Container(
-                            height: MediaQuery.of(context).size.height * 0.3,
-                            child: AspectRatio(
-                              aspectRatio: 7 / 10,
-                              child: Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4.0),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: Image.network(
-                                  currentImages[parentSelectedIndex!],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      Icon(Icons.close, color: AppTheme.errorColor),
+                      const SizedBox(width: AppSpacing.small),
+                      Text(
+                        '終了',
+                        style: AppTextStyles.body.copyWith(color: Colors.white),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          Flexible(
-            flex: 2,
-            child: isCurrentParent
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Text('わかるde賞を選ぼう', style: AppTextStyles.titleMedium),
-                      Text(
-                        'もっとも「わかる！」と共感できたヒントを選ぼう\n選ばれたプレイヤーには1ポイントが与えられます',
-                        textAlign: TextAlign.center,
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                            itemCount: sortedTopics.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.medium),
+              ),
+          ],
+          automaticallyImplyLeading: false,
+        ),
+        backgroundColor: AppTheme.backgroundColor,
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            isRight
+                ? Flexible(
+                    flex: 1,
+                    child: Text(
+                      '正解！',
+                      style: AppTextStyles.titleLarge,
+                    ),
+                  )
+                : Flexible(
+                    flex: 1,
+                    child: Text(
+                      '不正解...',
+                      style: AppTextStyles.titleLarge,
+                    ),
+                  ),
+            Flexible(
+              flex: 2,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'お題',
+                              style: AppTextStyles.body,
+                            ),
+                            Container(
+                              height: MediaQuery.of(context).size.height * 0.3,
+                              child: AspectRatio(
+                                aspectRatio: 7 / 10,
                                 child: Card(
-                                  margin: EdgeInsets.fromLTRB(
-                                      0, 0, 0, AppSpacing.medium),
-                                  child: InkWell(
-                                    onTap: () {
-                                      final topicEntry = sortedTopics[index];
-                                      final topicKey = topicEntry.key;
-                                      final topic = topicEntry.value;
-                                      final hint = hints[topicKey] as String?;
-                                      _showTopicDialog(topic, hint, topicKey);
-                                    },
-                                    child: Padding(
-                                      padding:
-                                          EdgeInsets.all(AppSpacing.medium),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(sortedTopics[index].value),
-                                          Icon(Icons.arrow_forward),
-                                        ],
+                                  elevation: 4,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4.0),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    currentImages[answerImageIndex],
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              '親が選んだ人物',
+                              style: AppTextStyles.body,
+                            ),
+                            Container(
+                              height: MediaQuery.of(context).size.height * 0.3,
+                              child: AspectRatio(
+                                aspectRatio: 7 / 10,
+                                child: Card(
+                                  elevation: 4,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4.0),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    currentImages[parentSelectedIndex!],
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              flex: 2,
+              child: isCurrentParent
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Text('わかるde賞を選ぼう', style: AppTextStyles.titleMedium),
+                        Text(
+                          'もっとも「わかる！」と共感できたヒントを選ぼう\n選ばれたプレイヤーには1ポイントが与えられます',
+                          textAlign: TextAlign.center,
+                        ),
+                        Expanded(
+                          child: ListView.builder(
+                              itemCount: sortedTopics.length,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.medium),
+                                  child: Card(
+                                    margin: EdgeInsets.fromLTRB(
+                                        0, 0, 0, AppSpacing.medium),
+                                    child: InkWell(
+                                      onTap: () {
+                                        final topicEntry = sortedTopics[index];
+                                        final topicKey = topicEntry.key;
+                                        final topic = topicEntry.value;
+                                        final hint = hints[topicKey] as String?;
+                                        _showTopicDialog(topic, hint, topicKey);
+                                      },
+                                      child: Padding(
+                                        padding:
+                                            EdgeInsets.all(AppSpacing.medium),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(sortedTopics[index].value),
+                                            Icon(Icons.arrow_forward),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }),
-                      )
-                    ],
-                  )
-                : Center(
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(AppSpacing.medium),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceColor,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                              child: LoadingButton(
-                            text: hasProceeded ? '他プレイヤー待ち' : '次に進む',
-                            isLoading: isLoading,
-                            onPressed: hasProceeded
-                                ? null
-                                : () async {
-                                    setState(() {
-                                      isLoading = true;
-                                    });
+                                );
+                              }),
+                        )
+                      ],
+                    )
+                  : Center(
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(AppSpacing.medium),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceColor,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                                child: LoadingButton(
+                              text: hasProceeded ? '他プレイヤー待ち' : '次に進む',
+                              isLoading: isLoading,
+                              onPressed: hasProceeded
+                                  ? null
+                                  : () async {
+                                      setState(() {
+                                        isLoading = true;
+                                      });
 
-                                    // API呼び出しのエラーハンドリング追加
-                                    try {
-                                      final result =
-                                          await ApiService.proceedToNext0004(
-                                              roomId,
-                                              currentUser.uid!,
-                                              ''); // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
-                                      if (result['success'] == true) {
-                                        print('プレイヤー${currentUser.uid} 準備完了');
+                                      // API呼び出しのエラーハンドリング追加
+                                      try {
+                                        final result =
+                                            await ApiService.proceedToNext0004(
+                                                roomId,
+                                                currentUser.uid!,
+                                                ''); // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
+                                        if (result['success'] == true) {
+                                          print('プレイヤー${currentUser.uid} 準備完了');
 
-                                        // 成功時のスナックバー表示
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text('準備完了！'),
-                                              backgroundColor:
-                                                  AppTheme.successColor,
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        // APIからの失敗レスポンス
-                                        if (mounted) {
-                                          ApiErrorHandler.handleApiError(
-                                              context, result, setError);
-                                        }
-                                      }
-                                    } catch (e) {
-                                      print('❌ 準備完了に失敗: $e');
-
-                                      if (mounted) {
-                                        // http.Response型のエラーかどうかで処理を分ける
-                                        if (e is http.Response) {
-                                          ApiErrorHandler.handleHttpError(
-                                              context, e, setError);
+                                          // 成功時のスナックバー表示
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text('準備完了！'),
+                                                backgroundColor:
+                                                    AppTheme.successColor,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
                                         } else {
-                                          ApiErrorHandler.handleException(
-                                              context, e, setError);
+                                          // APIからの失敗レスポンス
+                                          if (mounted) {
+                                            ApiErrorHandler.handleApiError(
+                                                context, result, setError);
+                                          }
                                         }
+                                      } catch (e) {
+                                        print('❌ 準備完了に失敗: $e');
+
+                                        if (mounted) {
+                                          // http.Response型のエラーかどうかで処理を分ける
+                                          if (e is http.Response) {
+                                            ApiErrorHandler.handleHttpError(
+                                                context, e, setError);
+                                          } else {
+                                            ApiErrorHandler.handleException(
+                                                context, e, setError);
+                                          }
+                                          setState(() {
+                                            hasProceeded = false;
+                                          });
+                                        }
+                                      } finally {
                                         setState(() {
-                                          hasProceeded = false;
+                                          isLoading = false;
+                                          hasProceeded = true;
                                         });
                                       }
-                                    } finally {
-                                      setState(() {
-                                        isLoading = false;
-                                        hasProceeded = true;
-                                      });
-                                    }
-                                  },
-                          ))
-                        ],
+                                    },
+                            ))
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-          )
-        ],
+            )
+          ],
+        ),
       ),
     );
   }

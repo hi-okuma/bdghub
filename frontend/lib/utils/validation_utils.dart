@@ -18,10 +18,11 @@ class ValidationUtils {
       return ValidationResult.invalid('ニックネームを入力してください');
     }
 
-    if (value.length < AppLayout.minNicknameLength) {
-      return ValidationResult.invalid(
-          'ニックネームは${AppLayout.minNicknameLength}文字以上入力してください');
-    }
+    // 最小文字数の制限は不要
+    // if (value.length < AppLayout.minNicknameLength) {
+    //   return ValidationResult.invalid(
+    //       'ニックネームは${AppLayout.minNicknameLength}文字以上入力してください');
+    // }
 
     if (value.length > AppLayout.maxNicknameLength) {
       return ValidationResult.invalid(
