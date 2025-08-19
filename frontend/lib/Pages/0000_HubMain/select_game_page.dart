@@ -256,36 +256,14 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: Text('部屋: $roomId'),
-        leading: Padding(
-          padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
-          child: TextButton(
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.grey[200],
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.small, vertical: 0),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppBorderRadius.small),
-              ),
-            ),
-            onPressed: _showExitDialog,
-            child: const Text(
-              '退出',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: AppTextStyles.captionFontSize,
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          Padding(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          centerTitle: true,
+          title: Text('部屋: $roomId'),
+          leading: Padding(
             padding: const EdgeInsets.symmetric(
                 vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
             child: TextButton(
@@ -298,9 +276,9 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   borderRadius: BorderRadius.circular(AppBorderRadius.small),
                 ),
               ),
-              onPressed: _copyRoomUrl,
+              onPressed: _showExitDialog,
               child: const Text(
-                'URLをコピー',
+                '退出',
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: AppTextStyles.captionFontSize,
@@ -308,150 +286,175 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.small),
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // デバッグ情報表示（開発時のみ）
-          if (kDebugMode && roomId.isNotEmpty) ...[
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.grey[200],
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.small, vertical: 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                  ),
+                ),
+                onPressed: _copyRoomUrl,
+                child: const Text(
+                  'URLをコピー',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: AppTextStyles.captionFontSize,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.small),
+          ],
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // デバッグ情報表示（開発時のみ）
+            if (kDebugMode && roomId.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.yellow[100],
+                child: Column(
+                  children: [
+                    Text(
+                        '🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
+                    Text('部屋: $roomId'),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final gameStateAsync =
+                            ref.watch(roomGameStateProvider(roomId));
+                        return gameStateAsync.when(
+                          data: (status) => Text('ゲーム状態: $status'),
+                          loading: () => const Text('ゲーム状態: 読み込み中...'),
+                          error: (error, _) => const Text('ゲーム状態: エラー'),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // 参加者エリア
             Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.yellow[100],
+              padding: const EdgeInsets.all(AppSpacing.large),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      '🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
-                  Text('部屋: $roomId'),
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final gameStateAsync =
-                          ref.watch(roomGameStateProvider(roomId));
-                      return gameStateAsync.when(
-                        data: (status) => Text('ゲーム状態: $status'),
-                        loading: () => const Text('ゲーム状態: 読み込み中...'),
-                        error: (error, _) => const Text('ゲーム状態: エラー'),
-                      );
-                    },
+                    '参加者',
+                    style: AppTextStyles.titleMedium,
                   ),
+                  const SizedBox(height: AppSpacing.small),
+                  // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
+                  Consumer(builder: (context, ref, _) {
+                    // roomIdが空の場合は playersProvider を watch しない
+                    if (roomId.isEmpty) {
+                      return Text(
+                        'ルームIDが見つかりません',
+                        style: AppTextStyles.errorText,
+                      );
+                    }
+
+                    final players = ref.watch(playersProvider(roomId));
+
+                    if (players.isEmpty) {
+                      return Text(
+                        '参加者がいません',
+                        style: AppTextStyles.body,
+                      );
+                    }
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: players.map((player) {
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(right: AppSpacing.small),
+                            child: PlayerBadge(
+                              nickname: player.nickname,
+                              isHost: player.isHost,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
+
+            // タブバー
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+              child: CustomTabBar(
+                controller: _tabController,
+                tabs: _tabs,
+              ),
+            ),
+
+            // ゲーム一覧（タブビュー）
+            Expanded(
+              child: _isGameLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      physics: const PageScrollPhysics(
+                        parent: ClampingScrollPhysics(),
+                      ),
+                      children: [
+                        GameListWidget(
+                          games: _gameList,
+                          onGameSelected: _onGameSelected,
+                        ),
+                        GameListWidget(
+                          games: _gameList.where((game) {
+                            if (game['genre'] is List) {
+                              List<GameGenre> genres =
+                                  List<GameGenre>.from(game['genre']);
+                              return genres.contains(GameGenre.popular);
+                            }
+                            return game['genre'] == GameGenre.popular;
+                          }).toList(),
+                          onGameSelected: _onGameSelected,
+                        ),
+                        GameListWidget(
+                          games: _gameList.where((game) {
+                            if (game['genre'] is List) {
+                              List<GameGenre> genres =
+                                  List<GameGenre>.from(game['genre']);
+                              return genres.contains(GameGenre.card);
+                            }
+                            return game['genre'] == GameGenre.card;
+                          }).toList(),
+                          onGameSelected: _onGameSelected,
+                        ),
+                        GameListWidget(
+                          games: _gameList.where((game) {
+                            if (game['genre'] is List) {
+                              List<GameGenre> genres =
+                                  List<GameGenre>.from(game['genre']);
+                              return genres.contains(GameGenre.cooperation);
+                            }
+                            return game['genre'] == GameGenre.cooperation;
+                          }).toList(),
+                          onGameSelected: _onGameSelected,
+                        ),
+                      ],
+                    ),
+            ),
           ],
-
-          // 参加者エリア
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.large),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '参加者',
-                  style: AppTextStyles.titleMedium,
-                ),
-                const SizedBox(height: AppSpacing.small),
-                // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
-                Consumer(builder: (context, ref, _) {
-                  // roomIdが空の場合は playersProvider を watch しない
-                  if (roomId.isEmpty) {
-                    return Text(
-                      'ルームIDが見つかりません',
-                      style: AppTextStyles.errorText,
-                    );
-                  }
-
-                  final players = ref.watch(playersProvider(roomId));
-
-                  if (players.isEmpty) {
-                    return Text(
-                      '参加者がいません',
-                      style: AppTextStyles.body,
-                    );
-                  }
-
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: players.map((player) {
-                        return Padding(
-                          padding:
-                              const EdgeInsets.only(right: AppSpacing.small),
-                          child: PlayerBadge(
-                            nickname: player.nickname,
-                            isHost: player.isHost,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-
-          // タブバー
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-            child: CustomTabBar(
-              controller: _tabController,
-              tabs: _tabs,
-            ),
-          ),
-
-          // ゲーム一覧（タブビュー）
-          Expanded(
-            child: _isGameLoading
-                ? const Center(
-                    child: CircularProgressIndicator(),
-                  )
-                : TabBarView(
-                    controller: _tabController,
-                    physics: const PageScrollPhysics(
-                      parent: ClampingScrollPhysics(),
-                    ),
-                    children: [
-                      GameListWidget(
-                        games: _gameList,
-                        onGameSelected: _onGameSelected,
-                      ),
-                      GameListWidget(
-                        games: _gameList.where((game) {
-                          if (game['genre'] is List) {
-                            List<GameGenre> genres =
-                                List<GameGenre>.from(game['genre']);
-                            return genres.contains(GameGenre.popular);
-                          }
-                          return game['genre'] == GameGenre.popular;
-                        }).toList(),
-                        onGameSelected: _onGameSelected,
-                      ),
-                      GameListWidget(
-                        games: _gameList.where((game) {
-                          if (game['genre'] is List) {
-                            List<GameGenre> genres =
-                                List<GameGenre>.from(game['genre']);
-                            return genres.contains(GameGenre.card);
-                          }
-                          return game['genre'] == GameGenre.card;
-                        }).toList(),
-                        onGameSelected: _onGameSelected,
-                      ),
-                      GameListWidget(
-                        games: _gameList.where((game) {
-                          if (game['genre'] is List) {
-                            List<GameGenre> genres =
-                                List<GameGenre>.from(game['genre']);
-                            return genres.contains(GameGenre.cooperation);
-                          }
-                          return game['genre'] == GameGenre.cooperation;
-                        }).toList(),
-                        onGameSelected: _onGameSelected,
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+        ),
       ),
     );
   }
