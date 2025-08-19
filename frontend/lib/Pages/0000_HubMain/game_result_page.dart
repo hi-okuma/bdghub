@@ -37,7 +37,8 @@ class GameResultPage extends ConsumerStatefulWidget {
   ConsumerState<GameResultPage> createState() => _GameResultPageState();
 }
 
-class _GameResultPageState extends ConsumerState<GameResultPage> with GameExitHandler {
+class _GameResultPageState extends ConsumerState<GameResultPage>
+    with GameExitHandler {
   String? _errorMessage;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
@@ -89,11 +90,14 @@ class _GameResultPageState extends ConsumerState<GameResultPage> with GameExitHa
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            '部屋情報が見つかりません',
-            style: AppTextStyles.bodyLarge,
+      return PopScope(
+        canPop: false,
+        child: Scaffold(
+          body: Center(
+            child: Text(
+              '部屋情報が見つかりません',
+              style: AppTextStyles.bodyLarge,
+            ),
           ),
         ),
       );
@@ -179,129 +183,134 @@ class _GameResultPageState extends ConsumerState<GameResultPage> with GameExitHa
         ? resultPlayers.map((p) => p.points).reduce((a, b) => a > b ? a : b)
         : 0;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          '結果発表',
-          style: AppTextStyles.titleLarge,
-        ),
-        centerTitle: true,
-        actions: [
-          // ホストプレイヤーのみ終了ボタンを表示
-          if (isHost)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-              child: ElevatedButton(
-                onPressed: showExitGameDialog,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.warningColor,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.medium,
-                    horizontal: AppSpacing.small,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.close, color: AppTheme.errorColor),
-                    const SizedBox(width: AppSpacing.small),
-                    Text(
-                      '終了',
-                      style: AppTextStyles.body.copyWith(color: Colors.white),
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            '結果発表',
+            style: AppTextStyles.titleLarge,
+          ),
+          centerTitle: true,
+          actions: [
+            // ホストプレイヤーのみ終了ボタンを表示
+            if (isHost)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
+                child: ElevatedButton(
+                  onPressed: showExitGameDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.warningColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.medium,
+                      horizontal: AppSpacing.small,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, color: AppTheme.errorColor),
+                      const SizedBox(width: AppSpacing.small),
+                      Text(
+                        '終了',
+                        style: AppTextStyles.body.copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        children: [
-          Expanded(
-            child: ShaderMask(
-              shaderCallback: (Rect bounds) {
-                return LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.0, 0.9, 0.95, 0.98],
-                  colors: [
-                    Color.fromARGB(0, 255, 255, 255),
-                    Color.fromARGB(50, 255, 255, 255),
-                    Color.fromARGB(128, 255, 255, 255),
-                    Color.fromARGB(255, 255, 255, 255),
-                  ],
-                ).createShader(bounds);
-              },
-              blendMode: BlendMode.dstOut,
-              child: resultPlayers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: AppSpacing.medium),
-                          Text(
-                            'プレイヤー情報を読み込み中...',
-                            style: AppTextStyles.body,
-                          ),
-                        ],
+          ],
+          automaticallyImplyLeading: false,
+        ),
+        backgroundColor: AppTheme.backgroundColor,
+        body: Column(
+          children: [
+            Expanded(
+              child: ShaderMask(
+                shaderCallback: (Rect bounds) {
+                  return LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.9, 0.95, 0.98],
+                    colors: [
+                      Color.fromARGB(0, 255, 255, 255),
+                      Color.fromARGB(50, 255, 255, 255),
+                      Color.fromARGB(128, 255, 255, 255),
+                      Color.fromARGB(255, 255, 255, 255),
+                    ],
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.dstOut,
+                child: resultPlayers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: AppSpacing.medium),
+                            Text(
+                              'プレイヤー情報を読み込み中...',
+                              style: AppTextStyles.body,
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.all(AppSpacing.medium),
+                        itemCount: resultPlayers.length,
+                        itemBuilder: (context, index) {
+                          final player = resultPlayers[index];
+                          final isWinner = player.points == maxPoints;
+                          return _buildPlayerResultCard(player, isWinner);
+                        },
                       ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.all(AppSpacing.medium),
-                      itemCount: resultPlayers.length,
-                      itemBuilder: (context, index) {
-                        final player = resultPlayers[index];
-                        final isWinner = player.points == maxPoints;
-                        return _buildPlayerResultCard(player, isWinner);
-                      },
-                    ),
+              ),
             ),
-          ),
 
-          // もう一度遊ぶボタン（画面下部固定）
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppSpacing.medium),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: LoadingButton(
-                      text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
-                      isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
-                      onPressed: _isPreparationCompleted || _isUpdatingReady
-                          ? null // ★準備完了済みまたは通信中は押せない
-                          : () async {
-                              setState(() {
-                                _isUpdatingReady = true; // ★通信開始
-                              });
+            // もう一度遊ぶボタン（画面下部固定）
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(AppSpacing.medium),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: LoadingButton(
+                        text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
+                        isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
+                        onPressed: _isPreparationCompleted || _isUpdatingReady
+                            ? null // ★準備完了済みまたは通信中は押せない
+                            : () async {
+                                setState(() {
+                                  _isUpdatingReady = true; // ★通信開始
+                                });
 
-                              try {
-                                await _updateReadyStatus(); // ★API呼び出し
-                                setState(() {
-                                  _isPreparationCompleted = true; // ★成功時のみtrue
-                                });
-                              } catch (e) {
-                                // エラー時は_isPreparationCompletedはfalseのまま
-                              } finally {
-                                setState(() {
-                                  _isUpdatingReady = false; // ★通信終了
-                                });
-                              }
-                            },
+                                try {
+                                  await _updateReadyStatus(); // ★API呼び出し
+                                  setState(() {
+                                    _isPreparationCompleted =
+                                        true; // ★成功時のみtrue
+                                  });
+                                } catch (e) {
+                                  // エラー時は_isPreparationCompletedはfalseのまま
+                                } finally {
+                                  setState(() {
+                                    _isUpdatingReady = false; // ★通信終了
+                                  });
+                                }
+                              },
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

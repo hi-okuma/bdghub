@@ -109,11 +109,14 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            '部屋情報が見つかりません',
-            style: AppTextStyles.bodyLarge,
+      return PopScope(
+        canPop: false,
+        child: Scaffold(
+          body: Center(
+            child: Text(
+              '部屋情報が見つかりません',
+              style: AppTextStyles.bodyLarge,
+            ),
           ),
         ),
       );
@@ -180,106 +183,110 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
       error: (_, __) => <NgWordPlayer>[],
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          // ホストプレイヤーのみ終了ボタンを表示
-          if (isHost)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-              child: ElevatedButton(
-                onPressed: showExitGameDialog,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.warningColor,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppSpacing.medium,
-                    horizontal: AppSpacing.small,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.close, color: AppTheme.errorColor),
-                    const SizedBox(width: AppSpacing.small),
-                    Text(
-                      '終了',
-                      style: AppTextStyles.body.copyWith(color: Colors.white),
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            // ホストプレイヤーのみ終了ボタンを表示
+            if (isHost)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
+                child: ElevatedButton(
+                  onPressed: showExitGameDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.warningColor,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.medium,
+                      horizontal: AppSpacing.small,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, color: AppTheme.errorColor),
+                      const SizedBox(width: AppSpacing.small),
+                      Text(
+                        '終了',
+                        style: AppTextStyles.body.copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-      backgroundColor: AppTheme.backgroundColor,
-      body: Column(
-        children: [
-          Expanded(
-            child: ShaderMask(
-              shaderCallback: (Rect bounds) {
-                return LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.0, 0.9, 0.95, 0.98],
-                  colors: [
-                    Color.fromARGB(0, 255, 255, 255),
-                    Color.fromARGB(50, 255, 255, 255),
-                    Color.fromARGB(128, 255, 255, 255),
-                    Color.fromARGB(255, 255, 255, 255),
-                  ],
-                ).createShader(bounds);
-              },
-              blendMode: BlendMode.dstOut,
-              child: gamePlayers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: AppSpacing.medium),
-                          Text(
-                            'プレイヤー情報を読み込み中...',
-                            style: AppTextStyles.body,
-                          ),
-                        ],
+          ],
+          automaticallyImplyLeading: false,
+        ),
+        backgroundColor: AppTheme.backgroundColor,
+        body: Column(
+          children: [
+            Expanded(
+              child: ShaderMask(
+                shaderCallback: (Rect bounds) {
+                  return LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.9, 0.95, 0.98],
+                    colors: [
+                      Color.fromARGB(0, 255, 255, 255),
+                      Color.fromARGB(50, 255, 255, 255),
+                      Color.fromARGB(128, 255, 255, 255),
+                      Color.fromARGB(255, 255, 255, 255),
+                    ],
+                  ).createShader(bounds);
+                },
+                blendMode: BlendMode.dstOut,
+                child: gamePlayers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: AppSpacing.medium),
+                            Text(
+                              'プレイヤー情報を読み込み中...',
+                              style: AppTextStyles.body,
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.only(
+                          left: AppSpacing.medium,
+                          right: AppSpacing.medium,
+                          top: AppSpacing.medium,
+                          bottom: AppSpacing.xxxLarge,
+                        ),
+                        itemCount: gamePlayers.length,
+                        itemBuilder: (context, index) {
+                          final player = gamePlayers[index];
+                          return _buildPlayerCard(player, gamePlayers);
+                        },
                       ),
-                    )
-                  : ListView.builder(
-                      padding: EdgeInsets.only(
-                        left: AppSpacing.medium,
-                        right: AppSpacing.medium,
-                        top: AppSpacing.medium,
-                        bottom: AppSpacing.xxxLarge,
-                      ),
-                      itemCount: gamePlayers.length,
-                      itemBuilder: (context, index) {
-                        final player = gamePlayers[index];
-                        return _buildPlayerCard(player, gamePlayers);
-                      },
-                    ),
+              ),
             ),
-          ),
 
-          // 申告ボタン（画面下部固定）
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(AppSpacing.medium),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: LoadingButton(
-                    text: _hasReported ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
-                    isLoading: _isSubmittingReport,
-                    onPressed: _hasReported ? null : _onReportPressed,
+            // 申告ボタン（画面下部固定）
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(AppSpacing.medium),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: LoadingButton(
+                      text: _hasReported ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
+                      isLoading: _isSubmittingReport,
+                      onPressed: _hasReported ? null : _onReportPressed,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
