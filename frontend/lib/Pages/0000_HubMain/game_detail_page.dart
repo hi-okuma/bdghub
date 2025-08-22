@@ -58,7 +58,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
       }
 
       if (!mounted) return;
-      
+
       // ★ 成功メッセージのみ表示（遷移はgame_state_providerが自動実行） ★
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ゲームを開始しています...')),
@@ -160,7 +160,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
 
                   Text(
                     '所要時間: ${widget.game['time']} / ${widget.game['players']}',
-                    style: AppTextStyles.gameCardTime,
+                    style: AppTextStyles.gameCard,
                   ),
                   const SizedBox(height: AppSpacing.xSmall),
 

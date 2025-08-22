@@ -212,7 +212,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
               ),
             ),
 
-          const SizedBox(height: AppSpacing.medium),
+          const SizedBox(height: AppSpacing.large),
 
           // 部屋コード入力（部屋参加時のみ）
           if (widget.isJoiningRoom)
@@ -230,15 +230,19 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
 
           // ボタン群
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              LoadingButton(
-                text: 'キャンセル',
-                isLoading: false,
-                isElevated: false,
-                onPressed: () => Navigator.of(context).pop(),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'キャンセル',
+                  style: AppTextStyles.subtitle2
+                      .copyWith(color: AppTheme.secondaryTextColor),
+                ),
               ),
-              LoadingButton(
+              TextLoadingButton(
                 text: widget.isJoiningRoom ? '部屋に参加する' : '部屋を作成する',
                 isLoading: _isLoading,
                 onPressed: _createRoom,

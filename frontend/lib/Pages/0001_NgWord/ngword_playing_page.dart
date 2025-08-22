@@ -115,7 +115,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
           body: Center(
             child: Text(
               '部屋情報が見つかりません',
-              style: AppTextStyles.bodyLarge,
+              style: AppTextStyles.subtitle,
             ),
           ),
         ),
@@ -399,13 +399,13 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
                 children: [
                   Text(
                     player.nickname,
-                    style: AppTextStyles.titleSmall,
+                    style: AppTextStyles.title,
                   ),
                 ],
               ),
               Text(
                 '${player.points}点',
-                style: AppTextStyles.bodyLarge.copyWith(
+                style: AppTextStyles.subtitle.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),

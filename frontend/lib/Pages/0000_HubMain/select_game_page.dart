@@ -31,11 +31,11 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   bool _isGameLoading = true;
   Set<GameGenre> _selectedGenre = {GameGenre.all};
 
-  final List<Tab> _tabs = const <Tab>[
-    Tab(text: '全て'),
-    Tab(text: '定番'),
-    Tab(text: 'カード'),
-    Tab(text: '協力'),
+  final List<CustomTab> _tabs = const <CustomTab>[
+    CustomTab(label: '全て'),
+    CustomTab(label: '定番'),
+    CustomTab(label: 'カード'),
+    CustomTab(label: '協力'),
   ];
 
   bool _isFromGameExit = false; // ★追加: ゲーム終了からの遷移かどうか

@@ -118,6 +118,7 @@ class GameThumbnail extends StatelessWidget {
   }
 }
 
+// TODO UI適応後、削除
 // ローディングボタンウィジェット
 class LoadingButton extends StatelessWidget {
   final String text;
@@ -159,6 +160,122 @@ class LoadingButton extends StatelessWidget {
             ),
           )
         : Text(text);
+  }
+}
+
+// Elevatedローディングボタンウィジェット
+class ElevatedLoadingButton extends StatelessWidget {
+  final String text;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const ElevatedLoadingButton({
+    Key? key,
+    required this.text,
+    required this.isLoading,
+    this.onPressed,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      child: _buildChild(),
+    );
+  }
+
+  Widget _buildChild() {
+    return isLoading
+        ? const SizedBox(
+            width: AppIconSizes.small,
+            height: AppIconSizes.small,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
+        : Text(
+            text,
+            style: AppTextStyles.subtitle2.copyWith(color: Colors.white),
+          );
+  }
+}
+
+// Outlinedローディングボタンウィジェット
+class OutlinedLoadingButton extends StatelessWidget {
+  final String text;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const OutlinedLoadingButton({
+    Key? key,
+    required this.text,
+    required this.isLoading,
+    this.onPressed,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: isLoading ? null : onPressed,
+      child: _buildChild(),
+    );
+  }
+
+  Widget _buildChild() {
+    return isLoading
+        ? const SizedBox(
+            width: AppIconSizes.small,
+            height: AppIconSizes.small,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
+        : Text(
+            text,
+            style:
+                AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
+          );
+  }
+}
+
+// Textローディングボタンウィジェット
+class TextLoadingButton extends StatelessWidget {
+  final String text;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  const TextLoadingButton({
+    Key? key,
+    required this.text,
+    required this.isLoading,
+    this.onPressed,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: isLoading ? null : onPressed,
+      child: _buildChild(),
+    );
+  }
+
+  Widget _buildChild() {
+    return isLoading
+        ? const SizedBox(
+            width: AppIconSizes.small,
+            height: AppIconSizes.small,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
+        : Text(
+            text,
+            style:
+                AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
+          );
   }
 }
 
@@ -206,10 +323,19 @@ class ErrorDisplay extends StatelessWidget {
   }
 }
 
+// カスタムタブデータクラス
+class CustomTab {
+  final String label;
+
+  const CustomTab({
+    required this.label,
+  });
+}
+
 // カスタムタブバーウィジェット
 class CustomTabBar extends StatelessWidget {
   final TabController controller;
-  final List<Tab> tabs;
+  final List<CustomTab> tabs;
 
   const CustomTabBar({
     Key? key,
@@ -221,22 +347,24 @@ class CustomTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.tabBackgroundColor,
-        borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+        color: AppTheme.selectedBackgroundColor,
+        borderRadius: BorderRadius.circular(AppBorderRadius.tabBar),
       ),
       child: TabBar(
+        isScrollable: true,
         controller: controller,
-        tabs: tabs,
-        labelColor: AppTheme.primaryColor,
-        unselectedLabelColor: AppTheme.secondaryTextColor,
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        indicator: BoxDecoration(
-          color: AppTheme.tabIndicatorColor,
-          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
-        ),
-        labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.small),
-        padding: const EdgeInsets.all(AppSpacing.xSmall),
+        // CustomTabデータからTabウィジェットを直接生成
+        tabs: tabs
+            .map((customTab) => Tab(
+                  height: AppLayout.tabHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.small),
+                    child: Container(child: Text(customTab.label)),
+                  ),
+                ))
+            .toList(),
+        padding: const EdgeInsets.all(AppSpacing.small),
       ),
     );
   }
@@ -267,7 +395,7 @@ class MaintenanceScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xLarge),
             Text(
               'メンテナンス中です',
-              style: AppTextStyles.titleLarge,
+              style: AppTextStyles.h5,
             ),
             const SizedBox(height: AppSpacing.medium),
             Text(
@@ -321,7 +449,7 @@ class InfoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: AppTextStyles.titleSmall),
+                    Text(title, style: AppTextStyles.title),
                     if (subtitle != null) ...[
                       const SizedBox(height: AppSpacing.xSmall),
                       Text(subtitle!, style: AppTextStyles.caption),

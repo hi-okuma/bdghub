@@ -51,7 +51,7 @@ class _BiasProfileParentTurnPageState
           body: Center(
             child: Text(
               '部屋情報が見つかりません',
-              style: AppTextStyles.bodyLarge,
+              style: AppTextStyles.subtitle,
             ),
           ),
         ),
@@ -144,7 +144,7 @@ class _BiasProfileParentTurnPageState
                             padding: const EdgeInsets.all(AppSpacing.large),
                             child: Text(
                               '${hint}',
-                              style: AppTextStyles.bodyLarge,
+                              style: AppTextStyles.subtitle,
                             ),
                           )),
                     ),
@@ -210,7 +210,7 @@ class _BiasProfileParentTurnPageState
                         children: [
                           Text(
                             'あなたは親プレイヤーです',
-                            style: AppTextStyles.titleLarge,
+                            style: AppTextStyles.h5,
                           ),
                           Text(
                             '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
@@ -227,7 +227,7 @@ class _BiasProfileParentTurnPageState
                         children: [
                           Text(
                             'あなたは子プレイヤーです',
-                            style: AppTextStyles.titleLarge,
+                            style: AppTextStyles.h5,
                           ),
                           Text(
                             '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
