@@ -51,17 +51,10 @@ Parent -> Parent: 正誤確認画面表示
 Children -> Children: 正誤確認画面表示
 
 == 正誤確認 ==
-alt 親が正解した場合
-    Parent -> Parent: ベストヒント選択
-    Parent -> APIgateway_Functions: 正誤確認済みリクエスト（ベストヒント含む）
-    APIgateway_Functions -> Firestore: 正誤確認済みリクエスト（ベストヒント含む）
-    Firestore -> Firestore: bestHintPlayer更新 & isReady更新 (false→true)
-else 親が不正解の場合
-    Parent -> Parent: 次に進むボタン押下
-    Parent -> APIgateway_Functions: 正誤確認済みリクエスト
-    APIgateway_Functions -> Firestore: 正誤確認済みリクエスト
-    Firestore -> Firestore: isReady更新 (false→true)
-end
+Parent -> Parent: わかる選択
+Parent -> APIgateway_Functions: 正誤確認済みリクエスト（わかるde賞含む）
+APIgateway_Functions -> Firestore: 正誤確認済みリクエスト（わかるde賞含む）
+Firestore -> Firestore: bestHintPlayer更新 & isReady更新 (false→true)
 
 Children -> Children: 次に進むボタン押下
 Children -> APIgateway_Functions: 正誤確認済みリクエスト
@@ -69,7 +62,7 @@ Children -> APIgateway_Functions: 正誤確認済みリクエスト
 alt 正誤確認していないプレイヤーが存在する場合
     APIgateway_Functions -> Firestore: 正誤確認済みリクエスト
     Firestore -> Firestore: isReady更新 (false→true)
-else 全員が正誤確認済みの場合（親のベストヒント選択含む）
+else 全員が正誤確認済みの場合（親のわかるde賞選択含む）
     alt ターンが１周していない場合
         APIgateway_Functions -> Firestore: 次ターン準備リクエスト
         Firestore -> Firestore: gameStatus更新 (result→childTurn)\n次ターンに向けた初期化
