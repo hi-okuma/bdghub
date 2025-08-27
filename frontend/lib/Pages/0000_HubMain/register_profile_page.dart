@@ -28,7 +28,6 @@ class RegisterProfilePage extends ConsumerStatefulWidget {
 class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _roomIdController = TextEditingController();
-  String? initialRoomId;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -36,7 +35,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   void initState() {
     super.initState();
     if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
-      initialRoomId = widget.initialRoomId!;
+      _roomIdController.text = widget.initialRoomId!;
     }
   }
 
@@ -214,12 +213,12 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
 
           // URLから遷移時（部屋参加時のみ）
           if (widget.isJoiningRoom &&
-              initialRoomId != null &&
-              initialRoomId!.isNotEmpty)
-            const SizedBox.shrink(),
+              widget.initialRoomId != null &&
+              widget.initialRoomId!.isNotEmpty)
+            const SizedBox.shrink()
 
           // 部屋コード入力（部屋参加時のみ）
-          if (widget.isJoiningRoom) ...[
+          else if (widget.isJoiningRoom) ...[
             const SizedBox(height: AppSpacing.large),
             TextField(
               controller: _roomIdController,
@@ -227,7 +226,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
                   widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
               decoration: const InputDecoration(
                 labelText: '部屋コードを入力',
-                hintText: 'abcdefg1234',
+                hintText: 'ABCD123456',
               ),
             ),
           ],
