@@ -78,7 +78,7 @@ class _BiasProfileChildTurnPageState
           body: Center(
             child: Text(
               '部屋情報が見つかりません',
-              style: AppTextStyles.bodyLarge,
+              style: AppTextStyles.subtitle,
             ),
           ),
         ),
@@ -151,7 +151,7 @@ class _BiasProfileChildTurnPageState
                   children: [
                     Text(
                       'あなたは親プレイヤーです',
-                      style: AppTextStyles.titleLarge,
+                      style: AppTextStyles.h5,
                     ),
                     Text(
                       '子プレイヤーが偏見を入力するまでお待ちください',
@@ -173,7 +173,7 @@ class _BiasProfileChildTurnPageState
                               children: [
                                 Text(
                                   'あなたは子プレイヤーです',
-                                  style: AppTextStyles.titleLarge,
+                                  style: AppTextStyles.h5,
                                 ),
                                 SizedBox(
                                   height: AppSpacing.small,

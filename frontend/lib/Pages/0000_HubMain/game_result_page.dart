@@ -96,7 +96,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
           body: Center(
             child: Text(
               '部屋情報が見つかりません',
-              style: AppTextStyles.bodyLarge,
+              style: AppTextStyles.subtitle,
             ),
           ),
         ),
@@ -189,7 +189,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
         appBar: AppBar(
           title: Text(
             '結果発表',
-            style: AppTextStyles.titleLarge,
+            style: AppTextStyles.h5,
           ),
           centerTitle: true,
           actions: [
@@ -399,7 +399,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
             child: Center(
               child: Text(
                 '${player.rank}',
-                style: AppTextStyles.titleSmall.copyWith(
+                style: AppTextStyles.title.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -423,7 +423,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
                 SizedBox(height: AppSpacing.small),
                 Text(
                   '${player.points}点',
-                  style: AppTextStyles.titleSmall.copyWith(
+                  style: AppTextStyles.title.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isWinner
                         ? Colors.amber.shade700

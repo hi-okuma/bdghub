@@ -25,7 +25,6 @@ class GameListWidget extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.large),
       itemCount: games.length,
       itemBuilder: (context, index) {
         final game = games[index];
@@ -41,9 +40,9 @@ class GameListWidget extends StatelessWidget {
         onTap: () => onGameSelected(game),
         borderRadius: BorderRadius.circular(AppBorderRadius.medium),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.medium),
+          padding: const EdgeInsets.all(AppSpacing.large),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // サムネイル - カスタムウィジェットを使用
               GameThumbnail(
@@ -57,40 +56,51 @@ class GameListWidget extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // タイトル
-                    Text(
-                      game['title'],
-                      style: AppTextStyles.titleSmall,
-                    ),
-                    const SizedBox(height: AppSpacing.xSmall),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // タイトル
+                                  Text(
+                                    game['title'],
+                                    style: AppTextStyles.subtitle,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xSmall),
 
-                    // ジャンルチップ - GenreUtilsを使用
-                    GenreUtils.buildGenreChips(game),
-                    const SizedBox(height: AppSpacing.xSmall),
+                                  // ジャンルチップ - GenreUtilsを使用
+                                  GenreUtils.buildGenreChips(game),
+                                  const SizedBox(height: AppSpacing.xSmall),
+                                ]),
+                          ),
+                          // 矢印アイコン
+                          Icon(
+                            Icons.chevron_right,
+                            size: AppIconSizes.small,
+                            color: AppTheme.secondaryTextColor,
+                          ),
+                        ]),
 
                     // 所要時間・プレイヤー数
                     Text(
-                      '所要時間: ${game['time']} / ${game['players']}',
-                      style: AppTextStyles.gameCardTime,
+                      '所要時間: ${game['time']} \n参加人数: ${game['players']}',
+                      style: AppTextStyles.gameCard,
+                      textAlign: TextAlign.left,
                     ),
                     const SizedBox(height: AppSpacing.xSmall),
 
                     // 概要
                     Text(
                       game['overview'],
-                      style: AppTextStyles.body,
+                      style: AppTextStyles.gameCard,
                       maxLines: AppLayout.maxGameDescriptionLines,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ),
-
-              // 矢印アイコン
-              Icon(
-                Icons.arrow_forward_ios,
-                size: AppIconSizes.xSmall,
-                color: AppTheme.secondaryTextColor,
               ),
             ],
           ),

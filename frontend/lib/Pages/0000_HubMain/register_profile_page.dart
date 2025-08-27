@@ -28,6 +28,7 @@ class RegisterProfilePage extends ConsumerStatefulWidget {
 class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _roomIdController = TextEditingController();
+  String? initialRoomId;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -35,7 +36,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   void initState() {
     super.initState();
     if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
-      _roomIdController.text = widget.initialRoomId!;
+      initialRoomId = widget.initialRoomId!;
     }
   }
 
@@ -197,7 +198,6 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
             decoration: InputDecoration(
               labelText: 'ニックネームを入力',
               hintText: '例：ボドゲハブ',
-              // helperText: '※「/」と「.」は使用できません',
             ),
             onChanged: _onNicknameChanged,
           ),
@@ -212,10 +212,15 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
               ),
             ),
 
-          const SizedBox(height: AppSpacing.medium),
+          // URLから遷移時（部屋参加時のみ）
+          if (widget.isJoiningRoom &&
+              initialRoomId != null &&
+              initialRoomId!.isNotEmpty)
+            const SizedBox.shrink(),
 
           // 部屋コード入力（部屋参加時のみ）
-          if (widget.isJoiningRoom)
+          if (widget.isJoiningRoom) ...[
+            const SizedBox(height: AppSpacing.large),
             TextField(
               controller: _roomIdController,
               enabled:
@@ -225,20 +230,25 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
                 hintText: 'abcdefg1234',
               ),
             ),
+          ],
 
           const SizedBox(height: AppSpacing.xLarge),
 
           // ボタン群
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              LoadingButton(
-                text: 'キャンセル',
-                isLoading: false,
-                isElevated: false,
-                onPressed: () => Navigator.of(context).pop(),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'キャンセル',
+                  style: AppTextStyles.subtitle2
+                      .copyWith(color: AppTheme.secondaryTextColor),
+                ),
               ),
-              LoadingButton(
+              TextLoadingButton(
                 text: widget.isJoiningRoom ? '部屋に参加する' : '部屋を作成する',
                 isLoading: _isLoading,
                 onPressed: _createRoom,

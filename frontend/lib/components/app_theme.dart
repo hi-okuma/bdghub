@@ -1,32 +1,45 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // カラーパレット - グレースケールに調整
-  static const Color primaryColor = Color(0xFF424242); // grey[800] - 深いグレー
+  // TODO UI適応後、不要なカラーを削除
+  static const Color primaryColor = Color(0xFFE07000); // Mango Tango
+  static const Color secondaryColor = Color(0xFFF5A524); // Buttercup
+  // static const Color primaryColor = Color(0xFF424242); // grey[800] - 深いグレー
   static const Color accentColor = Color(0xFF616161); // grey[700] - やや薄いグレー
-  static const Color backgroundColor = Color(0xFFFAFAFA); // grey[50] - 極薄グレー
+  static const Color disabledBackgroundColor = Color(0x1F000000);
+  static const Color selectedBackgroundColor = Color(0xFFF2F4F7);
+  static const Color backgroundColor = Colors.white;
   static const Color surfaceColor = Colors.white;
   static const Color cardColor = Colors.white;
+  static const Color cardBorderColor = Color(0xFFF1F5F9);
 
   // ステータスカラー - グレースケール対応
-  static const Color hostBadgeColor = Color(0xFFEEEEEE); // grey[200] - 薄いグレー
-  static const Color hostTextColor = Color(0xFF424242); // grey[800] - 深いグレー
-  static const Color genreChipBackground =
-      Color(0xFFF5F5F5); // grey[100] - 極薄グレー
-  static const Color genreChipText = Color(0xFF616161); // grey[700] - 中間グレー
+  // static const Color hostBadgeColor = Color(0xFFEEEEEE); // grey[200] - 薄いグレー
+  // static const Color hostTextColor = Color(0xFF424242); // grey[800] - 深いグレー
+  // static const Color genreChipBackground =
+  //     Color(0xFFF5F5F5); // grey[100] - 極薄グレー
+  // static const Color genreChipText = Color(0xFF616161); // grey[700] - 中間グレー
+  static const Color error1Color = Color(0xFFEC0001);
+  static const Color error2Color = Color(0xFFCE0000);
   static const Color errorColor = Color(0xFF757575); // grey[600] - エラーもグレー
   static const Color warningColor = Color(0xFF9E9E9E); // grey[500] - 警告もグレー
+  static const Color success1Color = Color(0xFF111827);
+  static const Color success2Color = Color(0xFF6B7280);
   static const Color successColor = Color(0xFF616161); // grey[700] - 成功もグレー
 
   // テキストカラー - グレースケール階調
-  static const Color primaryTextColor = Color(0xFF212121); // grey[900] - 最も濃い
-  static const Color secondaryTextColor = Color(0xFF757575); // grey[600] - 中間
+  static const Color primaryTextColor = Color(0xFF111827);
+  // static const Color primaryTextColor = Color(0xFF212121); // grey[900] - 最も濃い
+  static const Color secondaryTextColor = Color(0xFF6B7280);
+  // static const Color secondaryTextColor = Color(0xFF757575); // grey[600] - 中間
+  static const Color disabledTextColor = Color(0x61000000);
   static const Color hintTextColor = Color(0xFFBDBDBD); // grey[400] - 淡い
 
   // ボーダー・背景カラー - グレースケール
+  static const Color borderColor1 = Color(0x3B000000);
+  static const Color borderColor2 = Color(0xFFF1F5F9);
   static const Color borderColor = Color(0xFFE0E0E0); // grey[300] - 境界線
   static const Color tabBackgroundColor = Color(0xFFF5F5F5); // grey[100] - タブ背景
-  static const Color tabIndicatorColor = Colors.white;
 
   // ThemeDataの作成
   static ThemeData get lightTheme {
@@ -36,17 +49,17 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         surface: surfaceColor,
-        background: backgroundColor,
+        // background: backgroundColor,
       ),
 
       // AppBarテーマ
       appBarTheme: const AppBarTheme(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: backgroundColor,
+        foregroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontSize: AppTextStyles.titleLargeFontSize,
+          fontSize: AppTextStyles.h5FontSize,
           fontWeight: FontWeight.bold,
           fontFamily: 'NotoSansJP',
         ),
@@ -57,12 +70,30 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: disabledBackgroundColor,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.large,
-            vertical: AppSpacing.medium,
+            vertical: AppSpacing.large,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+            borderRadius: BorderRadius.circular(AppBorderRadius.elevatedButton),
+          ),
+          elevation: AppElevation.low,
+        ),
+      ),
+
+      // OutlinedButtonテーマ
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: primaryColor,
+          side: BorderSide(color: primaryColor),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.large,
+            vertical: AppSpacing.large,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppBorderRadius.elevatedButton),
           ),
           elevation: AppElevation.low,
         ),
@@ -74,7 +105,7 @@ class AppTheme {
           foregroundColor: primaryColor,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.large,
-            vertical: AppSpacing.medium,
+            vertical: AppSpacing.large,
           ),
         ),
       ),
@@ -82,30 +113,30 @@ class AppTheme {
       // Cardテーマ
       cardTheme: CardThemeData(
         color: cardColor,
-        elevation: AppElevation.low,
+        elevation: AppElevation.veryLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+          side: BorderSide(color: cardBorderColor),
+          borderRadius: BorderRadius.circular(AppBorderRadius.card),
         ),
         margin: const EdgeInsets.all(AppSpacing.small),
       ),
 
       // InputDecorationテーマ
       inputDecorationTheme: InputDecorationTheme(
+        labelStyle: TextStyle(color: secondaryTextColor),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
           borderSide: const BorderSide(color: borderColor),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
-        ),
+        focusedBorder: OutlineInputBorder(),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
-          borderSide: const BorderSide(color: errorColor),
+          borderSide: const BorderSide(color: error1Color),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: disabledBackgroundColor),
         ),
         filled: true,
         fillColor: surfaceColor,
-        hintStyle: const TextStyle(color: hintTextColor),
+        hintStyle: const TextStyle(color: secondaryTextColor),
       ),
 
       // SnackBarテーマ
@@ -113,7 +144,7 @@ class AppTheme {
         backgroundColor: primaryTextColor,
         contentTextStyle: const TextStyle(
           color: Colors.white,
-          fontSize: AppTextStyles.bodyFontSize,
+          fontSize: AppTextStyles.subtitle2FontSize,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppBorderRadius.medium),
@@ -123,15 +154,23 @@ class AppTheme {
 
       // TabBarテーマ
       tabBarTheme: TabBarThemeData(
-        labelColor: primaryColor,
-        unselectedLabelColor: secondaryTextColor,
+        tabAlignment: TabAlignment.start,
+        labelColor: Colors.white,
+        unselectedLabelColor: primaryTextColor,
         indicator: BoxDecoration(
-          color: tabIndicatorColor,
-          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+          color: primaryColor,
+          borderRadius: BorderRadius.circular(AppBorderRadius.tabBar),
         ),
+        indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.small),
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xSmall),
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        ),
       ),
     );
   }
@@ -154,11 +193,18 @@ class AppBorderRadius {
   static const double medium = 8.0;
   static const double large = 12.0;
   static const double xLarge = 16.0;
+  static const double elevatedButton = 20.0;
+  static const double card = 20.0;
+  static const double brandLogo = 6.0;
+  static const double tabBar = 22.0;
+  static const double tabSelected = 18.0;
+  static const double playerBadge = 20.0;
 }
 
 // エレベーション定数
 class AppElevation {
   static const double none = 0.0;
+  static const double veryLow = 1.0;
   static const double low = 2.0;
   static const double medium = 4.0;
   static const double high = 8.0;
@@ -167,17 +213,18 @@ class AppElevation {
 // テキストスタイル定数
 class AppTextStyles {
   // フォントサイズ
-  static const double titleLargeFontSize = 24.0;
+  static const double h5FontSize = 24.0;
   static const double titleMediumFontSize = 20.0;
-  static const double titleSmallFontSize = 18.0;
-  static const double bodyLargeFontSize = 16.0;
+  static const double titleFontSize = 18.0;
+  static const double subtitleFontSize = 16.0;
+  static const double subtitle2FontSize = 14.0;
   static const double bodyFontSize = 14.0;
-  static const double captionFontSize = 12.0;
-  static const double smallFontSize = 10.0;
+  static const double captionFontSize = 11.0;
+  // static const double smallFontSize = 10.0;
 
   // タイトルスタイル
-  static const TextStyle titleLarge = TextStyle(
-    fontSize: titleLargeFontSize,
+  static const TextStyle h5 = TextStyle(
+    fontSize: h5FontSize,
     fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
@@ -188,15 +235,23 @@ class AppTextStyles {
     color: AppTheme.primaryTextColor,
   );
 
-  static const TextStyle titleSmall = TextStyle(
-    fontSize: titleSmallFontSize,
+  static const TextStyle title = TextStyle(
+    fontSize: titleFontSize,
     fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
 
   // ボディスタイル
-  static const TextStyle bodyLarge = TextStyle(
-    fontSize: bodyLargeFontSize,
+  static const TextStyle subtitle = TextStyle(
+    fontSize: subtitleFontSize,
+    fontWeight: FontWeight.bold,
+    color: AppTheme.primaryTextColor,
+  );
+
+  // ボディスタイル
+  static const TextStyle subtitle2 = TextStyle(
+    fontSize: subtitle2FontSize,
+    fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
 
@@ -211,23 +266,23 @@ class AppTextStyles {
   );
 
   // 特殊用途スタイル
-  static const TextStyle gameCardTime = TextStyle(
+  static const TextStyle gameCard = TextStyle(
     fontSize: bodyFontSize,
     color: AppTheme.secondaryTextColor,
   );
 
-  static const TextStyle genreChip = TextStyle(
-    fontSize: captionFontSize,
-    color: AppTheme.genreChipText,
-  );
+  // static const TextStyle genreChip = TextStyle(
+  //   fontSize: captionFontSize,
+  //   color: AppTheme.genreChipText,
+  // );
 
-  static const TextStyle hostBadge = TextStyle(
-    fontSize: bodyFontSize,
-    color: AppTheme.hostTextColor,
-  );
+  // static const TextStyle hostBadge = TextStyle(
+  //   fontSize: subtitle2FontSize,
+  //   color: AppTheme.hostTextColor,
+  // );
 
   static const TextStyle errorText = TextStyle(
-    fontSize: bodyFontSize,
+    fontSize: subtitle2FontSize,
     color: AppTheme.errorColor,
   );
 }
@@ -240,7 +295,7 @@ class AppIconSizes {
   static const double large = 32.0;
   static const double xLarge = 40.0;
   static const double xxLarge = 48.0;
-  static const double gameCardThumbnail = 70.0;
+  static const double gameCardThumbnail = 112.0;
   static const double gameDetailThumbnail = 100.0;
 }
 
@@ -250,8 +305,9 @@ class AppLayout {
   static const double maxContentWidth = 600.0;
   static const int maxGameDescriptionLines = 3;
   static const int maxNicknameLength = 10;
-  static const int minNicknameLength = 2;
+  // static const int minNicknameLength = 2;
   static const int maxProfileLength = 100;
+  static const double tabHeight = 36;
 }
 
 // アニメーション定数

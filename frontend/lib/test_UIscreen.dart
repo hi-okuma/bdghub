@@ -53,7 +53,7 @@ class _testBiasProfileCheckAnswerPageState
         body: Center(
           child: Text(
             '部屋情報が見つかりません',
-            style: AppTextStyles.bodyLarge,
+            style: AppTextStyles.subtitle,
           ),
         ),
       );
@@ -123,14 +123,14 @@ class _testBiasProfileCheckAnswerPageState
                     flex: 1,
                     child: Text(
                       '正解！',
-                      style: AppTextStyles.titleLarge,
+                      style: AppTextStyles.h5,
                     ),
                   )
                 : Flexible(
                     flex: 1,
                     child: Text(
                       '不正解...',
-                      style: AppTextStyles.titleLarge,
+                      style: AppTextStyles.h5,
                     ),
                   ),
             Flexible(

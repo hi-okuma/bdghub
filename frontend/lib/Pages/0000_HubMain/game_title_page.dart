@@ -180,7 +180,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                   children: [
                     Text(
                       gameTitle,
-                      style: AppTextStyles.titleLarge,
+                      style: AppTextStyles.h5,
                     ),
                     const SizedBox(height: AppSpacing.small),
                     // ゲーム情報表示（人数・時間）

@@ -29,11 +29,11 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   String _maintenanceMessage = '';
   Set<GameGenre> _selectedGenre = {GameGenre.all};
 
-  final List<Tab> tabs = const <Tab>[
-    Tab(text: '全て'),
-    Tab(text: '定番'),
-    Tab(text: 'カード'),
-    Tab(text: '協力'),
+  final List<CustomTab> tabs = <CustomTab>[
+    CustomTab(label: '全て'),
+    CustomTab(label: '定番'),
+    CustomTab(label: 'カード'),
+    CustomTab(label: '協力'),
   ];
 
   @override
@@ -211,37 +211,35 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         children: [
           // 固定ヘッダー部分
           Container(
-            padding: const EdgeInsets.all(AppSpacing.large),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.large, vertical: AppSpacing.medium),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: LoadingButton(
-                        text: '部屋作成',
-                        isLoading: false,
-                        onPressed: () => _showCreateRoomDialog(),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.large),
-                    Expanded(
-                      child: LoadingButton(
-                        text: '部屋参加',
-                        isLoading: false,
-                        onPressed: () =>
-                            _showJoinRoomDialog(widget.roomId ?? ''),
-                      ),
-                    ),
-                  ],
+                Container(
+                  width: double.infinity,
+                  child: ElevatedLoadingButton(
+                    text: '部屋作成',
+                    isLoading: false,
+                    onPressed: () => _showCreateRoomDialog(),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xLarge),
+                const SizedBox(height: AppSpacing.large),
+                Container(
+                  width: double.infinity,
+                  child: OutlinedLoadingButton(
+                    text: '部屋参加',
+                    isLoading: false,
+                    onPressed: () => _showJoinRoomDialog(widget.roomId ?? ''),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.large),
                 Text(
                   'ゲーム一覧',
-                  style: AppTextStyles.titleMedium,
+                  style: AppTextStyles.title,
                 ),
                 const SizedBox(height: AppSpacing.medium),
                 // カスタムタブバーを使用
@@ -314,13 +312,30 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ボードゲームハブ'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () => _showNotifications(),
-          ),
-        ],
+        centerTitle: false,
+        title: Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                borderRadius: BorderRadius.circular(AppBorderRadius.brandLogo),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xSmall),
+                child: Icon(
+                  Icons.videogame_asset_outlined,
+                  color: Colors.white,
+                  size: AppIconSizes.medium,
+                ),
+              ),
+            ),
+            SizedBox(width: AppSpacing.small),
+            const Text(
+              'ボードゲームハブ',
+              style: AppTextStyles.title,
+            ),
+          ],
+        ),
       ),
       body: bodyContent,
     );
@@ -332,24 +347,12 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          insetPadding: const EdgeInsets.only(
-              top: 80,
-              left: AppSpacing.large,
-              right: AppSpacing.large,
-              bottom: AppSpacing.large),
+          insetPadding: const EdgeInsets.all(AppSpacing.large),
           child: const SingleChildScrollView(
             child: RegisterProfilePage(isJoiningRoom: false),
           ),
         );
       },
     );
-  }
-
-  void _showNotifications() {
-    if (!_isMaintenance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('お知らせはありません')),
-      );
-    }
   }
 }
