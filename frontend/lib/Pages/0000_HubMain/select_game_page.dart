@@ -306,7 +306,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.large, vertical: AppSpacing.large),
+                    horizontal: AppSpacing.large, vertical: AppSpacing.medium),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: _copyRoomUrl,
