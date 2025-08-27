@@ -28,6 +28,7 @@ class RegisterProfilePage extends ConsumerStatefulWidget {
 class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _roomIdController = TextEditingController();
+  String? initialRoomId;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -35,7 +36,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   void initState() {
     super.initState();
     if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
-      _roomIdController.text = widget.initialRoomId!;
+      initialRoomId = widget.initialRoomId!;
     }
   }
 
@@ -76,7 +77,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
       if (widget.isJoiningRoom) {
         responseData = await ApiService.joinRoom(
           _nicknameController.text,
-          _roomIdController.text,
+          initialRoomId!,
           uid,
         );
       } else {
@@ -98,9 +99,8 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
         return;
       }
 
-      final String roomId = widget.isJoiningRoom
-          ? _roomIdController.text
-          : responseData['roomId'];
+      final String roomId =
+          widget.isJoiningRoom ? initialRoomId : responseData['roomId'];
 
       // Riverpodにユーザー情報を保存
       try {
@@ -170,7 +170,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   @override
   void dispose() {
     _nicknameController.dispose();
-    _roomIdController.dispose();
+    // _roomIdController.dispose();
     super.dispose();
   }
 
@@ -212,10 +212,15 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
               ),
             ),
 
-          const SizedBox(height: AppSpacing.large),
+          // URLから遷移時（部屋参加時のみ）
+          if (widget.isJoiningRoom &&
+              initialRoomId != null &&
+              initialRoomId!.isNotEmpty)
+            const SizedBox.shrink(),
 
           // 部屋コード入力（部屋参加時のみ）
-          if (widget.isJoiningRoom)
+          if (widget.isJoiningRoom) ...[
+            const SizedBox(height: AppSpacing.large),
             TextField(
               controller: _roomIdController,
               enabled:
@@ -225,6 +230,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
                 hintText: 'abcdefg1234',
               ),
             ),
+          ],
 
           const SizedBox(height: AppSpacing.xLarge),
 

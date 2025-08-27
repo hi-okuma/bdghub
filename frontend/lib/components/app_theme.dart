@@ -19,8 +19,8 @@ class AppTheme {
   static const Color genreChipBackground =
       Color(0xFFF5F5F5); // grey[100] - 極薄グレー
   static const Color genreChipText = Color(0xFF616161); // grey[700] - 中間グレー
-  static const Color error1Color = Color(0x61000000);
-  static const Color error2Color = Color(0x61000000);
+  static const Color error1Color = Color(0xFFEC0001);
+  static const Color error2Color = Color(0xFFCE0000);
   static const Color errorColor = Color(0xFF757575); // grey[600] - エラーもグレー
   static const Color warningColor = Color(0xFF9E9E9E); // grey[500] - 警告もグレー
   static const Color success1Color = Color(0xFF111827);

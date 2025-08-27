@@ -191,7 +191,7 @@ class ElevatedLoadingButton extends StatelessWidget {
             height: AppIconSizes.small,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppTheme.primaryColor,
             ),
           )
         : Text(
@@ -229,7 +229,7 @@ class OutlinedLoadingButton extends StatelessWidget {
             height: AppIconSizes.small,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppTheme.primaryColor,
             ),
           )
         : Text(
@@ -268,7 +268,7 @@ class TextLoadingButton extends StatelessWidget {
             height: AppIconSizes.small,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppTheme.primaryColor,
             ),
           )
         : Text(
