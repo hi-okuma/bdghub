@@ -14,11 +14,11 @@ class AppTheme {
   static const Color cardBorderColor = Color(0xFFF1F5F9);
 
   // ステータスカラー - グレースケール対応
-  static const Color hostBadgeColor = Color(0xFFEEEEEE); // grey[200] - 薄いグレー
-  static const Color hostTextColor = Color(0xFF424242); // grey[800] - 深いグレー
-  static const Color genreChipBackground =
-      Color(0xFFF5F5F5); // grey[100] - 極薄グレー
-  static const Color genreChipText = Color(0xFF616161); // grey[700] - 中間グレー
+  // static const Color hostBadgeColor = Color(0xFFEEEEEE); // grey[200] - 薄いグレー
+  // static const Color hostTextColor = Color(0xFF424242); // grey[800] - 深いグレー
+  // static const Color genreChipBackground =
+  //     Color(0xFFF5F5F5); // grey[100] - 極薄グレー
+  // static const Color genreChipText = Color(0xFF616161); // grey[700] - 中間グレー
   static const Color error1Color = Color(0xFFEC0001);
   static const Color error2Color = Color(0xFFCE0000);
   static const Color errorColor = Color(0xFF757575); // grey[600] - エラーもグレー
@@ -198,6 +198,7 @@ class AppBorderRadius {
   static const double brandLogo = 6.0;
   static const double tabBar = 22.0;
   static const double tabSelected = 18.0;
+  static const double playerBadge = 20.0;
 }
 
 // エレベーション定数
@@ -243,12 +244,14 @@ class AppTextStyles {
   // ボディスタイル
   static const TextStyle subtitle = TextStyle(
     fontSize: subtitleFontSize,
+    fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
 
   // ボディスタイル
   static const TextStyle subtitle2 = TextStyle(
     fontSize: subtitle2FontSize,
+    fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
 
@@ -268,15 +271,15 @@ class AppTextStyles {
     color: AppTheme.secondaryTextColor,
   );
 
-  static const TextStyle genreChip = TextStyle(
-    fontSize: captionFontSize,
-    color: AppTheme.genreChipText,
-  );
+  // static const TextStyle genreChip = TextStyle(
+  //   fontSize: captionFontSize,
+  //   color: AppTheme.genreChipText,
+  // );
 
-  static const TextStyle hostBadge = TextStyle(
-    fontSize: subtitle2FontSize,
-    color: AppTheme.hostTextColor,
-  );
+  // static const TextStyle hostBadge = TextStyle(
+  //   fontSize: subtitle2FontSize,
+  //   color: AppTheme.hostTextColor,
+  // );
 
   static const TextStyle errorText = TextStyle(
     fontSize: subtitle2FontSize,

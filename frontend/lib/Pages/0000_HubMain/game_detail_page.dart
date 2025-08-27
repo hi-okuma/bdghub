@@ -84,7 +84,32 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.game['title']),
+        automaticallyImplyLeading: false,
+        leadingWidth: 105,
+        leading: TextButton(
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.small, vertical: 0),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.arrow_back,
+                color: AppTheme.primaryColor,
+                size: AppIconSizes.small,
+              ),
+              SizedBox(
+                width: AppSpacing.small,
+              ),
+              Text('戻る'),
+            ],
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.large),
@@ -110,19 +135,14 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
             // ゲーム詳細説明
             const SizedBox(height: AppSpacing.xxLarge),
             Text(
-              'ゲーム詳細',
-              style: AppTextStyles.titleMedium,
+              'ルール',
+              style: AppTextStyles.title,
             ),
             const SizedBox(height: AppSpacing.small),
             Text(
               widget.game['description'] ?? '説明がありません',
-              style: AppTextStyles.body.copyWith(height: 1.5),
+              style: AppTextStyles.body,
             ),
-            const SizedBox(height: AppSpacing.small),
-            // 区切り線
-            const Divider(height: AppSpacing.xxLarge),
-            // 作成者情報と購入リンク
-            _buildGameFooter(),
           ],
         ),
       ),
@@ -134,7 +154,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.medium),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // サムネイル
             GameThumbnail(
@@ -150,7 +170,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
                 children: [
                   Text(
                     widget.game['title'],
-                    style: AppTextStyles.titleMedium,
+                    style: AppTextStyles.subtitle,
                   ),
                   const SizedBox(height: AppSpacing.xSmall),
 
@@ -159,14 +179,15 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
                   const SizedBox(height: AppSpacing.xSmall),
 
                   Text(
-                    '所要時間: ${widget.game['time']} / ${widget.game['players']}',
+                    '所要時間: ${widget.game['time']} \n参加人数: ${widget.game['players']}',
+                    textAlign: TextAlign.left,
                     style: AppTextStyles.gameCard,
                   ),
                   const SizedBox(height: AppSpacing.xSmall),
 
                   Text(
                     widget.game['overview'] ?? '',
-                    style: AppTextStyles.body,
+                    style: AppTextStyles.gameCard,
                     maxLines: AppLayout.maxGameDescriptionLines,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -176,33 +197,6 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildGameFooter() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text('作成者：${widget.game['creatorName']}'),
-        ElevatedButton(
-            onPressed: () {
-              // ECサイトへ移動する処理
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${widget.game["title"]}の購入サイトへ移動します'),
-                ),
-              );
-            },
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.open_in_new,
-                  size: 18.0,
-                ),
-                Text('購入サイトへ'),
-              ],
-            ))
-      ],
     );
   }
 }

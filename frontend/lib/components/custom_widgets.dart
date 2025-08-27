@@ -24,12 +24,12 @@ class GenreChip extends StatelessWidget {
           vertical: AppSpacing.xSmall,
         ),
         decoration: BoxDecoration(
-          color: AppTheme.genreChipBackground,
+          color: AppTheme.selectedBackgroundColor,
           borderRadius: BorderRadius.circular(AppBorderRadius.large),
         ),
         child: Text(
           label,
-          style: AppTextStyles.genreChip,
+          style: AppTextStyles.caption,
         ),
       ),
     );
@@ -51,8 +51,8 @@ class PlayerBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: isHost ? AppTheme.hostBadgeColor : AppTheme.tabBackgroundColor,
-        borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        color: AppTheme.selectedBackgroundColor,
+        borderRadius: BorderRadius.circular(AppBorderRadius.playerBadge),
       ),
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.xSmall,
@@ -60,7 +60,6 @@ class PlayerBadge extends StatelessWidget {
       ),
       child: Text(
         isHost ? '$nickname（ホスト）' : nickname,
-        style: isHost ? AppTextStyles.hostBadge : AppTextStyles.body,
       ),
     );
   }

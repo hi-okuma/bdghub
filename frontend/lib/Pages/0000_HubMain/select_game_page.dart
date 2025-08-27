@@ -262,198 +262,227 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         appBar: AppBar(
           automaticallyImplyLeading: false,
           centerTitle: true,
-          title: Text('部屋: $roomId'),
-          leading: Padding(
-            padding: const EdgeInsets.symmetric(
-                vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
-            child: TextButton(
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.grey[200],
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.small, vertical: 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '部屋コード',
+                style: AppTextStyles.caption,
               ),
-              onPressed: _showExitDialog,
-              child: const Text(
-                '退出',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: AppTextStyles.captionFontSize,
-                ),
+              Text(
+                roomId,
+                style: AppTextStyles.title,
               ),
+            ],
+          ),
+          leadingWidth: 105,
+          leading: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.small, vertical: 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: _showExitDialog,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.logout,
+                  color: AppTheme.primaryColor,
+                  size: AppIconSizes.xSmall,
+                ),
+                const SizedBox(width: AppSpacing.small),
+                const Text(
+                  '退出する',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: AppTextStyles.subtitle2FontSize,
+                  ),
+                ),
+              ],
             ),
           ),
           actions: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.small, horizontal: AppSpacing.xSmall),
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.small, vertical: 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.large, vertical: AppSpacing.large),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: _copyRoomUrl,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.link,
+                    color: Colors.white,
+                    size: AppIconSizes.medium,
                   ),
-                ),
-                onPressed: _copyRoomUrl,
-                child: const Text(
-                  'URLをコピー',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: AppTextStyles.captionFontSize,
+                  SizedBox(
+                    width: AppSpacing.small,
                   ),
-                ),
+                  const Text(
+                    'URL',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: AppTextStyles.subtitle2FontSize,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: AppSpacing.small),
           ],
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // デバッグ情報表示（開発時のみ）
-            if (kDebugMode && roomId.isNotEmpty) ...[
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // デバッグ情報表示（開発時のみ）
+              if (kDebugMode && roomId.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  color: Colors.yellow[100],
+                  child: Column(
+                    children: [
+                      Text(
+                          '🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
+                      Text('部屋: $roomId'),
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final gameStateAsync =
+                              ref.watch(roomGameStateProvider(roomId));
+                          return gameStateAsync.when(
+                            data: (status) => Text('ゲーム状態: $status'),
+                            loading: () => const Text('ゲーム状態: 読み込み中...'),
+                            error: (error, _) => const Text('ゲーム状態: エラー'),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // 参加者エリア
               Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.yellow[100],
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        '🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
-                    Text('部屋: $roomId'),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final gameStateAsync =
-                            ref.watch(roomGameStateProvider(roomId));
-                        return gameStateAsync.when(
-                          data: (status) => Text('ゲーム状態: $status'),
-                          loading: () => const Text('ゲーム状態: 読み込み中...'),
-                          error: (error, _) => const Text('ゲーム状態: エラー'),
-                        );
-                      },
+                      '参加者',
+                      style: AppTextStyles.title,
                     ),
+                    const SizedBox(height: AppSpacing.small),
+                    // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
+                    Consumer(builder: (context, ref, _) {
+                      // roomIdが空の場合は playersProvider を watch しない
+                      if (roomId.isEmpty) {
+                        return Text(
+                          'ルームIDが見つかりません',
+                          style: AppTextStyles.errorText,
+                        );
+                      }
+
+                      final players = ref.watch(playersProvider(roomId));
+
+                      if (players.isEmpty) {
+                        return Text(
+                          '参加者がいません',
+                          style: AppTextStyles.body,
+                        );
+                      }
+
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: players.map((player) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  right: AppSpacing.small),
+                              child: PlayerBadge(
+                                nickname: player.nickname,
+                                isHost: player.isHost,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
-            ],
 
-            // 参加者エリア
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.large),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '参加者',
-                    style: AppTextStyles.titleMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.small),
-                  // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
-                  Consumer(builder: (context, ref, _) {
-                    // roomIdが空の場合は playersProvider を watch しない
-                    if (roomId.isEmpty) {
-                      return Text(
-                        'ルームIDが見つかりません',
-                        style: AppTextStyles.errorText,
-                      );
-                    }
-
-                    final players = ref.watch(playersProvider(roomId));
-
-                    if (players.isEmpty) {
-                      return Text(
-                        '参加者がいません',
-                        style: AppTextStyles.body,
-                      );
-                    }
-
-                    return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: players.map((player) {
-                          return Padding(
-                            padding:
-                                const EdgeInsets.only(right: AppSpacing.small),
-                            child: PlayerBadge(
-                              nickname: player.nickname,
-                              isHost: player.isHost,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-
-            // タブバー
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-              child: CustomTabBar(
+              // タブバー
+              CustomTabBar(
                 controller: _tabController,
                 tabs: _tabs,
               ),
-            ),
 
-            // ゲーム一覧（タブビュー）
-            Expanded(
-              child: _isGameLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : TabBarView(
-                      controller: _tabController,
-                      physics: const PageScrollPhysics(
-                        parent: ClampingScrollPhysics(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
+                child: Text(
+                  'ゲーム一覧',
+                  style: AppTextStyles.title,
+                ),
+              ),
+
+              // ゲーム一覧（タブビュー）
+              Expanded(
+                child: _isGameLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : TabBarView(
+                        controller: _tabController,
+                        physics: const PageScrollPhysics(
+                          parent: ClampingScrollPhysics(),
+                        ),
+                        children: [
+                          GameListWidget(
+                            games: _gameList,
+                            onGameSelected: _onGameSelected,
+                          ),
+                          GameListWidget(
+                            games: _gameList.where((game) {
+                              if (game['genre'] is List) {
+                                List<GameGenre> genres =
+                                    List<GameGenre>.from(game['genre']);
+                                return genres.contains(GameGenre.popular);
+                              }
+                              return game['genre'] == GameGenre.popular;
+                            }).toList(),
+                            onGameSelected: _onGameSelected,
+                          ),
+                          GameListWidget(
+                            games: _gameList.where((game) {
+                              if (game['genre'] is List) {
+                                List<GameGenre> genres =
+                                    List<GameGenre>.from(game['genre']);
+                                return genres.contains(GameGenre.card);
+                              }
+                              return game['genre'] == GameGenre.card;
+                            }).toList(),
+                            onGameSelected: _onGameSelected,
+                          ),
+                          GameListWidget(
+                            games: _gameList.where((game) {
+                              if (game['genre'] is List) {
+                                List<GameGenre> genres =
+                                    List<GameGenre>.from(game['genre']);
+                                return genres.contains(GameGenre.cooperation);
+                              }
+                              return game['genre'] == GameGenre.cooperation;
+                            }).toList(),
+                            onGameSelected: _onGameSelected,
+                          ),
+                        ],
                       ),
-                      children: [
-                        GameListWidget(
-                          games: _gameList,
-                          onGameSelected: _onGameSelected,
-                        ),
-                        GameListWidget(
-                          games: _gameList.where((game) {
-                            if (game['genre'] is List) {
-                              List<GameGenre> genres =
-                                  List<GameGenre>.from(game['genre']);
-                              return genres.contains(GameGenre.popular);
-                            }
-                            return game['genre'] == GameGenre.popular;
-                          }).toList(),
-                          onGameSelected: _onGameSelected,
-                        ),
-                        GameListWidget(
-                          games: _gameList.where((game) {
-                            if (game['genre'] is List) {
-                              List<GameGenre> genres =
-                                  List<GameGenre>.from(game['genre']);
-                              return genres.contains(GameGenre.card);
-                            }
-                            return game['genre'] == GameGenre.card;
-                          }).toList(),
-                          onGameSelected: _onGameSelected,
-                        ),
-                        GameListWidget(
-                          games: _gameList.where((game) {
-                            if (game['genre'] is List) {
-                              List<GameGenre> genres =
-                                  List<GameGenre>.from(game['genre']);
-                              return genres.contains(GameGenre.cooperation);
-                            }
-                            return game['genre'] == GameGenre.cooperation;
-                          }).toList(),
-                          onGameSelected: _onGameSelected,
-                        ),
-                      ],
-                    ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -464,20 +493,28 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('部屋から退出しますか？'),
-          actions: [
-            LoadingButton(
-              text: 'キャンセル',
-              isLoading: false,
-              isElevated: false,
-              onPressed: () => Navigator.of(context).pop(),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
+            child: Text(
+              '部屋から退出しますか？',
+              style: AppTextStyles.body,
             ),
-            LoadingButton(
+          ),
+          actions: [
+            TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'キャンセル',
+                  style: TextStyle(color: AppTheme.secondaryTextColor),
+                )),
+            TextLoadingButton(
               text: '退出する',
               isLoading: false,
               onPressed: () {
-                Navigator.of(context).pop();
                 _leaveRoom();
+                Navigator.of(context).pop();
               },
             ),
           ],

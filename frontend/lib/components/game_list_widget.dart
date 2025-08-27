@@ -25,7 +25,6 @@ class GameListWidget extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.large),
       itemCount: games.length,
       itemBuilder: (context, index) {
         final game = games[index];
@@ -68,7 +67,7 @@ class GameListWidget extends StatelessWidget {
                                   // タイトル
                                   Text(
                                     game['title'],
-                                    style: AppTextStyles.title,
+                                    style: AppTextStyles.subtitle,
                                   ),
                                   const SizedBox(height: AppSpacing.xSmall),
 

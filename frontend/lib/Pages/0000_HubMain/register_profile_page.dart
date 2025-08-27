@@ -77,7 +77,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
       if (widget.isJoiningRoom) {
         responseData = await ApiService.joinRoom(
           _nicknameController.text,
-          initialRoomId!,
+          _roomIdController.text,
           uid,
         );
       } else {
@@ -99,8 +99,9 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
         return;
       }
 
-      final String roomId =
-          widget.isJoiningRoom ? initialRoomId : responseData['roomId'];
+      final String roomId = widget.isJoiningRoom
+          ? _roomIdController.text
+          : responseData['roomId'];
 
       // Riverpodにユーザー情報を保存
       try {
@@ -170,7 +171,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
   @override
   void dispose() {
     _nicknameController.dispose();
-    // _roomIdController.dispose();
+    _roomIdController.dispose();
     super.dispose();
   }
 
@@ -197,7 +198,6 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
             decoration: InputDecoration(
               labelText: 'ニックネームを入力',
               hintText: '例：ボドゲハブ',
-              // helperText: '※「/」と「.」は使用できません',
             ),
             onChanged: _onNicknameChanged,
           ),
