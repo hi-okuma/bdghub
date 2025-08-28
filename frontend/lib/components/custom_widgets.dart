@@ -68,14 +68,14 @@ class PlayerBadge extends StatelessWidget {
 // ゲームサムネイルウィジェット
 class GameThumbnail extends StatelessWidget {
   final String? thumbnailUrl;
-  final double size;
+  final double? size;
   final double borderRadius;
 
   const GameThumbnail({
     Key? key,
     this.thumbnailUrl,
-    this.size = AppIconSizes.gameCardThumbnail,
-    this.borderRadius = AppBorderRadius.medium,
+    this.size,
+    this.borderRadius = AppBorderRadius.large,
   }) : super(key: key);
 
   @override
@@ -86,7 +86,6 @@ class GameThumbnail extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
-        color: AppTheme.tabBackgroundColor,
       ),
       child: (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
           ? Image.network(
@@ -103,14 +102,14 @@ class GameThumbnail extends StatelessWidget {
               errorBuilder: (context, error, stackTrace) {
                 return Icon(
                   Icons.broken_image,
-                  size: size * 0.6,
+                  size: size! * 0.6,
                   color: AppTheme.secondaryTextColor,
                 );
               },
             )
           : Icon(
               Icons.casino,
-              size: size * 0.6,
+              size: size! * 0.6,
               color: AppTheme.secondaryTextColor,
             ),
     );

@@ -120,7 +120,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     final gameTitle = currentGame.title ?? 'NGワードゲーム';
     final gameDescription = currentGame.overview ??
         '友達と一緒に遊ぶNGワードゲーム！あなたにだけ伝えられるNGワードを言わないようにしましょう。';
-    final gameImages = currentGame.gameImages ??
+    final gameImages = currentGame.tutorialImageList ??
         [
           'https://picsum.photos/id/100/400/400',
           'https://picsum.photos/id/101/400/400',
@@ -140,175 +140,148 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
-          title: Text('$gameTitle - 部屋: $roomId'),
+          centerTitle: false,
+          title: Text(gameTitle, style: AppTextStyles.title),
           actions: [
             if (isHost)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: ElevatedButton(
-                  onPressed: showExitGameDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.medium,
-                      horizontal: AppSpacing.small,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min, // 追加
-                    children: [
-                      Icon(Icons.close, color: AppTheme.errorColor),
-                      const SizedBox(width: AppSpacing.small), // アイコンとテキストの間隔
-                      Text(
-                        '終了',
-                        style: AppTextStyles.body,
-                      ),
-                    ],
-                  ),
+              TextButton(
+                onPressed: showExitGameDialog,
+                // ),
+                child: Row(
+                  children: [
+                    Icon(Icons.close,
+                        size: AppIconSizes.xSmall,
+                        color: AppTheme.primaryColor),
+                    const SizedBox(width: AppSpacing.small), // アイコンとテキストの間隔
+                    Text('終了する',
+                        style: AppTextStyles.subtitle2.copyWith(
+                          color: AppTheme.primaryColor,
+                        )),
+                  ],
                 ),
               ),
           ],
           automaticallyImplyLeading: false,
         ),
         body: SafeArea(
-          child: Column(
-            children: [
-              // タイトルと説明部分
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.large),
-                child: Column(
-                  children: [
-                    Text(
-                      gameTitle,
-                      style: AppTextStyles.h5,
-                    ),
-                    const SizedBox(height: AppSpacing.small),
-                    // ゲーム情報表示（人数・時間）
-                    if (playerInfo.isNotEmpty || durationInfo.isNotEmpty)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (durationInfo.isNotEmpty) ...[
-                            Icon(Icons.schedule,
-                                size: 16, color: AppTheme.hintTextColor),
-                            const SizedBox(width: 4),
-                            Text(durationInfo, style: AppTextStyles.caption),
-                          ],
-                          if (playerInfo.isNotEmpty && durationInfo.isNotEmpty)
-                            const Text(' / ', style: AppTextStyles.caption),
-                          if (playerInfo.isNotEmpty) ...[
-                            Icon(Icons.people,
-                                size: 16, color: AppTheme.hintTextColor),
-                            const SizedBox(width: 4),
-                            Text(playerInfo, style: AppTextStyles.caption),
-                          ],
-                        ],
-                      ),
-                    const SizedBox(height: AppSpacing.medium),
-                    Text(
-                      gameDescription,
-                      style: AppTextStyles.body,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-
-              // ゲーム紹介画像（カルーセル）
-              Expanded(
-                child: Container(
-                  color: AppTheme.tabBackgroundColor,
-                  child: Stack(
-                    alignment: Alignment.center,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+            child: Column(
+              children: [
+                // タイトルと説明部分
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.large),
+                  child: Column(
                     children: [
-                      // カルーセル
-                      PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentImageIndex = index;
-                          });
-                        },
-                        itemCount: gameImages.length,
-                        itemBuilder: (context, index) {
-                          final imageUrl = gameImages[index];
-
-                          return Center(
-                            child: GameThumbnail(
-                              thumbnailUrl: imageUrl,
-                              size: 300, // 少し小さめに調整
-                            ),
-                          );
-                        },
+                      Text(
+                        gameTitle,
+                        style: AppTextStyles.h5,
                       ),
-                      // インジケーター
-                      Positioned(
-                        bottom: AppSpacing.large,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            gameImages.length,
-                            (index) => Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xSmall),
-                              width: AppSpacing.small,
-                              height: AppSpacing.small,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: _currentImageIndex == index
-                                    ? AppTheme.errorColor
-                                    : AppTheme.hintTextColor,
+                      const SizedBox(height: AppSpacing.medium),
+                      Text(
+                        gameDescription,
+                        style: AppTextStyles.body,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ゲーム紹介画像（カルーセル）
+                Expanded(
+                  child: Container(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // カルーセル
+                        PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentImageIndex = index;
+                            });
+                          },
+                          itemCount: gameImages.length,
+                          itemBuilder: (context, index) {
+                            final imageUrl = gameImages[index];
+
+                            return Center(
+                              child: GameThumbnail(
+                                thumbnailUrl: imageUrl,
+                                size: AppLayout.tutorialImageSize,
+                              ),
+                            );
+                          },
+                        ),
+                        // インジケーター
+                        Positioned(
+                          bottom: AppSpacing.large,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(
+                              gameImages.length,
+                              (index) => Container(
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.xSmall),
+                                width: AppSpacing.small,
+                                height: AppSpacing.small,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _currentImageIndex == index
+                                      ? AppTheme.selectedBackgroundColor
+                                      : AppTheme.disabledBackgroundColor,
+                                ),
                               ),
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ボタン部分
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.medium,
+                  ),
+                  child: Column(
+                    children: [
+                      // 準備完了ボタン
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedLoadingButton(
+                          text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
+                          isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
+                          onPressed: _isPreparationCompleted || _isUpdatingReady
+                              ? null // ★準備完了済みまたは通信中は押せない
+                              : () async {
+                                  setState(() {
+                                    _isUpdatingReady = true; // ★通信開始
+                                  });
+
+                                  try {
+                                    await _updateReadyStatus(); // ★API呼び出し
+                                    setState(() {
+                                      _isPreparationCompleted =
+                                          true; // ★成功時のみtrue
+                                    });
+                                  } catch (e) {
+                                    // エラー時は_isPreparationCompletedはfalseのまま
+                                  } finally {
+                                    setState(() {
+                                      _isUpdatingReady = false; // ★通信終了
+                                    });
+                                  }
+                                },
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-
-              // ボタン部分
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.large,
-                  vertical: AppSpacing.medium,
-                ),
-                child: Column(
-                  children: [
-                    // 準備完了ボタン
-                    SizedBox(
-                      width: double.infinity,
-                      child: LoadingButton(
-                        text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
-                        isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
-                        onPressed: _isPreparationCompleted || _isUpdatingReady
-                            ? null // ★準備完了済みまたは通信中は押せない
-                            : () async {
-                                setState(() {
-                                  _isUpdatingReady = true; // ★通信開始
-                                });
-
-                                try {
-                                  await _updateReadyStatus(); // ★API呼び出し
-                                  setState(() {
-                                    _isPreparationCompleted =
-                                        true; // ★成功時のみtrue
-                                  });
-                                } catch (e) {
-                                  // エラー時は_isPreparationCompletedはfalseのまま
-                                } finally {
-                                  setState(() {
-                                    _isUpdatingReady = false; // ★通信終了
-                                  });
-                                }
-                              },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

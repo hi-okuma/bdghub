@@ -8,7 +8,7 @@ class CurrentGameState {
   final String? description;
   final String? overview;
   final String? thumbnailUrl;
-  final List<String>? gameImages;
+  final List<String>? tutorialImageList;
   final String? creatorName;
   final int? duration;
   final int? minPlayers;
@@ -21,7 +21,7 @@ class CurrentGameState {
     this.description,
     this.overview,
     this.thumbnailUrl,
-    this.gameImages,
+    this.tutorialImageList,
     this.creatorName,
     this.duration,
     this.minPlayers,
@@ -35,7 +35,7 @@ class CurrentGameState {
     String? description,
     String? overview,
     String? thumbnailUrl,
-    List<String>? gameImages,
+    List<String>? tutorialImageList,
     String? creatorName,
     int? duration,
     int? minPlayers,
@@ -48,7 +48,7 @@ class CurrentGameState {
       description: description ?? this.description,
       overview: overview ?? this.overview,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
-      gameImages: gameImages ?? this.gameImages,
+      tutorialImageList: tutorialImageList ?? this.tutorialImageList,
       creatorName: creatorName ?? this.creatorName,
       duration: duration ?? this.duration,
       minPlayers: minPlayers ?? this.minPlayers,
@@ -103,7 +103,7 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
           duration: gameData['duration'],
           minPlayers: gameData['minPlayers'],
           maxPlayers: gameData['maxPlayers'],
-          gameImages: _extractGameImages(gameData),
+          tutorialImageList: _extractGameImages(gameData),
           gameData: {
             ...gameData,
             if (assetsData != null) 'assets': assetsData,
@@ -131,10 +131,10 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
     }
 
     final currentGameData = currentGameDoc.data()!;
-    
+
     // ★ 基本情報はgamesコレクションから補完 ★
     await loadGameFromFirestore(gameId);
-    
+
     // ★ currentGameの情報で上書き ★
     state = state.copyWith(
       gameData: {
@@ -158,7 +158,7 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
       duration: _parseDuration(gameData['time']),
       minPlayers: _parseMinPlayers(gameData['players']),
       maxPlayers: _parseMaxPlayers(gameData['players']),
-      gameImages: _extractGameImages(gameData),
+      tutorialImageList: _extractGameImages(gameData),
       gameData: gameData,
     );
   }
@@ -196,15 +196,16 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
       description: defaultData['description'],
       overview: defaultData['overview'],
       creatorName: defaultData['creatorName'],
-      gameImages: _getDefaultImages(gameId),
+      tutorialImageList: _getDefaultImages(gameId),
       gameData: defaultData,
     );
   }
 
   List<String> _extractGameImages(Map<String, dynamic> gameData) {
     // DB設計では画像URLの配列は定義されていないが、将来的な拡張に備える
-    if (gameData['gameImages'] != null && gameData['gameImages'] is List) {
-      return List<String>.from(gameData['gameImages']);
+    if (gameData['tutorialImageList'] != null &&
+        gameData['tutorialImageList'] is List) {
+      return List<String>.from(gameData['tutorialImageList']);
     }
 
     // サムネイルを使用
