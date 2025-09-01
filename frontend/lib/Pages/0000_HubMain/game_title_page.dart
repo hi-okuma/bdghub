@@ -139,30 +139,10 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       canPop: false,
       child: Scaffold(
         backgroundColor: AppTheme.backgroundColor,
-        appBar: AppBar(
-          centerTitle: false,
-          title: Text(gameTitle, style: AppTextStyles.title),
-          actions: [
-            if (isHost)
-              TextButton(
-                onPressed: showExitGameDialog,
-                // ),
-                child: Row(
-                  children: [
-                    Icon(Icons.close,
-                        size: AppIconSizes.xSmall,
-                        color: AppTheme.primaryColor),
-                    const SizedBox(width: AppSpacing.small), // アイコンとテキストの間隔
-                    Text('終了する',
-                        style: AppTextStyles.subtitle2.copyWith(
-                          color: AppTheme.primaryColor,
-                        )),
-                  ],
-                ),
-              ),
-          ],
-          automaticallyImplyLeading: false,
-        ),
+        appBar: GameAppBar(
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: showExitGameDialog),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),

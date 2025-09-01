@@ -307,6 +307,7 @@ class AppLayout {
   static const int maxNicknameLength = 10;
   // static const int minNicknameLength = 2;
   static const int maxProfileLength = 100;
+  static const int maxProfileLines = 2;
   static const double tabHeight = 36;
   static const double tutorialImageSize = 400.0;
 }

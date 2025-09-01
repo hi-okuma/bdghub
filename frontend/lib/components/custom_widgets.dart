@@ -466,3 +466,46 @@ class InfoCard extends StatelessWidget {
     );
   }
 }
+
+class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String gameTitle;
+  final bool isHost;
+  final VoidCallback onExitPressed;
+
+  const GameAppBar({
+    Key? key,
+    required this.gameTitle,
+    required this.isHost,
+    required this.onExitPressed,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      centerTitle: false,
+      title: Text(gameTitle, style: AppTextStyles.title),
+      actions: [
+        if (isHost)
+          TextButton(
+            onPressed: onExitPressed,
+            // ),
+            child: Row(
+              children: [
+                Icon(Icons.close,
+                    size: AppIconSizes.xSmall, color: AppTheme.primaryColor),
+                const SizedBox(width: AppSpacing.small), // アイコンとテキストの間隔
+                Text('終了する',
+                    style: AppTextStyles.subtitle2.copyWith(
+                      color: AppTheme.primaryColor,
+                    )),
+              ],
+            ),
+          ),
+      ],
+      automaticallyImplyLeading: false,
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}

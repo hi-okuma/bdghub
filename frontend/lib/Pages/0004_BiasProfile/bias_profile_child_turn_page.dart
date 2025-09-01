@@ -89,6 +89,7 @@ class _BiasProfileChildTurnPageState
     final gameData = currentGame.gameData;
     final currentParent = gameData?['currentParent'] as String?;
     final isCurrentParent = currentParent == currentUser.uid;
+    final gameTitle = gameData?['title'] as String;
 
     // 現在のユーザーのお題を取得
     final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
@@ -112,63 +113,40 @@ class _BiasProfileChildTurnPageState
     return PopScope(
       canPop: false,
       child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            // ホストプレイヤーのみ終了ボタンを表示
-            if (isHost)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: ElevatedButton(
-                  onPressed: showExitGameDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.medium,
-                      horizontal: AppSpacing.small,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+        appBar: GameAppBar(
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: showExitGameDialog),
+        backgroundColor: AppTheme.backgroundColor,
+        body: isCurrentParent
+            ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      Icon(Icons.close, color: AppTheme.errorColor),
-                      const SizedBox(width: AppSpacing.small),
                       Text(
-                        '終了',
-                        style: AppTextStyles.body.copyWith(color: Colors.white),
+                        'あなたは親プレイヤーです',
+                        style: AppTextStyles.h5,
                       ),
+                      Text(
+                        '子プレイヤーが偏見を入力するまでお待ちください',
+                        style: AppTextStyles.body,
+                      )
                     ],
                   ),
                 ),
-              ),
-          ],
-          automaticallyImplyLeading: false,
-        ),
-        backgroundColor: AppTheme.backgroundColor,
-        body: isCurrentParent
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'あなたは親プレイヤーです',
-                      style: AppTextStyles.h5,
-                    ),
-                    Text(
-                      '子プレイヤーが偏見を入力するまでお待ちください',
-                      style: AppTextStyles.body,
-                    )
-                  ],
-                ),
               )
-            : Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    isSoftwareKeyboardVisible
-                        ? SizedBox.shrink()
-                        : Flexible(
-                            flex: 1,
-                            child: Column(
+            : Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      isSoftwareKeyboardVisible
+                          ? SizedBox.shrink()
+                          : Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
@@ -185,100 +163,94 @@ class _BiasProfileChildTurnPageState
                                 )
                               ],
                             ),
-                          ),
-                    Flexible(
-                      flex: isSoftwareKeyboardVisible ? 2 : 4,
-                      child: Center(
-                        child: Container(
-                          height: MediaQuery.of(context).size.height * 0.45,
-                          child: AspectRatio(
-                            aspectRatio: 7 / 10,
-                            child: answerImage.isEmpty
-                                ? Center(
-                                    child: CircularProgressIndicator(),
-                                  )
-                                : Card(
-                                    elevation: 4,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4.0),
+                      Flexible(
+                        flex: isSoftwareKeyboardVisible ? 2 : 4,
+                        child: Center(
+                          child: Container(
+                            width: MediaQuery.of(context).size.height * 0.35,
+                            child: AspectRatio(
+                              aspectRatio: 7 / 10,
+                              child: answerImage.isEmpty
+                                  ? Center(
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  : Card(
+                                      elevation: 4,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(4.0),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: Image.network(
+                                        answerImage,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return Center(
+                                            child: CircularProgressIndicator(
+                                              value: loadingProgress
+                                                          .expectedTotalBytes !=
+                                                      null
+                                                  ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                  : null,
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                          return Center(
+                                            child: Text(
+                                              '画像の読み込みに\n失敗しました',
+                                              style: AppTextStyles.body,
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: Image.network(
-                                      answerImage,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return Center(
-                                          child: CircularProgressIndicator(
-                                            value: loadingProgress
-                                                        .expectedTotalBytes !=
-                                                    null
-                                                ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                                : null,
-                                          ),
-                                        );
-                                      },
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return Center(
-                                          child: Text(
-                                            '画像の読み込みに\n失敗しました',
-                                            style: AppTextStyles.body,
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Flexible(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                      Column(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.medium),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TextField(
-                                  maxLength: AppLayout.maxProfileLength,
-                                  controller: _profileController,
-                                  decoration: InputDecoration(
-                                    labelText: currentUserTopic.isEmpty
-                                        ? 'お題を読み込み中...（${AppLayout.maxProfileLength}文字以内）'
-                                        : '$currentUserTopic（${AppLayout.maxProfileLength}文字以内）',
-                                    hintText: '偏見を入力してください',
-                                  ),
-                                  onChanged: _onProfileChanged,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                maxLength: AppLayout.maxProfileLength,
+                                maxLines: AppLayout.maxProfileLines,
+                                controller: _profileController,
+                                decoration: InputDecoration(
+                                  alignLabelWithHint: true,
+                                  labelText: currentUserTopic.isEmpty
+                                      ? 'お題を読み込み中...（${AppLayout.maxProfileLength}文字以内）'
+                                      : '$currentUserTopic（${AppLayout.maxProfileLength}文字以内）',
+                                  hintText: '偏見を入力してください',
                                 ),
-                                _errorMessage != null
-                                    ? Text(
-                                        _errorMessage!,
-                                        style: AppTextStyles.errorText,
-                                      )
-                                    : SizedBox.shrink(),
-                              ],
-                            ),
+                                onChanged: _onProfileChanged,
+                              ),
+                              _errorMessage != null
+                                  ? Text(
+                                      _errorMessage!,
+                                      style: AppTextStyles.errorText,
+                                    )
+                                  : SizedBox.shrink(),
+                            ],
                           ),
                           // エラー表示
                         ],
                       ),
-                    ),
-                    Flexible(
-                      flex: 1,
-                      child: Container(
+                      Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(AppSpacing.medium),
+                        padding:
+                            EdgeInsets.symmetric(vertical: AppSpacing.small),
                         child: Row(
                           children: [
                             Expanded(
@@ -378,8 +350,8 @@ class _BiasProfileChildTurnPageState
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
       ),
