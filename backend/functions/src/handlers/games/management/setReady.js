@@ -1,24 +1,17 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
-const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 const {getReadyTransitionStatus} = require("./statusTransitions");
 
 /**
- * ゲーム準備完了リクエストの共通ハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * ゲーム準備完了リクエストの共通ハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function setReadyHandler(req, res) {
-  const {uid, roomId, gameId} = req.body;
+async function setReadyHandler(request) {
+  const {uid, roomId, gameId} = request.data;
 
   if (!uid || !roomId || !gameId) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "不正なリクエストです。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("準備完了設定に失敗しました。必要な情報が不足しています。");
   }
 
   try {
@@ -28,19 +21,19 @@ async function setReadyHandler(req, res) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("GameNotFound");
+        throw new Error("ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const roomDoc = await transaction.get(roomRef);
 
       if (!roomDoc.data().players[uid]) {
-        throw new Error("PlayerNotFound");
+        throw new Error("プレイヤーが見つかりません。");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "waiting") {
-        throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
+        throw new Error("ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const updatedPlayers = {...currentGameData.players};
@@ -67,38 +60,24 @@ async function setReadyHandler(req, res) {
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`準備完了設定成功: roomId=${roomId}, uid=${uid}, gameId=${gameId}`);
-    return sendSuccess(res, {}, "");
-  } catch (error) {
-    logger.error(`準備完了設定エラー: ${error.message}`, {
+    logger.info(`準備完了設定成功: roomId=${roomId}, uid=${uid}, gameId=${gameId}`, {
       roomId,
       uid,
       gameId,
-      error: error.stack,
     });
 
-    const errorMessage = error.message || "サーバーエラーが発生しました。";
-
-    if (errorMessage.includes("GameNotFound")) {
-      return sendError(res, "GameNotFound", "ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。", 404, {roomId});
-    } else if (errorMessage.includes("InvalidGameStatus")) {
-      const status = errorMessage.split(":")[1] || "unknown";
-      return sendError(
-          res,
-          "InvalidGameStatus",
-          "ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-          {status},
-      );
-    }
-
-    return sendError(
-        res,
-        "Internal",
-        "サーバーエラーが発生しました。",
-        500,
-        {error: errorMessage},
-    );
+    return {
+      success: true,
+      message: "準備完了を設定しました。",
+    };
+  } catch (error) {
+    logger.error("準備完了設定エラー", {
+      error: error.message,
+      roomId,
+      uid,
+      gameId,
+    });
+    throw error;
   }
 }
 

@@ -1,24 +1,17 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
-const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 const {initializeGameData} = require("./init");
 
 /**
- * 偏見プロフィールゲームの結果確認リクエストを処理するハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * 偏見プロフィールゲームの結果確認リクエストを処理するハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function proceedToNext0004Handler(req, res) {
-  const {roomId, uid, bestHintPlayerUid} = req.body;
+async function proceedToNext0004Handler(request) {
+  const {roomId, uid, bestHintPlayerUid} = request.data;
 
   if (!roomId || !uid) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "不正なリクエストです。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("次に進む処理に失敗しました。必要な情報が不足しています。");
   }
 
   try {
@@ -28,20 +21,20 @@ async function proceedToNext0004Handler(req, res) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("GameNotFound");
+        throw new Error("ゲームが見つかりません。");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "result") {
-        throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const isCorrect = currentGameData.parentSelectedIndex === currentGameData.answerImageIndex;
       const isParent = uid === currentGameData.currentParent;
 
       if (isParent && !bestHintPlayerUid) {
-        throw new Error("BestHintPlayerRequired");
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const updateData = {};
@@ -49,11 +42,11 @@ async function proceedToNext0004Handler(req, res) {
 
       if (isParent && bestHintPlayerUid) {
         if (bestHintPlayerUid === currentGameData.currentParent) {
-          throw new Error("InvalidBestHintPlayer");
+          throw new Error("親プレイヤーはベストヒントに選択できません。");
         }
 
         if (!currentGameData.hints[bestHintPlayerUid]) {
-          throw new Error("PlayerDidNotSubmitHint");
+          throw new Error("選択されたプレイヤーが見つかりません。他のプレイヤーを選択するか、一度ゲームを終了してください。");
         }
 
         updatedPlayers = Object.fromEntries(
@@ -92,59 +85,24 @@ async function proceedToNext0004Handler(req, res) {
       }
     });
 
-    logger.info(`結果確認成功: roomId=${roomId}, uid=${uid}${bestHintPlayerUid ? ", bestHintPlayerUid=" + bestHintPlayerUid : ""}`);
-    return sendSuccess(res, {}, "");
-  } catch (error) {
-    logger.error(`結果確認エラー: ${error.message}`, {
+    logger.info(`結果確認成功: roomId=${roomId}, uid=${uid}${bestHintPlayerUid ? ", bestHintPlayerUid=" + bestHintPlayerUid : ""}`, {
       roomId,
       uid,
       bestHintPlayerUid,
-      error: error.stack,
     });
 
-    const errorMessage = error.message || "サーバーエラーが発生しました。";
-
-    if (errorMessage.includes("GameNotFound")) {
-      return sendError(res, "GameNotFound", "ゲームが見つかりません。", 404, {roomId});
-    } else if (errorMessage.includes("InvalidGameStatus")) {
-      const status = errorMessage.split(":")[1] || "unknown";
-      return sendError(
-          res,
-          "InvalidGameStatus",
-          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-          {status},
-      );
-    } else if (errorMessage.includes("BestHintPlayerRequired")) {
-      return sendError(
-          res,
-          "BestHintPlayerRequired",
-          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-      );
-    } else if (errorMessage.includes("InvalidBestHintPlayer")) {
-      return sendError(
-          res,
-          "InvalidBestHintPlayer",
-          "親プレイヤーはベストヒントに選択できません。",
-          400,
-      );
-    } else if (errorMessage.includes("PlayerDidNotSubmitHint")) {
-      return sendError(
-          res,
-          "PlayerDidNotSubmitHint",
-          "選択されたプレイヤーが見つかりません。他のプレイヤーを選択するか、一度ゲームを終了してください。",
-          400,
-      );
-    }
-
-    return sendError(
-        res,
-        "Internal",
-        "サーバーエラーが発生しました。",
-        500,
-        {error: errorMessage},
-    );
+    return {
+      success: true,
+      message: "結果を確認しました。",
+    };
+  } catch (error) {
+    logger.error("結果確認エラー", {
+      error: error.message,
+      roomId,
+      uid,
+      bestHintPlayerUid,
+    });
+    throw error;
   }
 }
 
