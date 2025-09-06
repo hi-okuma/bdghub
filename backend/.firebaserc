@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "bdghub-dev"
+    "dev": "bdghub-dev",
+    "stg": "bdghub-stg",
+    "prd": "bdghub-prd"
   }
 }
