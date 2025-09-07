@@ -1,23 +1,16 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
-const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 
 /**
- * 水平思考ゲームの成功/失敗リクエストを処理するハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * 水平思考ゲームの成功/失敗リクエストを処理するハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function reportResult0003Handler(req, res) {
-  const {roomId, result, answererUid} = req.body;
+async function reportResult0003Handler(request) {
+  const {roomId, result, answererUid} = request.data;
 
   if (!roomId || result === undefined || (result === true && !answererUid)) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "不正なリクエストです。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("結果報告に失敗しました。必要な情報が不足しています。");
   }
 
   try {
@@ -27,13 +20,13 @@ async function reportResult0003Handler(req, res) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("GameNotFound");
+        throw new Error("ゲームが見つかりません。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "playing") {
-        throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const updatedPlayers = updatePlayerPoints(currentGameData.players, result, answererUid);
@@ -52,17 +45,24 @@ async function reportResult0003Handler(req, res) {
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`結果報告成功: roomId=${roomId}, result=${result}`);
-    return sendSuccess(res, {}, "");
-  } catch (error) {
-    logger.error(`結果報告エラー: ${error.message}`, {
+    logger.info(`結果報告成功: roomId=${roomId}, result=${result}`, {
       roomId,
       result,
       answererUid,
-      error: error.stack,
     });
 
-    return handleError(res, error);
+    return {
+      success: true,
+      message: "結果を報告しました。",
+    };
+  } catch (error) {
+    logger.error("結果報告エラー", {
+      error: error.message,
+      roomId,
+      result,
+      answererUid,
+    });
+    throw error;
   }
 }
 
@@ -202,37 +202,6 @@ function createUpdateData(players, nextQuestioner, questionData, isOneRoundCompl
       usedQuestionIndex: usedQuestionIndex,
     };
   }
-}
-
-/**
- * エラーハンドリング
- * @param {object} res - レスポンスオブジェクト
- * @param {Error} error - エラーオブジェクト
- * @return {object} エラーレスポンス
- */
-function handleError(res, error) {
-  const errorMessage = error.message || "サーバーエラーが発生しました。";
-
-  if (errorMessage.includes("GameNotFound")) {
-    return sendError(res, "GameNotFound", "ゲームが見つかりません。ホストプレイヤーより一度ゲームを終了してください。", 404);
-  } else if (errorMessage.includes("InvalidGameStatus")) {
-    const status = errorMessage.split(":")[1] || "unknown";
-    return sendError(
-        res,
-        "InvalidGameStatus",
-        "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-        400,
-        {status},
-    );
-  }
-
-  return sendError(
-      res,
-      "Internal",
-      "サーバーエラーが発生しました。",
-      500,
-      {error: errorMessage},
-  );
 }
 
 module.exports = {

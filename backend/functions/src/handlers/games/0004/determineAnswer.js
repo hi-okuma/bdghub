@@ -1,23 +1,16 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
-const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 
 /**
- * 偏見プロフィールゲームの画像選択リクエストを処理するハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * 偏見プロフィールゲームの画像選択リクエストを処理するハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function determineAnswer0004Handler(req, res) {
-  const {roomId, uid, imageIndex} = req.body;
+async function determineAnswer0004Handler(request) {
+  const {roomId, uid, imageIndex} = request.data;
 
   if (!roomId || !uid || imageIndex === undefined || imageIndex < 0 || imageIndex > 4) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "不正なリクエストです。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("画像選択に失敗しました。必要な情報が不足しているか、無効な選択です。");
   }
 
   try {
@@ -27,17 +20,17 @@ async function determineAnswer0004Handler(req, res) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("GameNotFound");
+        throw new Error("ゲームが見つかりません。");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "parentTurn") {
-        throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       if (uid !== currentGameData.currentParent) {
-        throw new Error("OnlyParentCandetermineAnswer");
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       transaction.update(currentGameRef, {
@@ -46,45 +39,24 @@ async function determineAnswer0004Handler(req, res) {
       });
     });
 
-    logger.info(`画像選択成功: roomId=${roomId}, uid=${uid}, imageIndex=${imageIndex}`);
-    return sendSuccess(res, {}, "");
-  } catch (error) {
-    logger.error(`画像選択エラー: ${error.message}`, {
+    logger.info(`画像選択成功: roomId=${roomId}, uid=${uid}, imageIndex=${imageIndex}`, {
       roomId,
       uid,
       imageIndex,
-      error: error.stack,
     });
 
-    const errorMessage = error.message || "サーバーエラーが発生しました。";
-
-    if (errorMessage.includes("GameNotFound")) {
-      return sendError(res, "GameNotFound", "ゲームが見つかりません。", 404, {roomId});
-    } else if (errorMessage.includes("InvalidGameStatus")) {
-      const status = errorMessage.split(":")[1] || "unknown";
-      return sendError(
-          res,
-          "InvalidGameStatus",
-          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-          {status},
-      );
-    } else if (errorMessage.includes("OnlyParentCandetermineAnswer")) {
-      return sendError(
-          res,
-          "OnlyParentCandetermineAnswer",
-          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-      );
-    }
-
-    return sendError(
-        res,
-        "Internal",
-        "サーバーエラーが発生しました。",
-        500,
-        {error: errorMessage},
-    );
+    return {
+      success: true,
+      message: "画像を選択しました。",
+    };
+  } catch (error) {
+    logger.error("画像選択エラー", {
+      error: error.message,
+      roomId,
+      uid,
+      imageIndex,
+    });
+    throw error;
   }
 }
 

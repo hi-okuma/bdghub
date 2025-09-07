@@ -1,24 +1,17 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
-const {sendSuccess, sendError} = require("../../utils/responseHandler");
 
 /**
- * 部屋退出リクエストを処理するハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * 部屋退出リクエストを処理するハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function leaveRoomHandler(req, res) {
-  const {roomId, uid} = req.body;
+async function leaveRoomHandler(request) {
+  const {roomId, uid} = request.data;
 
   if (!roomId || !uid) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "退出に失敗しました。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("退出に失敗しました。必要な情報が不足しています。");
   }
 
   try {
@@ -26,39 +19,33 @@ async function leaveRoomHandler(req, res) {
     const roomDoc = await roomRef.get();
 
     if (!roomDoc.exists) {
-      return sendError(
-          res,
-          "NotFound",
-          "指定された部屋が見つかりません。",
-          404,
-          {roomId},
-      );
+      throw new Error("指定された部屋が見つかりません。");
     }
 
     const roomData = roomDoc.data();
 
     if (!roomData.players[uid]) {
-      return sendError(
-          res,
-          "PlayerNotFound",
-          "指定されたプレイヤーが部屋内に存在しません。",
-          404,
-          {roomId, uid},
-      );
+      throw new Error("指定されたプレイヤーが部屋内に存在しません。");
     }
 
     await updateRoomWithTransaction(roomRef, uid);
 
-    logger.info(`プレイヤー退出成功: uid=${uid} from room ${roomId}`);
-    return sendSuccess(res, {});
+    logger.info(`プレイヤー退出成功: uid=${uid} from room ${roomId}`, {
+      roomId,
+      uid,
+    });
+
+    return {
+      success: true,
+      message: "部屋から退出しました。",
+    };
   } catch (error) {
-    return sendError(
-        res,
-        "Internal",
-        "サーバーエラーが発生しました。",
-        500,
-        {error: error.message, roomId, uid},
-    );
+    logger.error("部屋退出エラー", {
+      error: error.message,
+      roomId,
+      uid,
+    });
+    throw error;
   }
 }
 

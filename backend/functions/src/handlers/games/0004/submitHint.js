@@ -1,45 +1,26 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
-const {sendSuccess, sendError} = require("../../../utils/responseHandler");
 
 /**
- * 偏見プロフィールゲームのヒント入力リクエストを処理するハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * 偏見プロフィールゲームのヒント入力リクエストを処理するハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function submitHint0004Handler(req, res) {
-  const {roomId, uid, hint} = req.body;
+async function submitHint0004Handler(request) {
+  const {roomId, uid, hint} = request.data;
 
   if (!roomId || !uid || !hint) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "不正なリクエストです。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("ヒント送信に失敗しました。必要な情報が不足しています。");
   }
 
   if (hint.length > 100) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "ヒントは100文字以内で入力してください。",
-        400,
-        {hint},
-    );
+    throw new Error("ヒントは100文字以内で入力してください。");
   }
 
   const forbiddenChars = ["'", "\"", ";", "-", "=", "/", "*"];
   for (const char of forbiddenChars) {
     if (hint.includes(char)) {
-      return sendError(
-          res,
-          "InvalidArgument",
-          `ヒントに禁止文字「${char}」が含まれています。`,
-          400,
-          {hint},
-      );
+      throw new Error(`ヒントに禁止文字「${char}」が含まれています。`);
     }
   }
 
@@ -50,17 +31,17 @@ async function submitHint0004Handler(req, res) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("GameNotFound");
+        throw new Error("ゲームが見つかりません。");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "childTurn") {
-        throw new Error(`InvalidGameStatus:${currentGameData.gameStatus}`);
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       if (uid === currentGameData.currentParent) {
-        throw new Error("ParentCannotsubmitHint");
+        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
       const updatedHints = {...currentGameData.hints, [uid]: hint};
@@ -83,44 +64,22 @@ async function submitHint0004Handler(req, res) {
       transaction.update(currentGameRef, updateData);
     });
 
-    logger.info(`ヒント設定成功: roomId=${roomId}, uid=${uid}`);
-    return sendSuccess(res, {}, "");
-  } catch (error) {
-    logger.error(`ヒント設定エラー: ${error.message}`, {
+    logger.info(`ヒント設定成功: roomId=${roomId}, uid=${uid}`, {
       roomId,
       uid,
-      error: error.stack,
     });
 
-    const errorMessage = error.message || "サーバーエラーが発生しました。";
-
-    if (errorMessage.includes("GameNotFound")) {
-      return sendError(res, "GameNotFound", "ゲームが見つかりません。", 404, {roomId});
-    } else if (errorMessage.includes("InvalidGameStatus")) {
-      const status = errorMessage.split(":")[1] || "unknown";
-      return sendError(
-          res,
-          "InvalidGameStatus",
-          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-          {status},
-      );
-    } else if (errorMessage.includes("ParentCannotsubmitHint")) {
-      return sendError(
-          res,
-          "ParentCannotsubmitHint",
-          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-          400,
-      );
-    }
-
-    return sendError(
-        res,
-        "Internal",
-        "サーバーエラーが発生しました。",
-        500,
-        {error: errorMessage},
-    );
+    return {
+      success: true,
+      message: "ヒントを送信しました。",
+    };
+  } catch (error) {
+    logger.error("ヒント設定エラー", {
+      error: error.message,
+      roomId,
+      uid,
+    });
+    throw error;
   }
 }
 

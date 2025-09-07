@@ -1,7 +1,6 @@
-const {onRequest} = require("firebase-functions/v2/https");
+const {onCall} = require("firebase-functions/v2/https");
 const {region} = require("./src/config/environment");
-const {setupCors} = require("./src/middleware/cors");
-const {checkMaintenance} = require("./src/middleware/maintenanceCheck");
+const {checkMaintenanceForCall} = require("./src/middleware/maintenanceCheck");
 const {createRoomHandler} = require("./src/handlers/room/createRoom");
 const {joinRoomHandler} = require("./src/handlers/room/joinRoom");
 const {leaveRoomHandler} = require("./src/handlers/room/leaveRoom");
@@ -15,74 +14,70 @@ const {submitHint0004Handler} = require("./src/handlers/games/0004/submitHint");
 const {determineAnswer0004Handler} = require("./src/handlers/games/0004/determineAnswer");
 const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToNext");
 
-exports.createRoom = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await createRoomHandler(req, res);
+const commonOptions = {
+  region: region,
+  enforceAppCheck: true,
+};
+
+// 部屋関連の関数
+exports.createRoom = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await createRoomHandler(request);
 });
 
-exports.joinRoom = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await joinRoomHandler(req, res);
+exports.joinRoom = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await joinRoomHandler(request);
 });
 
-exports.leaveRoom = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await leaveRoomHandler(req, res);
+exports.leaveRoom = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await leaveRoomHandler(request);
 });
 
-exports.startGame = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await startGameHandler(req, res);
+// ゲーム管理関連の関数
+exports.startGame = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await startGameHandler(request);
 });
 
-exports.endGame = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await endGameHandler(req, res);
+exports.endGame = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await endGameHandler(request);
 });
 
-exports.setReady = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await setReadyHandler(req, res);
+exports.setReady = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await setReadyHandler(request);
 });
 
-exports.declare0001 = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await declare0001Handler(req, res);
+// ゲーム固有の関数
+exports.declare0001 = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await declare0001Handler(request);
 });
 
-exports.reportResult0002 = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await reportResult0002Handler(req, res);
+exports.reportResult0002 = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await reportResult0002Handler(request);
 });
 
-exports.reportResult0003 = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await reportResult0003Handler(req, res);
+exports.reportResult0003 = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await reportResult0003Handler(request);
 });
 
-exports.submitHint0004 = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await submitHint0004Handler(req, res);
+exports.submitHint0004 = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await submitHint0004Handler(request);
 });
 
-exports.determineAnswer0004 = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await determineAnswer0004Handler(req, res);
+exports.determineAnswer0004 = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await determineAnswer0004Handler(request);
 });
 
-exports.proceedToNext0004 = onRequest({region: region}, async (req, res) => {
-  if (setupCors(req, res)) return;
-  if (await checkMaintenance(req, res)) return;
-  await proceedToNext0004Handler(req, res);
+exports.proceedToNext0004 = onCall(commonOptions, async (request) => {
+  await checkMaintenanceForCall(request);
+  return await proceedToNext0004Handler(request);
 });

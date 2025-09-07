@@ -1,55 +1,46 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
-const {sendSuccess, sendError} = require("../../utils/responseHandler");
 const {generateRoomId} = require("../../utils/idGenerator");
 
 /**
- * 部屋作成リクエストを処理するハンドラー
- * @param {object} req - リクエストオブジェクト
- * @param {object} res - レスポンスオブジェクト
+ * 部屋作成リクエストを処理するハンドラー（onCall用）
+ * @param {object} request - onCallのリクエストオブジェクト
+ * @return {Promise<object>} レスポンスデータ
  */
-async function createRoomHandler(req, res) {
-  const {nickname, uid} = req.body;
+async function createRoomHandler(request) {
+  const {nickname, uid} = request.data;
 
   if (!nickname || !uid) {
-    return sendError(
-        res,
-        "InvalidArgument",
-        "部屋作成に失敗しました。",
-        400,
-        {body: req.body},
-    );
+    throw new Error("部屋作成に失敗しました。ニックネームとユーザーIDが必要です。");
   }
 
   try {
     const roomId = await generateUniqueRoomId();
     if (!roomId) {
-      return sendError(
-          res,
-          "ResourceExhausted",
-          "部屋作成に失敗しました。",
-          429,
-      );
+      throw new Error("部屋作成に失敗しました。しばらく時間をおいて再度お試しください。");
     }
 
     const roomData = createRoomData(nickname, uid);
 
     await db.collection("rooms").doc(roomId).set(roomData);
-    logger.info(`部屋作成成功: ${roomId}`, {nickname, uid});
 
-    return sendSuccess(res, {
+    logger.info(`部屋作成成功: ${roomId}`, {
+      nickname,
+      uid,
+    });
+
+    return {
       roomId: roomId,
       nickname: nickname,
-    });
+    };
   } catch (error) {
-    return sendError(
-        res,
-        "Internal",
-        "サーバーエラーが発生しました。",
-        500,
-        {error: error.message},
-    );
+    logger.error("部屋作成エラー", {
+      error: error.message,
+      nickname,
+      uid,
+    });
+    throw new Error("サーバーエラーが発生しました。");
   }
 }
 
