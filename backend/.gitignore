@@ -68,4 +68,7 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
-test_functions
+#開発用
+javascript
+package-lock.json
+functions/package-lock.json
