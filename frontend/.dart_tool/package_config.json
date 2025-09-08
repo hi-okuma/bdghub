@@ -56,6 +56,24 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "cloud_functions",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/cloud_functions-5.6.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "cloud_functions_platform_interface",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/cloud_functions_platform_interface-5.8.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "cloud_functions_web",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/cloud_functions_web-4.11.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "collection",
       "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/collection-1.19.1",
       "packageUri": "lib/",
@@ -78,6 +96,24 @@
       "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/fake_async-1.3.3",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "firebase_app_check",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_app_check-0.3.2+10",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_app_check_platform_interface",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_app_check_platform_interface-0.1.1+10",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_app_check_web",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_app_check_web-0.2.0+14",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "firebase_auth",
@@ -159,7 +195,7 @@
     },
     {
       "name": "http",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/http-1.4.0",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/http-1.5.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
     },
@@ -303,9 +339,9 @@
     },
     {
       "name": "vm_service",
-      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/vm_service-15.0.0",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/vm_service-15.0.2",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.5"
     },
     {
       "name": "web",

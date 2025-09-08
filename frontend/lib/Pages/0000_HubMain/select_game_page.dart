@@ -3,8 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '/components/game_list_widget.dart';
 import '/components/custom_widgets.dart';
@@ -15,6 +13,7 @@ import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/services/api_service.dart';
 
 class SelectGamePage extends ConsumerStatefulWidget {
   const SelectGamePage({Key? key}) : super(key: key);
@@ -529,54 +528,29 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
 
       print('🚪 退出開始: ${userState.nickname} が部屋 ${userState.roomId} から退出');
 
-      // API呼び出しで退出処理
-      final Uri apiUrl = Uri.parse(
-          'https://asia-northeast1-bdghub-dev.cloudfunctions.net/leaveRoom');
-      final Map<String, dynamic> requestBody = {
-        'roomId': userState.roomId,
-        'uid': userState.uid,
-      };
-
-      final response = await http.post(
-        apiUrl,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
+      // ApiServiceを使用して退出処理
+      final responseData = await ApiService.leaveRoom(
+        userState.roomId!,
+        userState.uid!,
       );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+      print('🚪 API退出成功');
 
-        if (responseData.containsKey('success') &&
-            responseData['success'] == false) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(responseData['message'] ?? 'エラーが発生しました')),
-          );
-          return;
-        }
+      // 状態クリアを先に実行
+      ref.read(userProvider.notifier).leaveRoom();
 
-        print('🚪 API退出成功');
+      // ★ 修正: TopPageに直接遷移（全スタッククリア） ★
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const TopPage(),
+        ),
+        (route) => false, // 全ての前のルートを削除
+      );
 
-        // 状態クリアを先に実行
-        ref.read(userProvider.notifier).leaveRoom();
-
-        // ★ 修正: TopPageに直接遷移（全スタッククリア） ★
-        if (!mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => const TopPage(),
-          ),
-          (route) => false, // 全ての前のルートを削除
-        );
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('部屋を退出しました')),
-          );
-        }
-      } else {
-        print('🚪 API退出失敗: ${response.statusCode}');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('退出に失敗しました: ${response.statusCode}')),
+          const SnackBar(content: Text('部屋を退出しました')),
         );
       }
     } catch (e) {

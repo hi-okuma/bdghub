@@ -42,6 +42,8 @@ dependencies:
   universal_html: ^2.2.4
   flutter_riverpod: ^2.6.1
   firebase_auth: ^5.6.0
+  firebase_app_check: ^0.3.2+10
+  cloud_functions: ^5.6.2
 
 dev_dependencies:
   flutter_test:
@@ -67,7 +69,9 @@ flutter:
 
 #  To add assets to your application, add an assets section, like this:
   assets:
-    - assets/.env
+    - assets/.env.dev
+    - assets/.env.stg
+    - assets/.env.prd
 
   fonts:
     - family: NotoSansJP

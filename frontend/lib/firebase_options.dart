@@ -58,14 +58,19 @@ class DefaultFirebaseOptions {
     final appId = dotenv.env['APP_ID'];
     final messagingSenderId = dotenv.env['MESSAGING_SENDER_ID'];
     final projectId = dotenv.env['PROJECT_ID'];
-    
-    if (apiKey == null || apiKey.isEmpty ||
-        appId == null || appId.isEmpty ||
-        messagingSenderId == null || messagingSenderId.isEmpty ||
-        projectId == null || projectId.isEmpty) {
-      throw Exception('Firebase configuration values are missing or empty. Please check your .env file.');
+
+    if (apiKey == null ||
+        apiKey.isEmpty ||
+        appId == null ||
+        appId.isEmpty ||
+        messagingSenderId == null ||
+        messagingSenderId.isEmpty ||
+        projectId == null ||
+        projectId.isEmpty) {
+      throw Exception(
+          'Firebase configuration values are missing or empty. Please check your .env file.');
     }
-    
+
     return FirebaseOptions(
       apiKey: apiKey,
       appId: appId,
