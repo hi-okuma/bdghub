@@ -45,7 +45,7 @@ class _BiasProfileParentTurnPageState
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return PopScope(
+      return const PopScope(
         canPop: false,
         child: Scaffold(
           body: Center(
@@ -62,6 +62,7 @@ class _BiasProfileParentTurnPageState
     final gameData = currentGame.gameData;
     final currentParent = gameData?['currentParent'] as String?;
     final isCurrentParent = currentParent == currentUser.uid;
+    final gameTitle = gameData?['title'] as String;
 
     // 現在の部屋のお題を取得
     final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
@@ -130,32 +131,20 @@ class _BiasProfileParentTurnPageState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${_getNicknameByUid(uid)}のヒント'),
-                SizedBox(height: AppSpacing.small),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Container(
-                          decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8.0),
-                              color: AppTheme.backgroundColor),
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.large),
-                            child: Text(
-                              '${hint}',
-                              style: AppTextStyles.subtitle,
-                            ),
-                          )),
-                    ),
-                  ],
+                Text(
+                  '${hint}',
+                  style: AppTextStyles.body,
                 ),
+                const SizedBox(height: AppSpacing.large),
+                Text(_getNicknameByUid(uid),
+                    style: AppTextStyles.body
+                        .copyWith(color: AppTheme.secondaryTextColor))
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text('閉じる'),
+                child: const Text('閉じる'),
               ),
             ],
           );
@@ -166,51 +155,27 @@ class _BiasProfileParentTurnPageState
     return PopScope(
       canPop: false,
       child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            // ホストプレイヤーのみ終了ボタンを表示
-            if (isHost)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: ElevatedButton(
-                  onPressed: showExitGameDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.medium,
-                      horizontal: AppSpacing.small,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.close, color: AppTheme.errorColor),
-                      const SizedBox(width: AppSpacing.small),
-                      Text(
-                        '終了',
-                        style: AppTextStyles.body.copyWith(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-          automaticallyImplyLeading: false,
-        ),
+        appBar: GameAppBar(
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: showExitGameDialog),
         backgroundColor: AppTheme.backgroundColor,
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              isCurrentParent
-                  ? Flexible(
-                      flex: 1,
-                      child: Column(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                isCurrentParent
+                    ? const Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
                             'あなたは親プレイヤーです',
                             style: AppTextStyles.h5,
+                          ),
+                          SizedBox(
+                            height: AppSpacing.medium,
                           ),
                           Text(
                             '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
@@ -218,16 +183,16 @@ class _BiasProfileParentTurnPageState
                             textAlign: TextAlign.center,
                           )
                         ],
-                      ),
-                    )
-                  : Flexible(
-                      flex: 1,
-                      child: Column(
+                      )
+                    : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             'あなたは子プレイヤーです',
                             style: AppTextStyles.h5,
+                          ),
+                          SizedBox(
+                            height: AppSpacing.medium,
                           ),
                           Text(
                             '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
@@ -236,101 +201,126 @@ class _BiasProfileParentTurnPageState
                           )
                         ],
                       ),
-                    ),
-              Flexible(
-                flex: 4,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.medium),
-                          itemCount: currentImages.length,
-                          itemBuilder: (context, index) {
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                right: index < currentImages.length
-                                    ? AppSpacing.small
-                                    : 0,
-                              ),
-                              child: AspectRatio(
-                                aspectRatio: 7 / 10,
-                                child: Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4.0),
-                                    side: _selectedImageIndex == index
-                                        ? BorderSide(
-                                            width: 8.0,
-                                            color: AppTheme.primaryColor)
-                                        : BorderSide.none,
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.small),
+                  child: Flexible(
+                    flex: 4,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: MediaQuery.of(context).size.height * 0.5,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: currentImages.length,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: EdgeInsets.only(
+                                    right: index < currentImages.length
+                                        ? AppSpacing.xSmall
+                                        : 0,
                                   ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: InkWell(
-                                    onTap: isCurrentParent
-                                        ? () {
-                                            setState(() {
-                                              _selectedImageIndex = index;
-                                            });
-                                          }
-                                        : null,
-                                    child: Image.network(
-                                      currentImages[index],
-                                      fit: BoxFit.cover,
-                                      loadingBuilder:
-                                          (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return Center(
-                                          child: CircularProgressIndicator(
-                                            value: loadingProgress
-                                                        .expectedTotalBytes !=
-                                                    null
-                                                ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                                : null,
+                                  child: AspectRatio(
+                                    aspectRatio: 7 / 10,
+                                    child: Stack(
+                                      children: [
+                                        Opacity(
+                                          opacity: _selectedImageIndex == index
+                                              ? 0.5
+                                              : 1.0,
+                                          child: Card(
+                                            elevation: 4,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                      AppBorderRadius.small),
+                                              // 枠線の部分を削除
+                                            ),
+                                            clipBehavior: Clip.antiAlias,
+                                            child: InkWell(
+                                              onTap: isCurrentParent
+                                                  ? () {
+                                                      setState(() {
+                                                        _selectedImageIndex =
+                                                            index;
+                                                      });
+                                                    }
+                                                  : null,
+                                              child: Image.network(
+                                                currentImages[index],
+                                                fit: BoxFit.cover,
+                                                loadingBuilder: (context, child,
+                                                    loadingProgress) {
+                                                  if (loadingProgress == null)
+                                                    return child;
+                                                  return Center(
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      value: loadingProgress
+                                                                  .expectedTotalBytes !=
+                                                              null
+                                                          ? loadingProgress
+                                                                  .cumulativeBytesLoaded /
+                                                              loadingProgress
+                                                                  .expectedTotalBytes!
+                                                          : null,
+                                                    ),
+                                                  );
+                                                },
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return const Center(
+                                                    child: Text(
+                                                      '画像の読み込みに\n失敗しました',
+                                                      style: AppTextStyles.body,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
                                           ),
-                                        );
-                                      },
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return Center(
-                                          child: Text(
-                                            '画像の読み込みに\n失敗しました',
-                                            style: AppTextStyles.body,
-                                            textAlign: TextAlign.center,
+                                        ),
+                                        // チェックマークを右下に配置
+                                        if (_selectedImageIndex == index)
+                                          Positioned(
+                                            right: 15,
+                                            bottom: 25,
+                                            child: Container(
+                                              decoration: const BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.check_circle,
+                                                color: AppTheme.primaryColor,
+                                                size: AppIconSizes.large,
+                                              ),
+                                            ),
                                           ),
-                                        );
-                                      },
+                                      ],
                                     ),
                                   ),
-                                ),
-                              ),
-                            );
-                          },
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              Expanded(
-                flex: 2,
-                child: ListView.builder(
-                    itemCount: sortedTopics.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: AppSpacing.medium),
-                        child: Card(
-                          margin:
-                              EdgeInsets.fromLTRB(0, 0, 0, AppSpacing.medium),
+                Expanded(
+                  flex: 2,
+                  child: ListView.builder(
+                      itemCount: sortedTopics.length,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          margin: const EdgeInsets.fromLTRB(
+                              0, 0, 0, AppSpacing.medium),
                           child: InkWell(
                             onTap: () {
                               final topicEntry = sortedTopics[index];
@@ -340,28 +330,31 @@ class _BiasProfileParentTurnPageState
                               _showTopicDialog(topic, hint, topicKey);
                             },
                             child: Padding(
-                              padding: EdgeInsets.all(AppSpacing.medium),
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: AppSpacing.medium,
+                                  horizontal: AppSpacing.large),
                               child: Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(sortedTopics[index].value),
-                                  Icon(Icons.arrow_forward),
+                                  Text(
+                                    sortedTopics[index].value,
+                                    style: AppTextStyles.subtitle2,
+                                  ),
+                                  const Icon(Icons.chevron_right),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    }),
-              ),
-              isCurrentParent
-                  ? Flexible(
-                      flex: 1,
-                      child: Container(
+                        );
+                      }),
+                ),
+                isCurrentParent
+                    ? Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(AppSpacing.medium),
-                        decoration: BoxDecoration(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.medium),
+                        decoration: const BoxDecoration(
                           color: AppTheme.surfaceColor,
                         ),
                         child: Row(
@@ -387,7 +380,7 @@ class _BiasProfileParentTurnPageState
                                             if (mounted) {
                                               ScaffoldMessenger.of(context)
                                                   .showSnackBar(
-                                                SnackBar(
+                                                const SnackBar(
                                                   content: Text('回答を送信しました'),
                                                   backgroundColor:
                                                       AppTheme.successColor,
@@ -419,18 +412,15 @@ class _BiasProfileParentTurnPageState
                                         }
                                       }
                                     : null,
-                                child: Text('この人物に決定'),
+                                child: const Text('この人物に決定'),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    )
-                  : Flexible(
-                      flex: 1,
-                      child: SizedBox(),
-                    )
-            ],
+                      )
+                    : const SizedBox()
+              ],
+            ),
           ),
         ),
       ),

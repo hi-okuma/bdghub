@@ -168,6 +168,8 @@ class AppTheme {
 
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
+        titleTextStyle: AppTextStyles.title,
+        actionsPadding: EdgeInsets.all(AppSpacing.medium),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppBorderRadius.small),
         ),

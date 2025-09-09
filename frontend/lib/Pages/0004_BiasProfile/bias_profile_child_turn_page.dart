@@ -177,8 +177,8 @@ class _BiasProfileChildTurnPageState
                                   : Card(
                                       elevation: 4,
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(4.0),
+                                        borderRadius: BorderRadius.circular(
+                                            AppBorderRadius.small),
                                       ),
                                       clipBehavior: Clip.antiAlias,
                                       child: Image.network(
