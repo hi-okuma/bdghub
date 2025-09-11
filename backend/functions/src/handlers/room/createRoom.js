@@ -2,9 +2,10 @@ const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {generateRoomId} = require("../../utils/idGenerator");
+const {sanitizeUserInput} = require("../../utils/sanitization");
 
 /**
- * 部屋作成リクエストを処理するハンドラー（onCall用）
+ * 部屋作成リクエストを処理するハンドラー
  * @param {object} request - onCallのリクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
@@ -16,23 +17,29 @@ async function createRoomHandler(request) {
   }
 
   try {
+    const sanitizedNickname = sanitizeUserInput(nickname, {
+      maxLength: 10,
+      forbiddenChars: ["/", "."],
+      fieldName: "ニックネーム",
+    });
+
     const roomId = await generateUniqueRoomId();
     if (!roomId) {
       throw new Error("部屋作成に失敗しました。しばらく時間をおいて再度お試しください。");
     }
 
-    const roomData = createRoomData(nickname, uid);
+    const roomData = createRoomData(sanitizedNickname, uid);
 
     await db.collection("rooms").doc(roomId).set(roomData);
 
     logger.info(`部屋作成成功: ${roomId}`, {
-      nickname,
+      nickname: sanitizedNickname,
       uid,
     });
 
     return {
       roomId: roomId,
-      nickname: nickname,
+      nickname: sanitizedNickname,
     };
   } catch (error) {
     logger.error("部屋作成エラー", {
@@ -69,7 +76,7 @@ async function generateUniqueRoomId() {
 
 /**
  * 部屋データオブジェクトを作成する
- * @param {string} nickname - プレイヤーのニックネーム
+ * @param {string} nickname - プレイヤーのニックネーム（サニタイズ済み）
  * @param {string} uid - プレイヤーのUID
  * @return {object} 作成された部屋データオブジェクト
  */

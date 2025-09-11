@@ -1,5 +1,6 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
+const {sanitizeUserInput} = require("../../../utils/sanitization");
 
 /**
  * 偏見プロフィールゲームのヒント入力リクエストを処理するハンドラー（onCall用）
@@ -13,18 +14,13 @@ async function submitHint0004Handler(request) {
     throw new Error("ヒント送信に失敗しました。必要な情報が不足しています。");
   }
 
-  if (hint.length > 100) {
-    throw new Error("ヒントは100文字以内で入力してください。");
-  }
-
-  const forbiddenChars = ["'", "\"", ";", "-", "=", "/", "*"];
-  for (const char of forbiddenChars) {
-    if (hint.includes(char)) {
-      throw new Error(`ヒントに禁止文字「${char}」が含まれています。`);
-    }
-  }
-
   try {
+    const sanitizedHint = sanitizeUserInput(hint, {
+      maxLength: 100,
+      forbiddenChars: ["'", "\"", ";", "-", "=", "/", "*"],
+      fieldName: "ヒント",
+    });
+
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
       const currentGameRef = roomRef.collection("currentGame").doc("0004");
@@ -44,7 +40,7 @@ async function submitHint0004Handler(request) {
         throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
       }
 
-      const updatedHints = {...currentGameData.hints, [uid]: hint};
+      const updatedHints = {...currentGameData.hints, [uid]: sanitizedHint};
 
       const childPlayers = Object.entries(currentGameData.players).filter(
           ([uid, player]) => uid !== currentGameData.currentParent,
