@@ -1,6 +1,7 @@
 import 'package:bodogehub/Pages/0000_HubMain/game_title_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:bodogehub/Pages/0000_HubMain/top_page.dart';
@@ -12,19 +13,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/services/navigation_service.dart';
 import 'package:bodogehub/services/auth_service.dart';
 import 'test_UIscreen.dart';
+import 'package:bodogehub/config/environment_config.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await dotenv.load(fileName: "assets/.env");
+    // 環境を自動判定して初期化
+    await EnvironmentConfig.initialize();
   } catch (e) {
-    print('Error loading .env file: $e');
+    print('Error loading .env.dev file: $e');
     // .envファイルが読み込めない場合でも続行
   }
 
+  // デバッグ情報表示（リリース時は削除可）
+  EnvironmentConfig.printCurrentConfig();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await FirebaseAppCheck.instance.activate(
+    webProvider: ReCaptchaV3Provider(dotenv.env['SITE_KEY']!),
   );
 
   // Firebase Auth の初期化確認（オプション）

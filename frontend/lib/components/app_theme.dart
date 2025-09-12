@@ -12,6 +12,11 @@ class AppTheme {
   static const Color surfaceColor = Colors.white;
   static const Color cardColor = Colors.white;
   static const Color cardBorderColor = Color(0xFFF1F5F9);
+  static const Color winnerResultCardColor = Color(0xFFFFF0B3);
+  static const Color winnerResultRank1stColor = Color(0xFFFFC700);
+  static const Color winnerResultRank2ndColor = Color(0xFF999999);
+  static const Color winnerResultRank3rdColor = Color(0xFF927200);
+  static const Color resultRankDefaultColor = Color(0xFFE6E6E6);
 
   // ステータスカラー - グレースケール対応
   // static const Color hostBadgeColor = Color(0xFFEEEEEE); // grey[200] - 薄いグレー
@@ -168,6 +173,8 @@ class AppTheme {
 
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
+        titleTextStyle: AppTextStyles.title,
+        actionsPadding: EdgeInsets.all(AppSpacing.medium),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppBorderRadius.small),
         ),
@@ -297,6 +304,7 @@ class AppIconSizes {
   static const double xxLarge = 48.0;
   static const double gameCardThumbnail = 112.0;
   static const double gameDetailThumbnail = 100.0;
+  static const double rankIcon = 28.0;
 }
 
 // レイアウト定数
@@ -307,7 +315,10 @@ class AppLayout {
   static const int maxNicknameLength = 10;
   // static const int minNicknameLength = 2;
   static const int maxProfileLength = 100;
+  static const int maxProfileLines = 2;
   static const double tabHeight = 36;
+  static const double tutorialImageSize = 400.0;
+  static const double circleIndicatorStroke = 2;
 }
 
 // アニメーション定数

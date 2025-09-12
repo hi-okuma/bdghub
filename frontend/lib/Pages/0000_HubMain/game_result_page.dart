@@ -87,6 +87,8 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
     final isHost = ref.watch(isHostProvider);
 
     final roomId = currentUser.roomId;
+    final gameData = currentGame.gameData;
+    final gameTitle = gameData?['title'] as String;
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
@@ -186,49 +188,23 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
     return PopScope(
       canPop: false,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            '結果発表',
-            style: AppTextStyles.h5,
-          ),
-          centerTitle: true,
-          actions: [
-            // ホストプレイヤーのみ終了ボタンを表示
-            if (isHost)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: ElevatedButton(
-                  onPressed: showExitGameDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.medium,
-                      horizontal: AppSpacing.small,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.close, color: AppTheme.errorColor),
-                      const SizedBox(width: AppSpacing.small),
-                      Text(
-                        '終了',
-                        style: AppTextStyles.body.copyWith(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-          automaticallyImplyLeading: false,
+        appBar: GameAppBar(
+          gameTitle: gameTitle,
+          isHost: isHost,
+          onExitPressed: showExitGameDialog,
         ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.xLarge),
+              child: Text('結果発表', style: AppTextStyles.h5),
+            ),
             Expanded(
               child: ShaderMask(
                 shaderCallback: (Rect bounds) {
-                  return LinearGradient(
+                  return const LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: [0.0, 0.9, 0.95, 0.98],
@@ -242,7 +218,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
                 },
                 blendMode: BlendMode.dstOut,
                 child: resultPlayers.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -256,7 +232,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
                         ),
                       )
                     : ListView.builder(
-                        padding: EdgeInsets.all(AppSpacing.medium),
+                        padding: const EdgeInsets.all(AppSpacing.medium),
                         itemCount: resultPlayers.length,
                         itemBuilder: (context, index) {
                           final player = resultPlayers[index];
@@ -268,12 +244,8 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
             ),
 
             // もう一度遊ぶボタン（画面下部固定）
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(AppSpacing.medium),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-              ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.large),
               child: Row(
                 children: [
                   Expanded(
@@ -363,77 +335,57 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   }
 
   Widget _buildPlayerResultCard(ResultPlayer player, bool isWinner) {
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.medium),
-      padding: EdgeInsets.all(AppSpacing.large),
-      decoration: BoxDecoration(
-        // 最高ポイントプレイヤーは黄色背景
-        color: isWinner
-            ? Colors.amber.shade100.withValues(alpha: 0.3)
-            : AppTheme.cardColor.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(AppBorderRadius.large),
-        border: Border.all(
-          color: isWinner ? Colors.amber.shade300 : AppTheme.borderColor,
-          width: isWinner ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isWinner
-                ? Colors.amber.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.05),
-            blurRadius: AppElevation.medium,
-            offset: Offset(0, 4),
-          ),
-        ],
+    return Card(
+      margin: const EdgeInsets.only(
+        bottom: AppSpacing.xLarge,
       ),
-      child: Row(
-        children: [
-          // 順位表示
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: _getRankColor(player.rank),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '${player.rank}',
-                style: AppTextStyles.title.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+      elevation: AppElevation.low,
+      color: isWinner ? AppTheme.winnerResultCardColor : AppTheme.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.card),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.large),
+        child: Row(
+          children: [
+            // 順位表示
+            Container(
+              width: AppIconSizes.rankIcon,
+              height: AppIconSizes.rankIcon,
+              decoration: BoxDecoration(
+                color: _getRankColor(player.rank),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '${player.rank}',
+                  style: player.rank < 4
+                      ? AppTextStyles.subtitle.copyWith(color: Colors.white)
+                      : AppTextStyles.subtitle
+                          .copyWith(color: AppTheme.secondaryTextColor),
                 ),
               ),
             ),
-          ),
-
-          SizedBox(width: AppSpacing.medium),
-
-          // プレイヤー情報
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  player.nickname,
-                  style: AppTextStyles.titleMedium.copyWith(
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: AppSpacing.medium),
+            // プレイヤー情報
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(player.nickname,
+                      style: AppTextStyles.subtitle2
+                          .copyWith(color: AppTheme.secondaryTextColor)),
+                  const SizedBox(height: AppSpacing.small),
+                  Text(
+                    '${player.points}点',
+                    style: AppTextStyles.subtitle2
+                        .copyWith(color: AppTheme.secondaryTextColor),
                   ),
-                ),
-                SizedBox(height: AppSpacing.small),
-                Text(
-                  '${player.points}点',
-                  style: AppTextStyles.title.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isWinner
-                        ? Colors.amber.shade700
-                        : AppTheme.primaryColor,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -441,13 +393,13 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   Color _getRankColor(int rank) {
     switch (rank) {
       case 1:
-        return Colors.amber; // 金
+        return AppTheme.winnerResultRank1stColor; // 金
       case 2:
-        return Colors.grey.shade400; // 銀
+        return AppTheme.winnerResultRank2ndColor; // 銀
       case 3:
-        return Colors.brown.shade400; // 銅
+        return AppTheme.winnerResultRank3rdColor; // 銅
       default:
-        return AppTheme.accentColor; // その他
+        return AppTheme.resultRankDefaultColor; // その他
     }
   }
 }

@@ -38,8 +38,6 @@ class _BiasProfileChildTurnPageState
   bool _isValidInput = false;
 
   void _onProfileChanged(String value) {
-    print('🔍 入力値: "$value"'); // デバッグ用
-
     // エラーメッセージをクリア
     if (_errorMessage != null) {
       setState(() {
@@ -49,7 +47,6 @@ class _BiasProfileChildTurnPageState
 
     // バリデーション実行
     final validation = ValidationUtils.validateProfile(value);
-    print('🔍 バリデーション結果: ${validation.isValid}'); // デバッグ用
 
     // ★重要：バリデーション結果に関わらず毎回setStateで更新
     setState(() {
@@ -89,6 +86,7 @@ class _BiasProfileChildTurnPageState
     final gameData = currentGame.gameData;
     final currentParent = gameData?['currentParent'] as String?;
     final isCurrentParent = currentParent == currentUser.uid;
+    final gameTitle = gameData?['title'] as String;
 
     // 現在のユーザーのお題を取得
     final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
@@ -112,42 +110,15 @@ class _BiasProfileChildTurnPageState
     return PopScope(
       canPop: false,
       child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            // ホストプレイヤーのみ終了ボタンを表示
-            if (isHost)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: ElevatedButton(
-                  onPressed: showExitGameDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.medium,
-                      horizontal: AppSpacing.small,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.close, color: AppTheme.errorColor),
-                      const SizedBox(width: AppSpacing.small),
-                      Text(
-                        '終了',
-                        style: AppTextStyles.body.copyWith(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-          automaticallyImplyLeading: false,
-        ),
+        appBar: GameAppBar(
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: showExitGameDialog),
         backgroundColor: AppTheme.backgroundColor,
         body: isCurrentParent
-            ? Center(
+            ? const Center(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Text(
                       'あなたは親プレイヤーです',
@@ -165,42 +136,40 @@ class _BiasProfileChildTurnPageState
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     isSoftwareKeyboardVisible
-                        ? SizedBox.shrink()
-                        : Flexible(
-                            flex: 1,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'あなたは子プレイヤーです',
-                                  style: AppTextStyles.h5,
-                                ),
-                                SizedBox(
-                                  height: AppSpacing.small,
-                                ),
-                                Text(
-                                  '人物の見た目から勝手に想像して\n指定されたプロフィールを入力してください',
-                                  style: AppTextStyles.body,
-                                  textAlign: TextAlign.center,
-                                )
-                              ],
-                            ),
+                        ? const SizedBox.shrink()
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'あなたは子プレイヤーです',
+                                style: AppTextStyles.h5,
+                              ),
+                              SizedBox(
+                                height: AppSpacing.small,
+                              ),
+                              Text(
+                                '人物の見た目から勝手に想像して\n指定されたプロフィールを入力してください',
+                                style: AppTextStyles.body,
+                                textAlign: TextAlign.center,
+                              )
+                            ],
                           ),
                     Flexible(
                       flex: isSoftwareKeyboardVisible ? 2 : 4,
                       child: Center(
                         child: Container(
-                          height: MediaQuery.of(context).size.height * 0.45,
+                          height: MediaQuery.of(context).size.height * 0.5,
                           child: AspectRatio(
                             aspectRatio: 7 / 10,
                             child: answerImage.isEmpty
-                                ? Center(
+                                ? const Center(
                                     child: CircularProgressIndicator(),
                                   )
                                 : Card(
-                                    elevation: 4,
+                                    elevation: AppElevation.medium,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4.0),
+                                      borderRadius: BorderRadius.circular(
+                                          AppBorderRadius.small),
                                     ),
                                     clipBehavior: Clip.antiAlias,
                                     child: Image.network(
@@ -225,7 +194,7 @@ class _BiasProfileChildTurnPageState
                                       },
                                       errorBuilder:
                                           (context, error, stackTrace) {
-                                        return Center(
+                                        return const Center(
                                           child: Text(
                                             '画像の読み込みに\n失敗しました',
                                             style: AppTextStyles.body,
@@ -239,144 +208,134 @@ class _BiasProfileChildTurnPageState
                         ),
                       ),
                     ),
-                    Flexible(
-                      flex: 1,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.large),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.medium),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                TextField(
-                                  maxLength: AppLayout.maxProfileLength,
-                                  controller: _profileController,
-                                  decoration: InputDecoration(
-                                    labelText: currentUserTopic.isEmpty
-                                        ? 'お題を読み込み中...（${AppLayout.maxProfileLength}文字以内）'
-                                        : '$currentUserTopic（${AppLayout.maxProfileLength}文字以内）',
-                                    hintText: '偏見を入力してください',
-                                  ),
-                                  onChanged: _onProfileChanged,
-                                ),
-                                _errorMessage != null
-                                    ? Text(
-                                        _errorMessage!,
-                                        style: AppTextStyles.errorText,
-                                      )
-                                    : SizedBox.shrink(),
-                              ],
+                          TextField(
+                            maxLength: AppLayout.maxProfileLength,
+                            maxLines: AppLayout.maxProfileLines,
+                            controller: _profileController,
+                            decoration: InputDecoration(
+                              alignLabelWithHint: true,
+                              labelText: currentUserTopic.isEmpty
+                                  ? 'お題を読み込み中...（${AppLayout.maxProfileLength}文字以内）'
+                                  : '$currentUserTopic（${AppLayout.maxProfileLength}文字以内）',
+                              hintText: '偏見を入力してください',
                             ),
+                            onChanged: _onProfileChanged,
                           ),
                           // エラー表示
+                          _errorMessage != null
+                              ? Text(
+                                  _errorMessage!,
+                                  style: AppTextStyles.errorText,
+                                )
+                              : SizedBox.shrink(),
                         ],
                       ),
                     ),
-                    Flexible(
-                      flex: 1,
-                      child: Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(AppSpacing.medium),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: LoadingButton(
-                                text: hasSubmittedHint ? '他プレイヤー待ち' : '提出',
-                                isLoading: _isSubmitting,
-                                onPressed: (hasSubmittedHint ||
-                                        _isSubmitting ||
-                                        !_isValidInput) // 条件を修正
-                                    ? null
-                                    : () async {
-                                        // asyncを追加
-                                        // バリデーション
-                                        final profileText =
-                                            _profileController.text.trim();
-                                        if (profileText.isEmpty) {
-                                          setState(() {
-                                            _errorMessage = 'ヒントを入力してください';
-                                          });
-                                          return;
-                                        }
-
-                                        final validation =
-                                            ValidationUtils.validateProfile(
-                                                profileText);
-                                        if (!validation.isValid) {
-                                          setState(() {
-                                            _errorMessage =
-                                                validation.errorMessage;
-                                          });
-                                          return;
-                                        }
-
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.large),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: LoadingButton(
+                              text: hasSubmittedHint ? '他プレイヤー待ち' : '提出',
+                              isLoading: _isSubmitting,
+                              onPressed: (hasSubmittedHint ||
+                                      _isSubmitting ||
+                                      !_isValidInput) // 条件を修正
+                                  ? null
+                                  : () async {
+                                      // asyncを追加
+                                      // バリデーション
+                                      final profileText =
+                                          _profileController.text.trim();
+                                      if (profileText.isEmpty) {
                                         setState(() {
-                                          _errorMessage = null;
-                                          _isSubmitting = true; // 追加
+                                          _errorMessage = 'ヒントを入力してください';
                                         });
+                                        return;
+                                      }
 
-                                        // API呼び出しのエラーハンドリング追加
-                                        try {
-                                          final result =
-                                              await ApiService.submitHint0004(
-                                                  roomId,
-                                                  currentUser.uid!,
-                                                  profileText);
+                                      final validation =
+                                          ValidationUtils.validateProfile(
+                                              profileText);
+                                      if (!validation.isValid) {
+                                        setState(() {
+                                          _errorMessage =
+                                              validation.errorMessage;
+                                        });
+                                        return;
+                                      }
 
-                                          if (result['success'] == true) {
-                                            print('💡 ヒント提出: $profileText');
+                                      setState(() {
+                                        _errorMessage = null;
+                                        _isSubmitting = true; // 追加
+                                      });
 
-                                            // 成功時のスナックバー表示
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text('提出を受け付けました'),
-                                                  backgroundColor:
-                                                      AppTheme.successColor,
-                                                  duration:
-                                                      Duration(seconds: 2),
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            // APIからの失敗レスポンス
-                                            if (mounted) {
-                                              ApiErrorHandler.handleApiError(
-                                                  context, result, setError);
-                                              setState(() {
-                                                _isSubmitting = false;
-                                              });
-                                            }
-                                          }
-                                        } catch (e) {
-                                          print('❌ ヒント提出に失敗: $e');
+                                      // API呼び出しのエラーハンドリング追加
+                                      try {
+                                        final result =
+                                            await ApiService.submitHint0004(
+                                                roomId,
+                                                currentUser.uid!,
+                                                profileText);
 
+                                        if (result['success'] == true) {
+                                          print('💡 ヒント提出: $profileText');
+
+                                          // 成功時のスナックバー表示
                                           if (mounted) {
-                                            // http.Response型のエラーかどうかで処理を分ける
-                                            if (e is http.Response) {
-                                              ApiErrorHandler.handleHttpError(
-                                                  context, e, setError);
-                                            } else {
-                                              ApiErrorHandler.handleException(
-                                                  context, e, setError);
-                                            }
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text('提出を受け付けました'),
+                                                backgroundColor:
+                                                    AppTheme.successColor,
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          // APIからの失敗レスポンス
+                                          if (mounted) {
+                                            ApiErrorHandler.handleApiError(
+                                                context, result, setError);
                                             setState(() {
                                               _isSubmitting = false;
                                             });
                                           }
-                                        } finally {
+                                        }
+                                      } catch (e) {
+                                        print('❌ ヒント提出に失敗: $e');
+
+                                        if (mounted) {
+                                          // http.Response型のエラーかどうかで処理を分ける
+                                          if (e is http.Response) {
+                                            ApiErrorHandler.handleHttpError(
+                                                context, e, setError);
+                                          } else {
+                                            ApiErrorHandler.handleException(
+                                                context, e, setError);
+                                          }
                                           setState(() {
-                                            _isSubmitting = false; // ★通信終了
+                                            _isSubmitting = false;
                                           });
                                         }
-                                      },
-                              ),
+                                      } finally {
+                                        setState(() {
+                                          _isSubmitting = false; // ★通信終了
+                                        });
+                                      }
+                                    },
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
