@@ -132,7 +132,7 @@ class _BiasProfileParentTurnPageState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${hint}',
+                  '$hint',
                   style: AppTextStyles.body,
                 ),
                 const SizedBox(height: AppSpacing.large),
@@ -160,268 +160,262 @@ class _BiasProfileParentTurnPageState
             isHost: isHost,
             onExitPressed: showExitGameDialog),
         backgroundColor: AppTheme.backgroundColor,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                isCurrentParent
-                    ? const Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'あなたは親プレイヤーです',
-                            style: AppTextStyles.h5,
-                          ),
-                          SizedBox(
-                            height: AppSpacing.medium,
-                          ),
-                          Text(
-                            '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
-                            style: AppTextStyles.body,
-                            textAlign: TextAlign.center,
-                          )
-                        ],
-                      )
-                    : const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'あなたは子プレイヤーです',
-                            style: AppTextStyles.h5,
-                          ),
-                          SizedBox(
-                            height: AppSpacing.medium,
-                          ),
-                          Text(
-                            '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
-                            style: AppTextStyles.body,
-                            textAlign: TextAlign.center,
-                          )
-                        ],
-                      ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.small),
-                  child: Flexible(
-                    flex: 4,
-                    child: Row(
+        body: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            isCurrentParent
+                ? Center(
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'あなたは親プレイヤーです',
+                          style: AppTextStyles.h5,
+                        ),
+                        SizedBox(
+                          height: AppSpacing.medium,
+                        ),
+                        Text(
+                          '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
+                          style: AppTextStyles.body,
+                          textAlign: TextAlign.center,
+                        )
+                      ],
+                    ),
+                  )
+                : Center(
+                    child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: Container(
-                            height: MediaQuery.of(context).size.height * 0.5,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: currentImages.length,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    right: index < currentImages.length
-                                        ? AppSpacing.xSmall
-                                        : 0,
-                                  ),
-                                  child: AspectRatio(
-                                    aspectRatio: 7 / 10,
-                                    child: Stack(
-                                      children: [
-                                        Opacity(
-                                          opacity: _selectedImageIndex == index
-                                              ? 0.5
-                                              : 1.0,
-                                          child: Card(
-                                            elevation: 4,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      AppBorderRadius.small),
-                                              // 枠線の部分を削除
-                                            ),
-                                            clipBehavior: Clip.antiAlias,
-                                            child: InkWell(
-                                              onTap: isCurrentParent
-                                                  ? () {
-                                                      setState(() {
-                                                        _selectedImageIndex =
-                                                            index;
-                                                      });
-                                                    }
-                                                  : null,
-                                              child: Image.network(
-                                                currentImages[index],
-                                                fit: BoxFit.cover,
-                                                loadingBuilder: (context, child,
-                                                    loadingProgress) {
-                                                  if (loadingProgress == null)
-                                                    return child;
-                                                  return Center(
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      value: loadingProgress
-                                                                  .expectedTotalBytes !=
-                                                              null
-                                                          ? loadingProgress
-                                                                  .cumulativeBytesLoaded /
-                                                              loadingProgress
-                                                                  .expectedTotalBytes!
-                                                          : null,
-                                                    ),
-                                                  );
-                                                },
-                                                errorBuilder: (context, error,
-                                                    stackTrace) {
-                                                  return const Center(
-                                                    child: Text(
-                                                      '画像の読み込みに\n失敗しました',
-                                                      style: AppTextStyles.body,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                  );
-                                                },
+                        Text(
+                          'あなたは子プレイヤーです',
+                          style: AppTextStyles.h5,
+                        ),
+                        SizedBox(
+                          height: AppSpacing.medium,
+                        ),
+                        Text(
+                          '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
+                          style: AppTextStyles.body,
+                          textAlign: TextAlign.center,
+                        )
+                      ],
+                    ),
+                  ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.medium, horizontal: AppSpacing.large),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: MediaQuery.of(context).size.height * 0.4,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: currentImages.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              right: index < currentImages.length
+                                  ? AppSpacing.xSmall
+                                  : 0,
+                            ),
+                            child: AspectRatio(
+                              aspectRatio: 7 / 10,
+                              child: Stack(
+                                children: [
+                                  Opacity(
+                                    opacity: _selectedImageIndex == index
+                                        ? 0.5
+                                        : 1.0,
+                                    child: Card(
+                                      elevation: AppElevation.medium,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                            AppBorderRadius.small),
+                                        // 枠線の部分を削除
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: InkWell(
+                                        onTap: isCurrentParent
+                                            ? () {
+                                                setState(() {
+                                                  _selectedImageIndex = index;
+                                                });
+                                              }
+                                            : null,
+                                        child: Image.network(
+                                          currentImages[index],
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child,
+                                              loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                value: loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? loadingProgress
+                                                            .cumulativeBytesLoaded /
+                                                        loadingProgress
+                                                            .expectedTotalBytes!
+                                                    : null,
                                               ),
-                                            ),
-                                          ),
+                                            );
+                                          },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return const Center(
+                                              child: Text(
+                                                '画像の読み込みに\n失敗しました',
+                                                style: AppTextStyles.body,
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            );
+                                          },
                                         ),
-                                        // チェックマークを右下に配置
-                                        if (_selectedImageIndex == index)
-                                          Positioned(
-                                            right: 15,
-                                            bottom: 25,
-                                            child: Container(
-                                              decoration: const BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.check_circle,
-                                                color: AppTheme.primaryColor,
-                                                size: AppIconSizes.large,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                );
-                              },
+                                  // チェックマークを右下に配置
+                                  if (_selectedImageIndex == index)
+                                    Positioned(
+                                      right: 15,
+                                      bottom: 25,
+                                      child: Container(
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.check_circle,
+                                          color: AppTheme.primaryColor,
+                                          size: AppIconSizes.large,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                          itemCount: sortedTopics.length,
+                          itemBuilder: (context, index) {
+                            return Card(
+                              margin: const EdgeInsets.only(
+                                  bottom: AppSpacing.medium),
+                              child: InkWell(
+                                onTap: () {
+                                  final topicEntry = sortedTopics[index];
+                                  final topicKey = topicEntry.key;
+                                  final topic = topicEntry.value;
+                                  final hint = hints[topicKey] as String?;
+                                  _showTopicDialog(topic, hint, topicKey);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: AppSpacing.medium,
+                                      horizontal: AppSpacing.large),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        sortedTopics[index].value,
+                                        style: AppTextStyles.subtitle2,
+                                      ),
+                                      const Icon(Icons.chevron_right),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            isCurrentParent
+                ? Padding(
+                    padding: const EdgeInsets.all(AppSpacing.large),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _selectedImageIndex != null
+                                ? () async {
+                                    // API呼び出しのエラーハンドリング追加
+                                    try {
+                                      final result =
+                                          await ApiService.determineAnswer0004(
+                                        roomId,
+                                        currentUser.uid!,
+                                        _selectedImageIndex!,
+                                      );
+
+                                      if (result['success'] == true) {
+                                        print('💡 回答を提出: $_selectedImageIndex');
+
+                                        // 成功時のスナックバー表示
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text('回答を送信しました'),
+                                              backgroundColor:
+                                                  AppTheme.successColor,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      } else {
+                                        // APIからの失敗レスポンス
+                                        if (mounted) {
+                                          ApiErrorHandler.handleApiError(
+                                              context, result, setError);
+                                        }
+                                      }
+                                    } catch (e) {
+                                      print('❌ 回答にに失敗: $e');
+
+                                      if (mounted) {
+                                        // http.Response型のエラーかどうかで処理を分ける
+                                        if (e is http.Response) {
+                                          ApiErrorHandler.handleHttpError(
+                                              context, e, setError);
+                                        } else {
+                                          ApiErrorHandler.handleException(
+                                              context, e, setError);
+                                        }
+                                      }
+                                    }
+                                  }
+                                : null,
+                            child: const Text('この人物に決定'),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: ListView.builder(
-                      itemCount: sortedTopics.length,
-                      itemBuilder: (context, index) {
-                        return Card(
-                          margin: const EdgeInsets.fromLTRB(
-                              0, 0, 0, AppSpacing.medium),
-                          child: InkWell(
-                            onTap: () {
-                              final topicEntry = sortedTopics[index];
-                              final topicKey = topicEntry.key;
-                              final topic = topicEntry.value;
-                              final hint = hints[topicKey] as String?;
-                              _showTopicDialog(topic, hint, topicKey);
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: AppSpacing.medium,
-                                  horizontal: AppSpacing.large),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    sortedTopics[index].value,
-                                    style: AppTextStyles.subtitle2,
-                                  ),
-                                  const Icon(Icons.chevron_right),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                ),
-                isCurrentParent
-                    ? Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.medium),
-                        decoration: const BoxDecoration(
-                          color: AppTheme.surfaceColor,
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: _selectedImageIndex != null
-                                    ? () async {
-                                        // API呼び出しのエラーハンドリング追加
-                                        try {
-                                          final result = await ApiService
-                                              .determineAnswer0004(
-                                            roomId,
-                                            currentUser.uid!,
-                                            _selectedImageIndex!,
-                                          );
-
-                                          if (result['success'] == true) {
-                                            print(
-                                                '💡 回答を提出: $_selectedImageIndex');
-
-                                            // 成功時のスナックバー表示
-                                            if (mounted) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('回答を送信しました'),
-                                                  backgroundColor:
-                                                      AppTheme.successColor,
-                                                  duration:
-                                                      Duration(seconds: 2),
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            // APIからの失敗レスポンス
-                                            if (mounted) {
-                                              ApiErrorHandler.handleApiError(
-                                                  context, result, setError);
-                                            }
-                                          }
-                                        } catch (e) {
-                                          print('❌ 回答にに失敗: $e');
-
-                                          if (mounted) {
-                                            // http.Response型のエラーかどうかで処理を分ける
-                                            if (e is http.Response) {
-                                              ApiErrorHandler.handleHttpError(
-                                                  context, e, setError);
-                                            } else {
-                                              ApiErrorHandler.handleException(
-                                                  context, e, setError);
-                                            }
-                                          }
-                                        }
-                                      }
-                                    : null,
-                                child: const Text('この人物に決定'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox()
-              ],
-            ),
-          ),
+                  )
+                : const SizedBox()
+          ],
         ),
       ),
     );

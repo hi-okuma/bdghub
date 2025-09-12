@@ -116,15 +116,14 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
           title: const Text('ゲームを終了しますか？'),
           content: const Text('ゲームを終了すると、参加者全員がゲーム選択画面に戻ります。'),
           actions: [
-            LoadingButton(
-              text: 'キャンセル',
-              isLoading: false,
-              isElevated: false,
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            LoadingButton(
-              text: 'ゲーム終了',
-              isLoading: false,
+            TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('キャンセル',
+                    style: TextStyle(color: AppTheme.secondaryTextColor))),
+            TextButton(
+              child: const Text('ゲーム終了'),
               onPressed: () async {
                 Navigator.of(context).pop();
 
