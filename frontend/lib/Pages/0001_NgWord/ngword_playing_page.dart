@@ -104,6 +104,8 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
     final isHost = ref.watch(isHostProvider);
+    final gameData = currentGame.gameData;
+    final gameTitle = gameData?['title'] as String;
 
     final roomId = currentUser.roomId;
 
@@ -186,36 +188,10 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
     return PopScope(
       canPop: false,
       child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            // ホストプレイヤーのみ終了ボタンを表示
-            if (isHost)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: ElevatedButton(
-                  onPressed: showExitGameDialog,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.warningColor,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.medium,
-                      horizontal: AppSpacing.small,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.close, color: AppTheme.errorColor),
-                      const SizedBox(width: AppSpacing.small),
-                      Text(
-                        '終了',
-                        style: AppTextStyles.body.copyWith(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-          automaticallyImplyLeading: false,
+        appBar: GameAppBar(
+          gameTitle: gameTitle,
+          isHost: isHost,
+          onExitPressed: showExitGameDialog,
         ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
@@ -237,7 +213,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
                 },
                 blendMode: BlendMode.dstOut,
                 child: gamePlayers.isEmpty
-                    ? Center(
+                    ? const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -251,7 +227,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
                         ),
                       )
                     : ListView.builder(
-                        padding: EdgeInsets.only(
+                        padding: const EdgeInsets.only(
                           left: AppSpacing.medium,
                           right: AppSpacing.medium,
                           top: AppSpacing.medium,
@@ -267,16 +243,12 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
             ),
 
             // 申告ボタン（画面下部固定）
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(AppSpacing.medium),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceColor,
-              ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.large),
               child: Row(
                 children: [
                   Expanded(
-                    child: LoadingButton(
+                    child: ElevatedLoadingButton(
                       text: _hasReported ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
                       isLoading: _isSubmittingReport,
                       onPressed: _hasReported ? null : _onReportPressed,
@@ -368,74 +340,63 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
       return SizedBox.shrink();
     }
 
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.medium),
-      padding: EdgeInsets.all(AppSpacing.medium),
-      decoration: BoxDecoration(
-        color: !player.isAlive
-            ? AppTheme.hintTextColor.withValues(alpha: 0.3)
-            : AppTheme.cardColor.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(AppBorderRadius.large),
-        border: Border.all(
-          color: AppTheme.borderColor,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: AppElevation.low,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // プレイヤー名とポイント
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    player.nickname,
-                    style: AppTextStyles.title,
-                  ),
-                ],
-              ),
-              Text(
-                '${player.points}点',
-                style: AppTextStyles.subtitle.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: AppSpacing.small),
-
-          // NGワード表示
-          RichText(
-            text: TextSpan(
-              style: AppTextStyles.body,
+    return Card(
+      color: !player.isAlive
+          ? AppTheme.disabledBackgroundColor
+          : AppTheme.cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.large),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // プレイヤー名とポイント
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextSpan(
-                  text: 'NGワード：',
-                  style: TextStyle(color: AppTheme.secondaryTextColor),
+                Row(
+                  children: [
+                    Text(
+                      player.nickname,
+                      style: AppTextStyles.subtitle2
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                    ),
+                  ],
                 ),
-                TextSpan(
-                  text: player.ngWord.isEmpty ? '読み込み中...' : player.ngWord,
-                  style: TextStyle(
-                    color: player.ngWord.isEmpty
-                        ? AppTheme.hintTextColor
-                        : AppTheme.errorColor,
-                    fontWeight: FontWeight.bold,
+                Text(
+                  '${player.points}点',
+                  style: AppTextStyles.subtitle2.copyWith(
+                    color: AppTheme.secondaryTextColor,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+
+            SizedBox(height: AppSpacing.small),
+
+            // NGワード表示
+            RichText(
+              text: TextSpan(
+                style: AppTextStyles.body,
+                children: [
+                  TextSpan(
+                    text: 'NGワード：',
+                    style: AppTextStyles.subtitle
+                        .copyWith(color: AppTheme.error2Color),
+                  ),
+                  TextSpan(
+                    text: player.ngWord.isEmpty ? '読み込み中...' : player.ngWord,
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: player.ngWord.isEmpty
+                          ? AppTheme.secondaryTextColor
+                          : AppTheme.error2Color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

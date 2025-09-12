@@ -137,7 +137,7 @@ class AppTheme {
           borderSide: const BorderSide(color: error1Color),
         ),
         disabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: disabledBackgroundColor),
+          borderSide: BorderSide(color: disabledBackgroundColor),
         ),
         filled: true,
         fillColor: surfaceColor,

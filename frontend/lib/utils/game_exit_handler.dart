@@ -38,7 +38,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         context: context,
         barrierDismissible: false,
         builder: (context) => Center(
-          child: Card(
+          child: Dialog(
             child: Padding(
               padding: EdgeInsets.all(AppSpacing.large),
               child: Column(
