@@ -1,16 +1,22 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwGameStatusError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * 偏見プロフィールゲームの画像選択リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * 偏見プロフィールゲームの画像選択リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function determineAnswer0004Handler(request) {
   const {roomId, uid, imageIndex} = request.data;
 
   if (!roomId || !uid || imageIndex === undefined || imageIndex < 0 || imageIndex > 4) {
-    throw new Error("画像選択に失敗しました。必要な情報が不足しているか、無効な選択です。");
+    throwValidationError("画像選択に失敗しました。");
   }
 
   try {
@@ -20,17 +26,20 @@ async function determineAnswer0004Handler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが見つかりません。");
+        throwNotFoundError("ゲーム", "0004");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "parentTurn") {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwGameStatusError("parentTurn", currentGameData.gameStatus);
       }
 
       if (uid !== currentGameData.currentParent) {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwStructuredError(
+            "OnlyParentCandetermineAnswer",
+            "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
+        );
       }
 
       transaction.update(currentGameRef, {
@@ -50,13 +59,18 @@ async function determineAnswer0004Handler(request) {
       message: "画像を選択しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("画像選択エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       uid,
       imageIndex,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 

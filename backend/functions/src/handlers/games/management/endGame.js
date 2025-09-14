@@ -2,17 +2,22 @@ const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {DEFAULT_MAX_ROOM_PLAYERS} = require("../../../config/environment");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * ゲーム終了リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * ゲーム終了リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function endGameHandler(request) {
   const {roomId} = request.data;
 
   if (!roomId) {
-    throw new Error("ゲーム終了に失敗しました。必要な情報が不足しています。");
+    throwValidationError("ゲーム終了に失敗しました。");
   }
 
   try {
@@ -23,7 +28,7 @@ async function endGameHandler(request) {
       const roomDoc = await transaction.get(roomRef);
 
       if (!roomDoc.exists) {
-        throw new Error("指定された部屋が見つかりません。");
+        throwNotFoundError("部屋", roomId);
       }
 
       const roomData = roomDoc.data();
@@ -53,11 +58,16 @@ async function endGameHandler(request) {
       message: "ゲームを終了しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("ゲーム終了エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 
@@ -66,15 +76,27 @@ async function endGameHandler(request) {
  * @param {string} status - 部屋のステータス
  */
 function handleInvalidRoomStatus(status) {
-  const statusErrors = {
-    "accepting": "この部屋ではゲームが進行中ではありません。",
-    "full": "この部屋ではゲームが進行中ではありません。",
-    "closed": "この部屋はすでに閉じられています。",
-    "unknown": "ゲームを終了できませんでした。",
+  const statusErrorMap = {
+    "accepting": {
+      code: "InvalidRoomStatus",
+      message: "この部屋ではゲームが進行中ではありません。",
+    },
+    "full": {
+      code: "InvalidRoomStatus",
+      message: "この部屋ではゲームが進行中ではありません。",
+    },
+    "closed": {
+      code: "RoomClosed",
+      message: "この部屋はすでに閉じられています。",
+    },
   };
 
-  const errorMessage = statusErrors[status] || statusErrors.unknown;
-  throw new Error(errorMessage);
+  const errorInfo = statusErrorMap[status] || {
+    code: "InvalidRoomStatus",
+    message: "ゲームを終了できませんでした。",
+  };
+
+  throwStructuredError(errorInfo.code, errorInfo.message);
 }
 
 /**

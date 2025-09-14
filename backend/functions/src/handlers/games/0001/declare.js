@@ -1,16 +1,22 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
+const {
+  throwValidationError,
+  throwGameStatusError,
+  throwNotFoundError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * NGワードゲームの申告リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * NGワードゲームの申告リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function declare0001Handler(request) {
   const {roomId, uid} = request.data;
 
   if (!roomId || !uid) {
-    throw new Error("申告に失敗しました。必要な情報が不足しています。");
+    throwValidationError("申告に失敗しました。");
   }
 
   try {
@@ -20,13 +26,17 @@ async function declare0001Handler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが見つかりません。");
+        throwNotFoundError("ゲーム", "0001");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "playing") {
-        throw new Error("ゲームが進行中ではありません。");
+        throwGameStatusError("playing", currentGameData.gameStatus);
+      }
+
+      if (!currentGameData.players[uid]) {
+        throwNotFoundError("プレイヤー", uid);
       }
 
       const updatedPlayers = {...currentGameData.players};
@@ -41,7 +51,7 @@ async function declare0001Handler(request) {
         const winnerEntry = Object.entries(updatedPlayers).find(([uid, player]) => player.isAlive);
 
         if (!winnerEntry) {
-          throw new Error("勝者が見つかりません");
+          throwStructuredError("Internal", "勝者が見つかりません");
         }
 
         const winnerUid = winnerEntry[0];
@@ -61,7 +71,7 @@ async function declare0001Handler(request) {
         );
 
         if (!ngWordsDoc.exists) {
-          throw new Error("NGワードリストが見つかりません");
+          throwStructuredError("Internal", "NGワードリストが見つかりません");
         }
 
         const ngWordsList = ngWordsDoc.data().words;
@@ -95,12 +105,17 @@ async function declare0001Handler(request) {
       message: "申告しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("申告エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       uid,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 

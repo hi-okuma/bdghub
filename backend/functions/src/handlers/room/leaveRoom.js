@@ -1,17 +1,22 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwStructuredError,
+} = require("../../utils/errorHandler");
 
 /**
- * 部屋退出リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * 部屋退出リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function leaveRoomHandler(request) {
   const {roomId, uid} = request.data;
 
   if (!roomId || !uid) {
-    throw new Error("退出に失敗しました。必要な情報が不足しています。");
+    throwValidationError("退出に失敗しました。");
   }
 
   try {
@@ -19,13 +24,13 @@ async function leaveRoomHandler(request) {
     const roomDoc = await roomRef.get();
 
     if (!roomDoc.exists) {
-      throw new Error("指定された部屋が見つかりません。");
+      throwNotFoundError("部屋", roomId);
     }
 
     const roomData = roomDoc.data();
 
     if (!roomData.players[uid]) {
-      throw new Error("指定されたプレイヤーが部屋内に存在しません。");
+      throwNotFoundError("プレイヤー", uid);
     }
 
     await updateRoomWithTransaction(roomRef, uid);
@@ -40,12 +45,17 @@ async function leaveRoomHandler(request) {
       message: "部屋から退出しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("部屋退出エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       uid,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 

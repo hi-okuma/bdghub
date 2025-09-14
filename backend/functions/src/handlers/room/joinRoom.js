@@ -2,20 +2,38 @@ const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {DEFAULT_MAX_ROOM_PLAYERS} = require("../../config/environment");
+const {sanitizeUserInput, sanitizeAlphanumeric} = require("../../utils/sanitization");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwRoomStatusError,
+  throwStructuredError,
+} = require("../../utils/errorHandler");
 
 /**
- * 部屋参加リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * 部屋参加リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function joinRoomHandler(request) {
   const {nickname, uid, roomId} = request.data;
 
   if (!nickname || !uid || !roomId) {
-    throw new Error("部屋に参加できませんでした。必要な情報が不足しています。");
+    throwValidationError("部屋に参加できませんでした。");
   }
 
   try {
+    const sanitizedNickname = sanitizeUserInput(nickname, {
+      maxLength: 10,
+      forbiddenChars: ["/", "."],
+      fieldName: "ニックネーム",
+    });
+
+    const sanitizedRoomId = sanitizeAlphanumeric(roomId, {
+      maxLength: 16,
+      fieldName: "部屋コード",
+    });
+
     let maxRoomPlayers = DEFAULT_MAX_ROOM_PLAYERS;
     try {
       const serviceConfigDoc = await db.collection("serviceConfig").doc("global").get();
@@ -26,18 +44,18 @@ async function joinRoomHandler(request) {
       logger.warn("serviceConfig取得エラー、デフォルト値を使用します", {error: configError.message});
     }
 
-    const roomDoc = await db.collection("rooms").doc(roomId).get();
+    const roomDoc = await db.collection("rooms").doc(sanitizedRoomId).get();
     if (!roomDoc.exists) {
-      throw new Error("指定された部屋が見つかりません。");
+      throwNotFoundError("部屋", sanitizedRoomId);
     }
 
     const roomData = roomDoc.data();
-    const roomRef = db.collection("rooms").doc(roomId);
+    const roomRef = db.collection("rooms").doc(sanitizedRoomId);
 
     const currentPlayerCount = Object.keys(roomData.players).length;
 
     if (roomData.status === "full" && currentPlayerCount < maxRoomPlayers) {
-      logger.info(`部屋ID=${roomId} はfullですが、最大人数が引き上げられたためacceptingに戻します。`);
+      logger.info(`部屋ID=${sanitizedRoomId} はfullですが、最大人数が引き上げられたためacceptingに戻します。`);
       await roomRef.update({
         status: "accepting",
         updatedAt: FieldValue.serverTimestamp(),
@@ -46,67 +64,59 @@ async function joinRoomHandler(request) {
     }
 
     if (roomData.status !== "accepting") {
-      handleInvalidRoomStatus(roomData.status);
+      throwRoomStatusError(roomData.status);
     }
 
-    if (isNicknameDuplicate(roomData, nickname)) {
-      throw new Error("このニックネームは既に使われています。");
+    if (isNicknameDuplicate(roomData, sanitizedNickname)) {
+      throwStructuredError("DuplicateNickname", "このニックネームは既に使われています。");
     }
 
-    if (roomData.players.length >= maxRoomPlayers) {
+    if (currentPlayerCount >= maxRoomPlayers) {
       if (roomData.status === "accepting") {
         try {
           await roomRef.update({
             status: "full",
             updatedAt: FieldValue.serverTimestamp(),
           });
-          logger.info(`部屋が満員になったためステータスを更新: roomId=${roomId}`);
+          logger.info(`部屋が満員になったためステータスを更新: roomId=${sanitizedRoomId}`);
         } catch (updateError) {
-          logger.error(`満員時のステータス更新に失敗: roomId=${roomId}`, {error: updateError});
+          logger.error(`満員時のステータス更新に失敗: roomId=${sanitizedRoomId}`, {error: updateError});
         }
       }
-      throw new Error("部屋が満員です。");
+      throwRoomStatusError("full");
     }
 
-    const willBeFull = roomData.players.length + 1 >= maxRoomPlayers;
-    await addPlayerToRoom(roomId, nickname, uid, willBeFull);
+    const willBeFull = currentPlayerCount + 1 >= maxRoomPlayers;
+    await addPlayerToRoom(sanitizedRoomId, sanitizedNickname, uid, willBeFull);
 
-    logger.info(`プレイヤー参加成功: ${nickname}(${uid}) to room ${roomId}`, {
-      nickname,
+    logger.info(`プレイヤー参加成功: ${sanitizedNickname}(${uid}) to room ${sanitizedRoomId}`, {
+      nickname: sanitizedNickname,
       uid,
       willBeFull,
     });
 
     return {
-      roomId: roomId,
-      nickname: nickname,
+      roomId: sanitizedRoomId,
+      nickname: sanitizedNickname,
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
+    if (error.message.includes("ニックネーム") || error.message.includes("部屋コード")) {
+      throwValidationError(error.message);
+    }
+
     logger.error("部屋参加エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       nickname,
       uid,
     });
-    // エラーメッセージをそのまま投げる（既に適切なメッセージが設定されている）
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
-}
-
-/**
- * 無効な部屋ステータスに対するエラーを投げる
- * @param {string} status - 部屋のステータス
- */
-function handleInvalidRoomStatus(status) {
-  const statusErrors = {
-    inProgress: "この部屋はすでにゲームが開始されています。",
-    closed: "この部屋はすでに閉じられています。",
-    full: "部屋が満員です。",
-    default: "この部屋は現在参加できません。",
-  };
-
-  const errorMessage = statusErrors[status] || statusErrors.default;
-  throw new Error(errorMessage);
 }
 
 /**
@@ -122,7 +132,7 @@ function isNicknameDuplicate(roomData, nickname) {
 /**
  * プレイヤーを部屋に追加する
  * @param {string} roomId - 部屋ID
- * @param {string} nickname - ニックネーム
+ * @param {string} nickname - ニックネーム（サニタイズ済み）
  * @param {string} uid - プレイヤーのUID
  * @param {boolean} willBeFull - 部屋が満員になるかどうか
  * @return {Promise} 更新処理のPromise

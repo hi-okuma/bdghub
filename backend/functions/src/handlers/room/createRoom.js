@@ -2,9 +2,14 @@ const {logger} = require("firebase-functions");
 const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {generateRoomId} = require("../../utils/idGenerator");
+const {sanitizeUserInput} = require("../../utils/sanitization");
+const {
+  throwValidationError,
+  throwStructuredError,
+} = require("../../utils/errorHandler");
 
 /**
- * 部屋作成リクエストを処理するハンドラー（onCall用）
+ * 部屋作成リクエストを処理するハンドラー
  * @param {object} request - onCallのリクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
@@ -12,35 +17,53 @@ async function createRoomHandler(request) {
   const {nickname, uid} = request.data;
 
   if (!nickname || !uid) {
-    throw new Error("部屋作成に失敗しました。ニックネームとユーザーIDが必要です。");
+    throwValidationError("部屋作成に失敗しました。");
   }
 
   try {
+    const sanitizedNickname = sanitizeUserInput(nickname, {
+      maxLength: 10,
+      forbiddenChars: ["/", "."],
+      fieldName: "ニックネーム",
+    });
+
     const roomId = await generateUniqueRoomId();
     if (!roomId) {
-      throw new Error("部屋作成に失敗しました。しばらく時間をおいて再度お試しください。");
+      throwStructuredError(
+          "ResourceExhausted",
+          "部屋作成に失敗しました。しばらく時間をおいて再度お試しください。",
+      );
     }
 
-    const roomData = createRoomData(nickname, uid);
+    const roomData = createRoomData(sanitizedNickname, uid);
 
     await db.collection("rooms").doc(roomId).set(roomData);
 
     logger.info(`部屋作成成功: ${roomId}`, {
-      nickname,
+      nickname: sanitizedNickname,
       uid,
     });
 
     return {
       roomId: roomId,
-      nickname: nickname,
+      nickname: sanitizedNickname,
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
+    if (error.message.includes("ニックネーム")) {
+      throwValidationError(error.message);
+    }
+
     logger.error("部屋作成エラー", {
       error: error.message,
+      stack: error.stack,
       nickname,
       uid,
     });
-    throw new Error("サーバーエラーが発生しました。");
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 
@@ -52,7 +75,7 @@ async function generateUniqueRoomId() {
   let roomId = generateRoomId();
   let isUnique = false;
   let attempts = 0;
-  const MAX_ATTEMPTS = 10;
+  const MAX_ATTEMPTS = 3;
 
   while (!isUnique && attempts < MAX_ATTEMPTS) {
     const roomDoc = await db.collection("rooms").doc(roomId).get();
@@ -69,7 +92,7 @@ async function generateUniqueRoomId() {
 
 /**
  * 部屋データオブジェクトを作成する
- * @param {string} nickname - プレイヤーのニックネーム
+ * @param {string} nickname - プレイヤーのニックネーム（サニタイズ済み）
  * @param {string} uid - プレイヤーのUID
  * @return {object} 作成された部屋データオブジェクト
  */

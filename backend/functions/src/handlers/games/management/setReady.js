@@ -1,17 +1,23 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {getReadyTransitionStatus} = require("./statusTransitions");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwGameStatusError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * ゲーム準備完了リクエストの共通ハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * ゲーム準備完了リクエストの共通ハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function setReadyHandler(request) {
   const {uid, roomId, gameId} = request.data;
 
   if (!uid || !roomId || !gameId) {
-    throw new Error("準備完了設定に失敗しました。必要な情報が不足しています。");
+    throwValidationError("準備完了設定に失敗しました。");
   }
 
   try {
@@ -21,19 +27,19 @@ async function setReadyHandler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。");
+        throwNotFoundError("ゲーム", gameId);
       }
 
       const roomDoc = await transaction.get(roomRef);
 
       if (!roomDoc.data().players[uid]) {
-        throw new Error("プレイヤーが見つかりません。");
+        throwNotFoundError("プレイヤー", uid);
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "waiting") {
-        throw new Error("ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。");
+        throwGameStatusError("waiting", currentGameData.gameStatus);
       }
 
       const updatedPlayers = {...currentGameData.players};
@@ -71,13 +77,18 @@ async function setReadyHandler(request) {
       message: "準備完了を設定しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("準備完了設定エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       uid,
       gameId,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 
