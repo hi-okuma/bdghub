@@ -3,6 +3,10 @@ const {db} = require("../../config/firebase");
 const {FieldValue} = require("firebase-admin/firestore");
 const {generateRoomId} = require("../../utils/idGenerator");
 const {sanitizeUserInput} = require("../../utils/sanitization");
+const {
+  throwValidationError,
+  throwStructuredError,
+} = require("../../utils/errorHandler");
 
 /**
  * 部屋作成リクエストを処理するハンドラー
@@ -13,7 +17,7 @@ async function createRoomHandler(request) {
   const {nickname, uid} = request.data;
 
   if (!nickname || !uid) {
-    throw new Error("部屋作成に失敗しました。ニックネームとユーザーIDが必要です。");
+    throwValidationError("部屋作成に失敗しました。");
   }
 
   try {
@@ -25,7 +29,10 @@ async function createRoomHandler(request) {
 
     const roomId = await generateUniqueRoomId();
     if (!roomId) {
-      throw new Error("部屋作成に失敗しました。しばらく時間をおいて再度お試しください。");
+      throwStructuredError(
+          "ResourceExhausted",
+          "部屋作成に失敗しました。しばらく時間をおいて再度お試しください。",
+      );
     }
 
     const roomData = createRoomData(sanitizedNickname, uid);
@@ -42,12 +49,21 @@ async function createRoomHandler(request) {
       nickname: sanitizedNickname,
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
+    if (error.message.includes("ニックネーム")) {
+      throwValidationError(error.message);
+    }
+
     logger.error("部屋作成エラー", {
       error: error.message,
+      stack: error.stack,
       nickname,
       uid,
     });
-    throw new Error("サーバーエラーが発生しました。");
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 
@@ -59,7 +75,7 @@ async function generateUniqueRoomId() {
   let roomId = generateRoomId();
   let isUnique = false;
   let attempts = 0;
-  const MAX_ATTEMPTS = 10;
+  const MAX_ATTEMPTS = 3;
 
   while (!isUnique && attempts < MAX_ATTEMPTS) {
     const roomDoc = await db.collection("rooms").doc(roomId).get();

@@ -1,16 +1,22 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwGameStatusError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * 水平思考ゲームの成功/失敗リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * 水平思考ゲームの成功/失敗リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function reportResult0003Handler(request) {
   const {roomId, result, answererUid} = request.data;
 
   if (!roomId || result === undefined || (result === true && !answererUid)) {
-    throw new Error("結果報告に失敗しました。必要な情報が不足しています。");
+    throwValidationError("結果報告に失敗しました。");
   }
 
   try {
@@ -20,13 +26,13 @@ async function reportResult0003Handler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが見つかりません。ホストプレイヤーより一度ゲームを終了してください。");
+        throwNotFoundError("ゲーム", "0003");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "playing") {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwGameStatusError("playing", currentGameData.gameStatus);
       }
 
       const updatedPlayers = updatePlayerPoints(currentGameData.players, result, answererUid);
@@ -56,13 +62,18 @@ async function reportResult0003Handler(request) {
       message: "結果を報告しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("結果報告エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       result,
       answererUid,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 
@@ -114,7 +125,7 @@ async function getQuestionsList(transaction) {
   );
 
   if (!questionsDoc.exists) {
-    throw new Error("問題リストが見つかりません");
+    throwStructuredError("Internal", "問題リストが見つかりません");
   }
 
   return questionsDoc.data().questions;

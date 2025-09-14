@@ -1,16 +1,22 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwGameStatusError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * カタカナ禁止ゲームの成功/失敗リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * カタカナ禁止ゲームの成功/失敗リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function reportResult0002Handler(request) {
   const {roomId, result, answererUid} = request.data;
 
   if (!roomId || result === undefined || (result === true && !answererUid)) {
-    throw new Error("結果報告に失敗しました。必要な情報が不足しています。");
+    throwValidationError("結果報告に失敗しました。");
   }
 
   try {
@@ -20,13 +26,13 @@ async function reportResult0002Handler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが見つかりません。");
+        throwNotFoundError("ゲーム", "0002");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "playing") {
-        throw new Error("ゲームが進行中ではありません。");
+        throwGameStatusError("playing", currentGameData.gameStatus);
       }
 
       const updatedPlayers = {...currentGameData.players};
@@ -52,7 +58,7 @@ async function reportResult0002Handler(request) {
       );
 
       if (!topicsDoc.exists) {
-        throw new Error("お題リストが見つかりません");
+        throwStructuredError("Internal", "お題リストが見つかりません");
       }
       const topicsList = topicsDoc.data().topics;
       let updateData = {};
@@ -130,13 +136,18 @@ async function reportResult0002Handler(request) {
       message: "結果を報告しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("結果報告エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       result,
       answererUid,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 

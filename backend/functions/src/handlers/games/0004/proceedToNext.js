@@ -1,17 +1,23 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {initializeGameData} = require("./init");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwGameStatusError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * 偏見プロフィールゲームの結果確認リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * 偏見プロフィールゲームの結果確認リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function proceedToNext0004Handler(request) {
   const {roomId, uid, bestHintPlayerUid} = request.data;
 
   if (!roomId || !uid) {
-    throw new Error("次に進む処理に失敗しました。必要な情報が不足しています。");
+    throwValidationError("次に進む処理に失敗しました。");
   }
 
   try {
@@ -21,20 +27,23 @@ async function proceedToNext0004Handler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが見つかりません。");
+        throwNotFoundError("ゲーム", "0004");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "result") {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwGameStatusError("result", currentGameData.gameStatus);
       }
 
       const isCorrect = currentGameData.parentSelectedIndex === currentGameData.answerImageIndex;
       const isParent = uid === currentGameData.currentParent;
 
       if (isParent && !bestHintPlayerUid) {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwStructuredError(
+            "BestHintPlayerRequired",
+            "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
+        );
       }
 
       const updateData = {};
@@ -42,11 +51,14 @@ async function proceedToNext0004Handler(request) {
 
       if (isParent && bestHintPlayerUid) {
         if (bestHintPlayerUid === currentGameData.currentParent) {
-          throw new Error("親プレイヤーはベストヒントに選択できません。");
+          throwStructuredError("InvalidBestHintPlayer", "親プレイヤーはベストヒントに選択できません。");
         }
 
         if (!currentGameData.hints[bestHintPlayerUid]) {
-          throw new Error("選択されたプレイヤーが見つかりません。他のプレイヤーを選択するか、一度ゲームを終了してください。");
+          throwStructuredError(
+              "PlayerDidNotSubmitHint",
+              "選択されたプレイヤーが見つかりません。他のプレイヤーを選択するか、一度ゲームを終了してください。",
+          );
         }
 
         updatedPlayers = Object.fromEntries(
@@ -96,13 +108,18 @@ async function proceedToNext0004Handler(request) {
       message: "結果を確認しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("結果確認エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       uid,
       bestHintPlayerUid,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 

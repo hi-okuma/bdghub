@@ -1,17 +1,23 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {sanitizeUserInput} = require("../../../utils/sanitization");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwGameStatusError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * 偏見プロフィールゲームのヒント入力リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * 偏見プロフィールゲームのヒント入力リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function submitHint0004Handler(request) {
   const {roomId, uid, hint} = request.data;
 
   if (!roomId || !uid || !hint) {
-    throw new Error("ヒント送信に失敗しました。必要な情報が不足しています。");
+    throwValidationError("ヒント送信に失敗しました。");
   }
 
   try {
@@ -27,17 +33,20 @@ async function submitHint0004Handler(request) {
       const currentGameDoc = await transaction.get(currentGameRef);
 
       if (!currentGameDoc.exists) {
-        throw new Error("ゲームが見つかりません。");
+        throwNotFoundError("ゲーム", "0004");
       }
 
       const currentGameData = currentGameDoc.data();
 
       if (currentGameData.gameStatus !== "childTurn") {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwGameStatusError("childTurn", currentGameData.gameStatus);
       }
 
       if (uid === currentGameData.currentParent) {
-        throw new Error("不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。");
+        throwStructuredError(
+            "ParentCannotsubmitHint",
+            "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
+        );
       }
 
       const updatedHints = {...currentGameData.hints, [uid]: sanitizedHint};
@@ -70,12 +79,22 @@ async function submitHint0004Handler(request) {
       message: "ヒントを送信しました。",
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
+    if (error.message.includes("ヒント")) {
+      throwValidationError(error.message);
+    }
+
+    // その他の予期しないエラー
     logger.error("ヒント設定エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       uid,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 

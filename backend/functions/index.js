@@ -1,6 +1,6 @@
 const {onCall} = require("firebase-functions/v2/https");
 const {region} = require("./src/config/environment");
-const {checkMaintenanceForCall} = require("./src/middleware/maintenanceCheck");
+const {checkMaintenance} = require("./src/middleware/maintenanceCheck");
 const {createRoomHandler} = require("./src/handlers/room/createRoom");
 const {joinRoomHandler} = require("./src/handlers/room/joinRoom");
 const {leaveRoomHandler} = require("./src/handlers/room/leaveRoom");
@@ -21,63 +21,63 @@ const commonOptions = {
 
 // 部屋関連の関数
 exports.createRoom = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await createRoomHandler(request);
 });
 
 exports.joinRoom = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await joinRoomHandler(request);
 });
 
 exports.leaveRoom = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await leaveRoomHandler(request);
 });
 
 // ゲーム管理関連の関数
 exports.startGame = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await startGameHandler(request);
 });
 
 exports.endGame = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await endGameHandler(request);
 });
 
 exports.setReady = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await setReadyHandler(request);
 });
 
 // ゲーム固有の関数
 exports.declare0001 = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await declare0001Handler(request);
 });
 
 exports.reportResult0002 = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await reportResult0002Handler(request);
 });
 
 exports.reportResult0003 = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await reportResult0003Handler(request);
 });
 
 exports.submitHint0004 = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await submitHint0004Handler(request);
 });
 
 exports.determineAnswer0004 = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await determineAnswer0004Handler(request);
 });
 
 exports.proceedToNext0004 = onCall(commonOptions, async (request) => {
-  await checkMaintenanceForCall(request);
+  await checkMaintenance(request);
   return await proceedToNext0004Handler(request);
 });

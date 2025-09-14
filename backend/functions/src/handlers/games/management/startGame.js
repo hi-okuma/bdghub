@@ -1,17 +1,22 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
 const {FieldValue, Timestamp} = require("firebase-admin/firestore");
+const {
+  throwValidationError,
+  throwNotFoundError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
- * ゲーム開始リクエストを処理するハンドラー（onCall用）
- * @param {object} request - onCallのリクエストオブジェクト
+ * ゲーム開始リクエストを処理するハンドラー
+ * @param {object} request - リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function startGameHandler(request) {
   const {roomId, gameId} = request.data;
 
   if (!roomId || !gameId) {
-    throw new Error("ゲーム開始に失敗しました。必要な情報が不足しています。");
+    throwValidationError("ゲーム開始に失敗しました。");
   }
 
   try {
@@ -22,7 +27,7 @@ async function startGameHandler(request) {
       const roomDoc = await transaction.get(roomRef);
 
       if (!roomDoc.exists) {
-        throw new Error("指定された部屋が見つかりません。");
+        throwNotFoundError("部屋", roomId);
       }
 
       const roomData = roomDoc.data();
@@ -35,13 +40,13 @@ async function startGameHandler(request) {
       const gameDoc = await transaction.get(gameRef);
 
       if (!gameDoc.exists) {
-        throw new Error("指定されたゲームが見つかりません。");
+        throwNotFoundError("ゲーム", gameId);
       }
 
       gameData = gameDoc.data();
 
       if (!gameData.isPublished) {
-        throw new Error("このゲームは公開されていません。");
+        throwStructuredError("Unpublished", "このゲームは公開されていません。");
       }
 
       if (gameData.releaseDate) {
@@ -53,28 +58,34 @@ async function startGameHandler(request) {
         } else if (gameData.releaseDate instanceof Date) {
           releaseDate = gameData.releaseDate;
         } else {
-          throw new Error("InvalidReleaseDateFormat");
+          throwStructuredError("Internal", "InvalidReleaseDateFormat");
         }
 
         if (releaseDate > now) {
-          throw new Error("このゲームは公開されていません。");
+          throwStructuredError("NotReleased", "このゲームは公開されていません。");
         }
       }
 
       const currentPlayerCount = Object.keys(roomData.players).length;
 
       if (currentPlayerCount < gameData.minPlayers) {
-        throw new Error(`このゲームには最低${gameData.minPlayers}人のプレイヤーが必要です。現在${currentPlayerCount}人です。`);
+        throwStructuredError(
+            "InsufficientPlayers",
+            `このゲームには最低${gameData.minPlayers}人のプレイヤーが必要です。現在${currentPlayerCount}人です。`,
+        );
       }
       if (currentPlayerCount > gameData.maxPlayers) {
-        throw new Error(`このゲームは最大${gameData.maxPlayers}人までです。現在${currentPlayerCount}人です。`);
+        throwStructuredError(
+            "TooManyPlayers",
+            `このゲームは最大${gameData.maxPlayers}人までです。現在${currentPlayerCount}人です。`,
+        );
       }
 
       let gameInitializer;
       try {
         gameInitializer = require(`../../games/${gameId}/init.js`);
       } catch (error) {
-        throw new Error("ゲームを開始できませんでした。");
+        throwStructuredError("InitializerNotFound", "ゲームを開始できませんでした。");
       }
 
       const currentGameData = await gameInitializer.createCurrentGame(roomData.players);
@@ -99,7 +110,6 @@ async function startGameHandler(request) {
       gameId,
     });
 
-    // プレイ回数更新（非同期・分離処理）
     updatePlayCount(gameId).catch((error) => {
       logger.warn(`プレイ回数更新エラー: ${error.message}`, {
         roomId,
@@ -113,12 +123,17 @@ async function startGameHandler(request) {
       gameTitle: gameData.title,
     };
   } catch (error) {
+    if (error.code && error.details) {
+      throw error;
+    }
+
     logger.error("ゲーム開始エラー", {
       error: error.message,
+      stack: error.stack,
       roomId,
       gameId,
     });
-    throw error;
+    throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
 }
 
@@ -127,14 +142,23 @@ async function startGameHandler(request) {
  * @param {string} status - 部屋のステータス
  */
 function handleInvalidRoomStatus(status) {
-  const statusErrors = {
-    "inProgress": "この部屋ではすでにゲームが進行中です。",
-    "closed": "この部屋はすでに閉じられています。",
-    "unknown": "ゲームを開始できませんでした。",
+  const statusErrorMap = {
+    "inProgress": {
+      code: "AlreadyInProgress",
+      message: "この部屋ではすでにゲームが進行中です。",
+    },
+    "closed": {
+      code: "RoomClosed",
+      message: "この部屋はすでに閉じられています。",
+    },
   };
 
-  const errorMessage = statusErrors[status] || statusErrors.unknown;
-  throw new Error(errorMessage);
+  const errorInfo = statusErrorMap[status] || {
+    code: "InvalidRoomStatus",
+    message: "ゲームを開始できませんでした。",
+  };
+
+  throwStructuredError(errorInfo.code, errorInfo.message);
 }
 
 /**
