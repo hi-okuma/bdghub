@@ -9,6 +9,7 @@ class AppTheme {
   static const Color disabledBackgroundColor = Color(0x1F000000);
   static const Color selectedBackgroundColor = Color(0xFFF2F4F7);
   static const Color backgroundColor = Colors.white;
+  static const Color errorBackgroundColor = Color(0xFFFDEDED);
   static const Color surfaceColor = Colors.white;
   static const Color cardColor = Colors.white;
   static const Color cardBorderColor = Color(0xFFF1F5F9);
