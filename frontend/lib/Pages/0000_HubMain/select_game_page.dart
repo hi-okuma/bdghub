@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -144,7 +145,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     final roomId = ref.read(currentRoomIdProvider);
     if (roomId == null) return;
 
-    String shareUrl = 'https://bdghub-dev.web.app/?roomId=$roomId';
+    String shareUrl = dotenv.env['SHARE_URL']! + '$roomId';
     Clipboard.setData(ClipboardData(text: shareUrl)).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
