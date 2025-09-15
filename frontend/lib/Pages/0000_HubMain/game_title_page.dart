@@ -118,8 +118,22 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
 
     // ★ DB設計に基づくゲーム情報を動的に取得 ★
     final gameTitle = currentGame.title ?? 'NGワードゲーム';
-    final gameDescription = currentGame.overview ??
-        '友達と一緒に遊ぶNGワードゲーム！あなたにだけ伝えられるNGワードを言わないようにしましょう。';
+
+    String gameDescription(String gameId) {
+      switch (gameId) {
+        case '0001':
+          return 'いつものおしゃべりが、スリリングなゲームに！\nプレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
+        case '0002':
+          return currentGame.overview!;
+        case '0003':
+          return currentGame.overview!;
+        case '0004':
+          return 'AIが作り出した実在しない人物の見かけから、\nプレイヤーが想像して書いたプロフィールを見て、\nお題の人物を推理する新感覚ゲーム';
+        default:
+          return 'いつものおしゃべりが、スリリングなゲームに！\nプレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
+      }
+    }
+
     final gameImages = currentGame.tutorialImageList ??
         [
           'https://picsum.photos/id/100/400/400',
@@ -160,7 +174,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                       ),
                       const SizedBox(height: AppSpacing.medium),
                       Text(
-                        gameDescription,
+                        gameDescription(currentGame.gameId!),
                         style: AppTextStyles.body,
                         textAlign: TextAlign.center,
                       ),
