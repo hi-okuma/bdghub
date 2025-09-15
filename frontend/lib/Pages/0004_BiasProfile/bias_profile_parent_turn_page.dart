@@ -176,7 +176,7 @@ class _BiasProfileParentTurnPageState
                           height: AppSpacing.medium,
                         ),
                         Text(
-                          '子プレイヤーが入力した偏見から\nお題となる人物を当てよう',
+                          '子プレイヤーが入力した偏見をもとに\n5枚の画像の中から正解の人物を当てよう\n（画像は横にスワイプできます）',
                           style: AppTextStyles.body,
                           textAlign: TextAlign.center,
                         )
@@ -195,7 +195,7 @@ class _BiasProfileParentTurnPageState
                           height: AppSpacing.medium,
                         ),
                         Text(
-                          '親が回答している間、他のプレイヤーが入力した\nプロフィールを覗いてみましょう',
+                          '親が回答している間、他のプレイヤーが入力した\n偏見を覗いてみましょう\n（画像は横にスワイプできます）',
                           style: AppTextStyles.body,
                           textAlign: TextAlign.center,
                         )
