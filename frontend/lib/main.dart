@@ -94,17 +94,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-class TestApp extends StatelessWidget {
-  const TestApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      // app_theme.dartで定義したテーマを使用
-      theme: AppTheme.lightTheme,
-      home: GameTitlePage(),
-    );
-  }
-}
