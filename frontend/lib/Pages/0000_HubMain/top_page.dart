@@ -256,54 +256,58 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                 ? const Center(
                     child: CircularProgressIndicator(),
                   )
-                : TabBarView(
-                    controller: _tabController,
-                    physics: const PageScrollPhysics(
-                      parent: ClampingScrollPhysics(),
+                : Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.large),
+                    child: TabBarView(
+                      controller: _tabController,
+                      physics: const PageScrollPhysics(
+                        parent: ClampingScrollPhysics(),
+                      ),
+                      children: [
+                        // 全てのゲーム
+                        GameListWidget(
+                          games: _gameList,
+                          onGameSelected: _onGameSelected,
+                        ),
+                        // 定番ゲーム
+                        GameListWidget(
+                          games: _gameList.where((game) {
+                            if (game['genre'] is List) {
+                              List<GameGenre> genres =
+                                  List<GameGenre>.from(game['genre']);
+                              return genres.contains(GameGenre.popular);
+                            }
+                            return game['genre'] == GameGenre.popular;
+                          }).toList(),
+                          onGameSelected: _onGameSelected,
+                        ),
+                        // カードゲーム
+                        GameListWidget(
+                          games: _gameList.where((game) {
+                            if (game['genre'] is List) {
+                              List<GameGenre> genres =
+                                  List<GameGenre>.from(game['genre']);
+                              return genres.contains(GameGenre.card);
+                            }
+                            return game['genre'] == GameGenre.card;
+                          }).toList(),
+                          onGameSelected: _onGameSelected,
+                        ),
+                        // 協力ゲーム
+                        GameListWidget(
+                          games: _gameList.where((game) {
+                            if (game['genre'] is List) {
+                              List<GameGenre> genres =
+                                  List<GameGenre>.from(game['genre']);
+                              return genres.contains(GameGenre.cooperation);
+                            }
+                            return game['genre'] == GameGenre.cooperation;
+                          }).toList(),
+                          onGameSelected: _onGameSelected,
+                        ),
+                      ],
                     ),
-                    children: [
-                      // 全てのゲーム
-                      GameListWidget(
-                        games: _gameList,
-                        onGameSelected: _onGameSelected,
-                      ),
-                      // 定番ゲーム
-                      GameListWidget(
-                        games: _gameList.where((game) {
-                          if (game['genre'] is List) {
-                            List<GameGenre> genres =
-                                List<GameGenre>.from(game['genre']);
-                            return genres.contains(GameGenre.popular);
-                          }
-                          return game['genre'] == GameGenre.popular;
-                        }).toList(),
-                        onGameSelected: _onGameSelected,
-                      ),
-                      // カードゲーム
-                      GameListWidget(
-                        games: _gameList.where((game) {
-                          if (game['genre'] is List) {
-                            List<GameGenre> genres =
-                                List<GameGenre>.from(game['genre']);
-                            return genres.contains(GameGenre.card);
-                          }
-                          return game['genre'] == GameGenre.card;
-                        }).toList(),
-                        onGameSelected: _onGameSelected,
-                      ),
-                      // 協力ゲーム
-                      GameListWidget(
-                        games: _gameList.where((game) {
-                          if (game['genre'] is List) {
-                            List<GameGenre> genres =
-                                List<GameGenre>.from(game['genre']);
-                            return genres.contains(GameGenre.cooperation);
-                          }
-                          return game['genre'] == GameGenre.cooperation;
-                        }).toList(),
-                        onGameSelected: _onGameSelected,
-                      ),
-                    ],
                   ),
           ),
         ],

@@ -334,108 +334,121 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
             const SizedBox(width: AppSpacing.small),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // デバッグ情報表示（開発時のみ）
-              if (kDebugMode && roomId.isNotEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.yellow[100],
-                  child: Column(
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 戻る処理、リロードに関する不具合アラート
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.medium, horizontal: AppSpacing.large),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.errorBackgroundColor,
+                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.medium),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                          '🔍 デバッグ: ${userState.nickname} (${userState.isHost ? "ホスト" : "子"})'),
-                      Text('部屋: $roomId'),
-                      Consumer(
-                        builder: (context, ref, _) {
-                          final gameStateAsync =
-                              ref.watch(roomGameStateProvider(roomId));
-                          return gameStateAsync.when(
-                            data: (status) => Text('ゲーム状態: $status'),
-                            loading: () => const Text('ゲーム状態: 読み込み中...'),
-                            error: (error, _) => const Text('ゲーム状態: エラー'),
-                          );
-                        },
+                      Icon(
+                        Icons.error_outline_rounded,
+                        color: AppTheme.error1Color,
                       ),
+                      SizedBox(
+                        width: AppSpacing.small,
+                      ),
+                      Expanded(
+                          child:
+                              Text('現在、リロードや戻る操作をすると部屋を退出してしまう不具合が発生しています。')),
                     ],
                   ),
                 ),
-              ],
-
-              // 参加者エリア
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '参加者',
-                      style: AppTextStyles.title,
-                    ),
-                    const SizedBox(height: AppSpacing.small),
-                    // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
-                    Consumer(builder: (context, ref, _) {
-                      // roomIdが空の場合は playersProvider を watch しない
-                      if (roomId.isEmpty) {
-                        return Text(
-                          'ルームIDが見つかりません',
-                          style: AppTextStyles.errorText,
-                        );
-                      }
-
-                      final players = ref.watch(playersProvider(roomId));
-
-                      if (players.isEmpty) {
-                        return Text(
-                          '参加者がいません',
-                          style: AppTextStyles.body,
-                        );
-                      }
-
-                      return SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: players.map((player) {
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                  right: AppSpacing.small),
-                              child: PlayerBadge(
-                                nickname: player.nickname,
-                                isHost: player.isHost,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
               ),
+            ),
 
-              // タブバー
-              CustomTabBar(
+            // 参加者エリア
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.medium, horizontal: AppSpacing.large),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '参加者',
+                    style: AppTextStyles.title,
+                  ),
+                  const SizedBox(height: AppSpacing.small),
+                  // playersProvider を使用して、プレイヤーリストを一貫した方法で取得する
+                  Consumer(builder: (context, ref, _) {
+                    // roomIdが空の場合は playersProvider を watch しない
+                    if (roomId.isEmpty) {
+                      return Text(
+                        'ルームIDが見つかりません',
+                        style: AppTextStyles.errorText,
+                      );
+                    }
+
+                    final players = ref.watch(playersProvider(roomId));
+
+                    if (players.isEmpty) {
+                      return Text(
+                        '参加者がいません',
+                        style: AppTextStyles.body,
+                      );
+                    }
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: players.map((player) {
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(right: AppSpacing.small),
+                            child: PlayerBadge(
+                              nickname: player.nickname,
+                              isHost: player.isHost,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+
+            // タブバー
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.medium, horizontal: AppSpacing.large),
+              child: CustomTabBar(
                 controller: _tabController,
                 tabs: _tabs,
               ),
+            ),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
-                child: Text(
-                  'ゲーム一覧',
-                  style: AppTextStyles.title,
-                ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.medium, horizontal: AppSpacing.large),
+              child: Text(
+                'ゲーム一覧',
+                style: AppTextStyles.title,
               ),
+            ),
 
-              // ゲーム一覧（タブビュー）
-              Expanded(
-                child: _isGameLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(),
-                      )
-                    : TabBarView(
+            // ゲーム一覧（タブビュー）
+            Expanded(
+              child: _isGameLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.large),
+                      child: TabBarView(
                         controller: _tabController,
                         physics: const PageScrollPhysics(
                           parent: ClampingScrollPhysics(),
@@ -480,9 +493,9 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                           ),
                         ],
                       ),
-              ),
-            ],
-          ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
