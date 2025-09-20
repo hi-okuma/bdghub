@@ -14,6 +14,8 @@ const {submitHint0004Handler} = require("./src/handlers/games/0004/submitHint");
 const {determineAnswer0004Handler} = require("./src/handlers/games/0004/determineAnswer");
 const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToNext");
 
+const {cleanupAnonymousUsers} = require("./src/handlers/maintenance/cleanupAnonymousUsers");
+
 const commonOptions = {
   region: region,
   enforceAppCheck: true,
@@ -81,3 +83,5 @@ exports.proceedToNext0004 = onCall(commonOptions, async (request) => {
   await checkMaintenance(request);
   return await proceedToNext0004Handler(request);
 });
+
+exports.cleanupAnonymousUsers = cleanupAnonymousUsers;
