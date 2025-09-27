@@ -101,30 +101,38 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
     );
 
     let usedImages = [...existingGameData.usedImages];
-    let usedTopics = [...existingGameData.usedTopics];
     const unusedImages = allImages.filter((img) => !usedImages.includes(img));
     let currentImages;
+
     if (unusedImages.length >= 5) {
       const shuffled = shuffleArray(unusedImages);
       currentImages = shuffled.slice(0, 5);
+      usedImages = [...usedImages, ...currentImages];
     } else {
       const shuffled = shuffleArray(allImages);
       currentImages = shuffled.slice(0, 5);
+      usedImages = [...currentImages];
     }
 
     const answerImageIndex = Math.floor(Math.random() * 5);
-    const topics = {};
+
+    let usedTopics = [...existingGameData.usedTopics];
     const childPlayers = playerUids.filter((uid) => uid !== parentPlayer);
     const unusedTopics = allTopics.filter((topic) => !usedTopics.includes(topic));
-    const topicSource = unusedTopics.length >= childPlayers.length ? unusedTopics : allTopics;
-    const shuffledTopics = shuffleArray(topicSource);
 
+    let selectedTopics;
+    if (unusedTopics.length >= childPlayers.length) {
+      selectedTopics = shuffleArray(unusedTopics).slice(0, childPlayers.length);
+      usedTopics = [...usedTopics, ...selectedTopics];
+    } else {
+      selectedTopics = shuffleArray(allTopics).slice(0, childPlayers.length);
+      usedTopics = [...selectedTopics];
+    }
+
+    const topics = {};
     childPlayers.forEach((uid, index) => {
-      topics[uid] = shuffledTopics[index % shuffledTopics.length];
+      topics[uid] = selectedTopics[index];
     });
-
-    usedImages = [...usedImages, ...currentImages];
-    usedTopics = [...usedTopics, ...Object.values(topics)];
 
     return {
       players: players,
@@ -142,31 +150,40 @@ async function initializeGameData(playerUids, existingGameData = null, isNewRoun
   );
   const nextParentIndex = (currentParentIndex + 1) % playerUids.length;
   const nextParent = playerUids[nextParentIndex];
+
   let usedImages = [...existingGameData.usedImages];
-  let usedTopics = [...existingGameData.usedTopics];
   const unusedImages = allImages.filter((img) => !usedImages.includes(img));
   let currentImages;
+
   if (unusedImages.length >= 5) {
     const shuffled = shuffleArray(unusedImages);
     currentImages = shuffled.slice(0, 5);
+    usedImages = [...usedImages, ...currentImages];
   } else {
     const shuffled = shuffleArray(allImages);
     currentImages = shuffled.slice(0, 5);
+    usedImages = [...currentImages];
   }
 
   const answerImageIndex = Math.floor(Math.random() * 5);
-  const topics = {};
+
+  let usedTopics = [...existingGameData.usedTopics];
   const childPlayers = playerUids.filter((uid) => uid !== nextParent);
   const unusedTopics = allTopics.filter((topic) => !usedTopics.includes(topic));
-  const topicSource = unusedTopics.length >= childPlayers.length ? unusedTopics : allTopics;
-  const shuffledTopics = shuffleArray(topicSource);
 
+  let selectedTopics;
+  if (unusedTopics.length >= childPlayers.length) {
+    selectedTopics = shuffleArray(unusedTopics).slice(0, childPlayers.length);
+    usedTopics = [...usedTopics, ...selectedTopics];
+  } else {
+    selectedTopics = shuffleArray(allTopics).slice(0, childPlayers.length);
+    usedTopics = [...selectedTopics];
+  }
+
+  const topics = {};
   childPlayers.forEach((uid, index) => {
-    topics[uid] = shuffledTopics[index % shuffledTopics.length];
+    topics[uid] = selectedTopics[index];
   });
-
-  usedImages = [...usedImages, ...currentImages];
-  usedTopics = [...usedTopics, ...Object.values(topics)];
 
   return {
     currentParent: nextParent,
