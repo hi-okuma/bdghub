@@ -1,6 +1,4 @@
-// models/user_state.dart
 import 'package:flutter/foundation.dart';
-import 'game_enums.dart'; // 追加
 
 // Player: 「部屋内の全プレイヤー」のデータ表現用
 @immutable
@@ -33,7 +31,7 @@ class Player {
   }
 }
 
-// ★修正：UserStateクラス
+// UserState: 「自分」の状態管理用
 @immutable
 class UserState {
   final String? nickname;
@@ -42,8 +40,6 @@ class UserState {
   final bool isHost;
   final bool isConnected;
   final DateTime? joinTime;
-  final bool isRestoring;
-  final GamePhase? gamePhase; // 追加
 
   const UserState({
     this.nickname,
@@ -52,8 +48,6 @@ class UserState {
     this.isHost = false,
     this.isConnected = false,
     this.joinTime,
-    this.isRestoring = false,
-    this.gamePhase, // 追加
   });
 
   UserState copyWith({
@@ -63,8 +57,6 @@ class UserState {
     bool? isHost,
     bool? isConnected,
     DateTime? joinTime,
-    bool? isRestoring,
-    GamePhase? gamePhase, // 追加
   }) {
     return UserState(
       nickname: nickname ?? this.nickname,
@@ -73,15 +65,13 @@ class UserState {
       isHost: isHost ?? this.isHost,
       isConnected: isConnected ?? this.isConnected,
       joinTime: joinTime ?? this.joinTime,
-      isRestoring: isRestoring ?? this.isRestoring,
-      gamePhase: gamePhase ?? this.gamePhase, // 追加
     );
   }
 
   // デバッグ用
   @override
   String toString() {
-    return 'UserState(nickname: $nickname, roomId: $roomId, uid: $uid, isHost: $isHost, isConnected: $isConnected, isRestoring: $isRestoring, gamePhase: $gamePhase)'; // ★修正
+    return 'UserState(nickname: $nickname, roomId: $roomId, uid: $uid, isHost: $isHost, isConnected: $isConnected)';
   }
 
   // 空の状態かチェック
