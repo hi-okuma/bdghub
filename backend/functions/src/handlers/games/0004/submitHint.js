@@ -10,7 +10,7 @@ const {
 
 /**
  * 偏見プロフィールゲームのヒント入力リクエストを処理するハンドラー
- * @param {object} request - リクエストオブジェクト
+ * @param {object} request リクエストオブジェクト
  * @return {Promise<object>} レスポンスデータ
  */
 async function submitHint0004Handler(request) {
@@ -24,6 +24,7 @@ async function submitHint0004Handler(request) {
     const sanitizedHint = sanitizeUserInput(hint, {
       maxLength: 100,
       forbiddenChars: ["'", "\"", ";", "-", "=", "/", "*"],
+      allowLineBreaks: true,
       fieldName: "ヒント",
     });
 
@@ -87,7 +88,6 @@ async function submitHint0004Handler(request) {
       throwValidationError(error.message);
     }
 
-    // その他の予期しないエラー
     logger.error("ヒント設定エラー", {
       error: error.message,
       stack: error.stack,
