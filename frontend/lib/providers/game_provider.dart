@@ -117,7 +117,6 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
     }
   }
 
-  // ★ シンプル：currentGameサブドキュメントから取得 ★
   Future<void> loadFromCurrentGame(String roomId, String gameId) async {
     final currentGameDoc = await FirebaseFirestore.instance
         .collection('rooms')
@@ -132,15 +131,12 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
 
     final currentGameData = currentGameDoc.data()!;
 
-    // ★ 基本情報はgamesコレクションから補完 ★
+    // 基本情報をgamesコレクションから取得
     await loadGameFromFirestore(gameId);
 
-    // ★ currentGameの情報で上書き ★
+    // currentGameの情報で完全置換（マージしない）
     state = state.copyWith(
-      gameData: {
-        ...state.gameData ?? {},
-        ...currentGameData,
-      },
+      gameData: currentGameData, // ← 直接置換
     );
 
     print('🎮 Game loaded from currentGame: $gameId');
@@ -165,6 +161,13 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
 
   void clearGame() {
     state = const CurrentGameState();
+  }
+
+  void updateGameData(Map<String, dynamic> newGameData) {
+    print('🔄 Updating game data (full replace)');
+    state = state.copyWith(
+      gameData: newGameData, // マージせず完全置換
+    );
   }
 
   // デフォルトのゲーム情報を設定（Firestore取得失敗時）
