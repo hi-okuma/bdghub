@@ -4,10 +4,8 @@ import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.d
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:bodogehub/models/game_enums.dart';
 import '../providers/game_provider.dart';
 import '../providers/user_provider.dart';
-import '../providers/game_state_provider.dart';
 import '../Pages/0000_HubMain/game_title_page.dart';
 import '../Pages/0000_HubMain/select_game_page.dart';
 import '../Pages/0000_HubMain/game_result_page.dart';
@@ -21,82 +19,6 @@ class NavigationService {
 
   NavigatorState? get _navigator => navigatorKey.currentState;
   BuildContext? get context => _navigator?.context;
-
-  // ★修正：復帰時の画面遷移でGamePhaseを考慮
-  void navigateToGameScreenByStatus(
-      GameStatus gameStatus, Map<String, dynamic> gameData,
-      {bool isRestore = false, bool isGameEnded = false}) {
-    if (_navigator == null) return;
-
-    print(
-        '🎮 復帰時の画面遷移: $gameStatus (restore: $isRestore, gameEnded: $isGameEnded)');
-
-    switch (gameStatus) {
-      case GameStatus.waiting:
-        // ★修正：ゲーム終了後のwaitingかどうかで判定
-        if (isGameEnded) {
-          print('🎮 Game ended waiting - navigating to result page');
-          navigateToResult(gameData);
-        } else {
-          print('🎮 Initial waiting - navigating to game title');
-          _navigator!.pushReplacement(
-            MaterialPageRoute(builder: (context) => const GameTitlePage()),
-          );
-        }
-        break;
-
-      case GameStatus.playing:
-        navigateToPlayingPage();
-        break;
-
-      case GameStatus.childTurn:
-        navigateToChildTurn(gameData);
-        break;
-
-      case GameStatus.parentTurn:
-        navigateToParentTurn(gameData);
-        break;
-      case GameStatus.result:
-        navigateToCheckAnswer(gameData);
-    }
-  }
-
-  // ★新規追加：GamePhaseを考慮した復帰メソッド
-  void navigateToGameScreenWithPhase(GameStatus gameStatus,
-      Map<String, dynamic> gameData, GamePhase gamePhase) {
-    if (_navigator == null) return;
-
-    print('🎮 フェーズ考慮の画面遷移: $gameStatus, phase: $gamePhase');
-
-    switch (gameStatus) {
-      case GameStatus.waiting:
-        if (gamePhase == GamePhase.ended) {
-          // ゲーム進行中または終了後のwaiting = 結果画面
-          print('🎮 Game phase waiting - navigating to result page');
-          navigateToResult(gameData);
-        } else {
-          // 初期状態のwaiting = ゲームタイトル
-          print('🎮 Initial waiting - navigating to game title');
-          navigateToGameTitle();
-        }
-        break;
-
-      case GameStatus.playing:
-        navigateToPlayingPage();
-        break;
-
-      case GameStatus.childTurn:
-        navigateToChildTurn(gameData);
-        break;
-
-      case GameStatus.parentTurn:
-        navigateToParentTurn(gameData);
-        break;
-
-      case GameStatus.result:
-        navigateToCheckAnswer(gameData);
-    }
-  }
 
   void navigateToGameTitle() {
     if (_navigator == null) return;
