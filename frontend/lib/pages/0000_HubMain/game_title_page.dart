@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
 import '/components/custom_widgets.dart';
 import '/models/user_state.dart';
+import '/models/game_enums.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_provider.dart';

@@ -1,19 +1,123 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/user_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/user_state.dart'; // ★UserStateはmodelsからインポート
+import '../models/game_enums.dart';
 import '../providers/room_provider.dart';
 import '../providers/game_state_provider.dart';
+import '../services/auth_service.dart';
 
 class UserNotifier extends StateNotifier<UserState> {
   final Ref _ref;
+  static const String _roomIdKey = 'current_room_id';
+  static const String _userNicknameKey = 'user_nickname';
+  static const String _userUidKey = 'user_uid';
+  static const String _isHostKey = 'is_host';
+  static const String _gamePhaseKey = 'game_phase';
 
   UserNotifier(this._ref) : super(const UserState());
 
+  // localStorage操作メソッド
+  Future<void> _saveToStorage({
+    required String roomId,
+    required String nickname,
+    required String uid,
+    required bool isHost,
+    GamePhase? gamePhase, // 追加
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_roomIdKey, roomId);
+      await prefs.setString(_userNicknameKey, nickname);
+      await prefs.setString(_userUidKey, uid);
+      await prefs.setBool(_isHostKey, isHost);
+
+      // gamePhaseの保存
+      if (gamePhase != null) {
+        await prefs.setString(_gamePhaseKey, gamePhase.name);
+        print('💾 gamePhase保存: $gamePhase');
+      }
+
+      print('💾 ローカルストレージに保存: roomId=$roomId, nickname=$nickname');
+    } catch (e) {
+      print('⚠️ ローカルストレージ保存エラー: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final roomId = prefs.getString(_roomIdKey);
+      final nickname = prefs.getString(_userNicknameKey);
+      final uid = prefs.getString(_userUidKey);
+      final isHost = prefs.getBool(_isHostKey) ?? false;
+
+      // gamePhaseの読み込み
+      final gamePhaseStr = prefs.getString(_gamePhaseKey);
+      GamePhase? gamePhase;
+      if (gamePhaseStr != null) {
+        try {
+          gamePhase = GamePhase.values.byName(gamePhaseStr);
+          print('💾 gamePhase復元: $gamePhase');
+        } catch (e) {
+          print('⚠️ gamePhase復元エラー: $e');
+          gamePhase = GamePhase.initial; // デフォルト値
+        }
+      }
+
+      if (roomId != null && nickname != null && uid != null) {
+        return {
+          'roomId': roomId,
+          'nickname': nickname,
+          'uid': uid,
+          'isHost': isHost,
+          'gamePhase': gamePhase, // 追加
+        };
+      }
+    } catch (e) {
+      print('⚠️ ローカルストレージ読み込みエラー: $e');
+    }
+    return null;
+  }
+
+  Future<void> _clearStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_roomIdKey);
+      await prefs.remove(_userNicknameKey);
+      await prefs.remove(_userUidKey);
+      await prefs.remove(_isHostKey);
+      await prefs.remove(_gamePhaseKey); // 追加
+      print('🗑️ ローカルストレージをクリア');
+    } catch (e) {
+      print('⚠️ ローカルストレージクリアエラー: $e');
+    }
+  }
+
+  // gamePhase更新メソッドを追加
+  void updateGamePhase(GamePhase gamePhase) async {
+    state = state.copyWith(gamePhase: gamePhase);
+
+    // 現在保存されている情報と一緒に更新
+    if (state.roomId != null && state.nickname != null && state.uid != null) {
+      await _saveToStorage(
+        roomId: state.roomId!,
+        nickname: state.nickname!,
+        uid: state.uid!,
+        isHost: state.isHost,
+        gamePhase: gamePhase,
+      );
+    }
+
+    print('🎮 GamePhase更新: $gamePhase');
+  }
+
+  // 既存メソッドを修正（gamePhaseも保存するように）
   void createRoom({
     required String nickname,
     required String roomId,
     required String uid,
-  }) {
-    // 既存の監視をクリーンアップ（再作成の場合）
+  }) async {
     _cleanupBeforeJoin(roomId);
 
     state = UserState(
@@ -23,7 +127,17 @@ class UserNotifier extends StateNotifier<UserState> {
       isHost: true,
       isConnected: true,
       joinTime: DateTime.now(),
+      gamePhase: GamePhase.initial, // 部屋作成時は初期状態
     );
+
+    await _saveToStorage(
+      roomId: roomId,
+      nickname: nickname,
+      uid: uid,
+      isHost: true,
+      gamePhase: GamePhase.initial, // 追加
+    );
+
     print('🏠 部屋作成: $state');
   }
 
@@ -31,8 +145,7 @@ class UserNotifier extends StateNotifier<UserState> {
     required String nickname,
     required String roomId,
     required String uid,
-  }) {
-    // 既存の監視をクリーンアップ（再参加の場合）
+  }) async {
     _cleanupBeforeJoin(roomId);
 
     state = UserState(
@@ -42,14 +155,122 @@ class UserNotifier extends StateNotifier<UserState> {
       isHost: false,
       isConnected: true,
       joinTime: DateTime.now(),
+      gamePhase: GamePhase.initial, // 部屋参加時は初期状態
     );
+
+    await _saveToStorage(
+      roomId: roomId,
+      nickname: nickname,
+      uid: uid,
+      isHost: false,
+      gamePhase: GamePhase.initial, // 追加
+    );
+
     print('👥 部屋参加: $state');
   }
 
-  // 参加前のクリーンアップ（再参加対応）
+  Future<bool> tryRestoreFromStorage() async {
+    try {
+      final data = await _loadFromStorage();
+      if (data == null) {
+        print('🔍 復帰データなし');
+        return false;
+      }
+
+      print('🔍 復帰データ発見: ${data['roomId']} (gamePhase: ${data['gamePhase']})');
+
+      final currentUid = await AuthService.ensureAuthenticated();
+      if (currentUid != data['uid']) {
+        print('⚠️ UIDが変更されているため復帰をスキップ');
+        await _clearStorage();
+        return false;
+      }
+
+      final roomSnapshot = await FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(data['roomId'])
+          .get();
+
+      if (!roomSnapshot.exists) {
+        print('⚠️ 部屋が存在しないため復帰失敗');
+        await _clearStorage();
+        return false;
+      }
+
+      final roomData = roomSnapshot.data() as Map<String, dynamic>?;
+      final players = roomData?['players'] as Map<String, dynamic>? ?? {};
+
+      if (!players.containsKey(currentUid)) {
+        print('⚠️ プレイヤーが部屋から削除されているため復帰失敗');
+        await _clearStorage();
+        return false;
+      }
+
+      _cleanupBeforeJoin(data['roomId']);
+
+      state = UserState(
+        nickname: data['nickname'],
+        roomId: data['roomId'],
+        uid: data['uid'],
+        isHost: data['isHost'],
+        isConnected: true,
+        joinTime: DateTime.now(),
+        isRestoring: true,
+        gamePhase: data['gamePhase'] ?? GamePhase.initial, // 追加
+      );
+
+      print('✅ 復帰成功: ${data['roomId']} (復帰モード, gamePhase: ${state.gamePhase})');
+
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          state = state.copyWith(isRestoring: false);
+          print('🔄 復帰モード終了');
+        }
+      });
+
+      return true;
+    } catch (e) {
+      print('❌ 復帰処理エラー: $e');
+      await _clearStorage();
+      return false;
+    }
+  }
+
+  // leaveRoom時にgamePhaseもクリア
+  void leaveRoom() async {
+    print('🚪 部屋退出前の状態: $state');
+    final currentRoomId = state.roomId;
+
+    await _clearStorage();
+
+    if (currentRoomId != null) {
+      try {
+        final gameStateNotifier =
+            _ref.read(roomGameStateProvider(currentRoomId).notifier);
+        gameStateNotifier.stopMonitoring();
+        print('🔄 ゲーム状態監視を停止: $currentRoomId');
+
+        Future.delayed(Duration(milliseconds: 100), () {
+          try {
+            _ref.invalidate(roomStreamProvider(currentRoomId));
+            _ref.invalidate(playersProvider(currentRoomId));
+            _ref.invalidate(roomGameStateProvider(currentRoomId));
+            print('🔄 関連プロバイダーをクリア: $currentRoomId');
+          } catch (e) {
+            print('⚠️ 遅延プロバイダークリーンアップエラー: $e');
+          }
+        });
+      } catch (e) {
+        print('⚠️ プロバイダークリーンアップエラー: $e');
+      }
+    }
+
+    state = const UserState();
+    print('🚪 部屋退出後の状態: $state');
+  }
+
   void _cleanupBeforeJoin(String roomId) {
     try {
-      // 同じroomIdの古いプロバイダーをクリーンアップ
       _ref.invalidate(roomStreamProvider(roomId));
       _ref.invalidate(playersProvider(roomId));
       _ref.invalidate(roomGameStateProvider(roomId));
@@ -71,41 +292,6 @@ class UserNotifier extends StateNotifier<UserState> {
     print('🔗 接続状態更新: $isConnected');
   }
 
-  void leaveRoom() {
-    print('🚪 部屋退出前の状態: $state');
-    final currentRoomId = state.roomId;
-
-    // 関連プロバイダーのクリーンアップ（状態クリア前に実行）
-    if (currentRoomId != null) {
-      try {
-        // ★ 修正1: RoomGameStateNotifierの監視を完全停止 ★
-        final gameStateNotifier =
-            _ref.read(roomGameStateProvider(currentRoomId).notifier);
-        gameStateNotifier.stopMonitoring();
-        print('🔄 ゲーム状態監視を停止: $currentRoomId');
-
-        // ★ 修正2: 少し待機してから invalidate を実行 ★
-        Future.delayed(Duration(milliseconds: 100), () {
-          try {
-            // Providerをinvalidateして新しいインスタンスを強制作成
-            _ref.invalidate(roomStreamProvider(currentRoomId));
-            _ref.invalidate(playersProvider(currentRoomId));
-            _ref.invalidate(roomGameStateProvider(currentRoomId));
-            print('🔄 関連プロバイダーをクリア: $currentRoomId');
-          } catch (e) {
-            print('⚠️ 遅延プロバイダークリーンアップエラー: $e');
-          }
-        });
-      } catch (e) {
-        print('⚠️ プロバイダークリーンアップエラー: $e');
-      }
-    }
-
-    // ★ 修正3: 状態をクリア（invalidate後に実行） ★
-    state = const UserState();
-    print('🚪 部屋退出後の状態: $state');
-  }
-
   void disconnect() {
     state = state.copyWith(isConnected: false);
     print('❌ 切断: $state');
@@ -116,7 +302,6 @@ final userProvider = StateNotifierProvider<UserNotifier, UserState>((ref) {
   return UserNotifier(ref);
 });
 
-// ★ 修正：room_provider.dartと同じ方法でhostPlayerを判定 ★
 final isHostProvider = Provider<bool>((ref) {
   final userState = ref.watch(userProvider);
 
@@ -133,14 +318,12 @@ final isHostProvider = Provider<bool>((ref) {
       if (!snapshot.exists) return false;
 
       final data = snapshot.data() as Map<String, dynamic>?;
-      // ★ room_provider.dartと同じ方法でhostPlayerを判定 ★
       final hostPlayer = data?['hostPlayer'] as String?;
 
       if (hostPlayer == null) {
-        return userState.isHost; // フォールバック
+        return userState.isHost;
       }
 
-      // 現在のユーザーのUIDがhostPlayerと一致するかチェック
       return userState.uid == hostPlayer;
     },
     loading: () => userState.isHost,

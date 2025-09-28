@@ -5,6 +5,7 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:bodogehub/Pages/0000_HubMain/top_page.dart';
+import 'package:bodogehub/pages/0000_HubMain/app_initialization_page.dart';
 import 'package:bodogehub/components/app_theme.dart';
 // Flutter WebでのみUriを取得するためにプラットフォーム固有のインポート
 import 'package:universal_html/html.dart' as html;
@@ -86,11 +87,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'ボードゲームハブ',
-      // app_theme.dartで定義したテーマを使用
       theme: AppTheme.lightTheme,
-      // NavigationServiceのキーを設定
       navigatorKey: NavigationService.navigatorKey,
-      home: TopPage(roomId: roomId),
+      // ★変更：初期化画面から開始
+      home: AppInitializationPage(urlRoomId: roomId),
     );
   }
 }
