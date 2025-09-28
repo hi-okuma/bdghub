@@ -1,11 +1,25 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:bodogehub/models/game_enums.dart';
 import '../providers/user_provider.dart';
 import '../providers/game_provider.dart';
 import '../services/navigation_service.dart';
+
+// DB設計に基づくゲーム状態の列挙型
+enum GameStatus {
+  waiting, // ゲーム開始前/終了後
+  playing, // ゲーム中（基本状態）
+  childTurn, // 子ターン（0004のみ）
+  parentTurn, // 親ターン（0004のみ）
+  result,
+}
+
+// ゲームの進行段階を管理する内部状態
+enum GamePhase {
+  initial, // 初期状態（ゲーム開始前）
+  started, // ゲーム開始済み
+  ended, // ゲーム終了済み
+}
 
 // rooms/{roomId}/currentGame サブコレクションを監視するNotifier
 class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
@@ -21,22 +35,17 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   GamePhase _currentGamePhase = GamePhase.initial;
   bool _hasNavigatedToPlaying = false; // Playingページに遷移済みかどうか
   bool _hasNavigatedToChildTurn = false; // ChildTurnページに遷移済みかどうか
-  bool _hasNavigatedToParentTurn = false; // ParentTurnページに遷移済みかどうか
-  bool _hasNavigatedToResult = false; // Resultページに遷移済みかどうか
+  bool _hasNavigatedToResult = false; // CheckAnsewrページに遷移済みかどうか
 
-  // roomのstatusを保持
+  // ★ 追加: roomのstatusを保持 ★
   String? _currentRoomStatus;
-  String? _previousRoomStatus; // 前回のroom statusを保持
-
-  // 遷移制御の完全な一元化
-  bool _navigationInProgress = false; // 遷移処理中フラグ
-  String? _lastNavigatedScreen; // 最後に遷移した画面を記録
+  String? _previousRoomStatus; // ★ 前回のroom statusを保持
 
   @override
   Future<GameStatus> build(String roomId) async {
     print('🔍 RoomGameStateNotifier.build called with roomId: $roomId');
 
-    // ユーザー状態をチェック
+    // ★ 修正: ユーザー状態をチェック ★
     try {
       final userState = ref.read(userProvider);
 
@@ -51,10 +60,6 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         print('🔍 Invalid roomId - skipping monitoring');
         return GameStatus.waiting;
       }
-
-      // 保存されたgamePhaseを取得して初期化
-      _currentGamePhase = userState.gamePhase ?? GamePhase.initial;
-      print('🔍 Initial GamePhase from storage: $_currentGamePhase');
     } catch (e) {
       print('🔍 Error reading user state - skipping monitoring: $e');
       return GameStatus.waiting;
@@ -63,12 +68,11 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _isDisposed = false;
     _hasNavigatedToGameTitle = false;
     _previousGameStatus = null;
+    _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
     _hasNavigatedToChildTurn = false;
     _currentRoomStatus = null;
     _previousRoomStatus = null;
-    _navigationInProgress = false;
-    _lastNavigatedScreen = null;
 
     ref.onDispose(() {
       print('🔍 Disposing RoomGameStateNotifier');
@@ -83,28 +87,16 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     return GameStatus.waiting;
   }
 
-  // ★追加: gamePhase更新・保存メソッド
-  void _updateAndSaveGamePhase(GamePhase newPhase) {
-    _currentGamePhase = newPhase;
-
-    try {
-      // UserNotifierのgamePhaseも更新
-      final userNotifier = ref.read(userProvider.notifier);
-      userNotifier.updateGamePhase(newPhase);
-      print('🎮 GamePhase更新・保存: $newPhase');
-    } catch (e) {
-      print('⚠️ GamePhase保存エラー: $e');
-    }
-  }
-
   void _startMonitoring(String roomId) {
     print('🔍 Starting room monitoring for roomId: $roomId');
 
+    // ★ 修正: disposed状態チェック ★
     if (_isDisposed) {
       print('🔍 Already disposed - skipping monitoring');
       return;
     }
 
+    // ★ 修正: ユーザー状態の再チェック ★
     try {
       final userState = ref.read(userProvider);
       if (userState.uid == null || userState.uid!.isEmpty) {
@@ -128,6 +120,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         try {
           print('🔍 Room document update received');
 
+          // ★ 修正: 処理中にdisposed状態チェック ★
           if (_isDisposed) {
             print('🔍 Disposed during room update - stopping');
             return;
@@ -171,20 +164,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       final data = doc.data() as Map<String, dynamic>?;
       final roomStatus = data?['status'] as String?;
 
-      // room statusの変化を検知
+      // ★ room statusの変化を検知 ★
       _previousRoomStatus = _currentRoomStatus;
       _currentRoomStatus = roomStatus;
       print('🔍 Room status: $roomStatus (previous: $_previousRoomStatus)');
 
-      // ★修正: inProgressからacceptingへの変化でgamePhaseをリセット
+      // ★ 重要: inProgressからwaitingへの変化を検知 ★
       if (_previousRoomStatus == 'inProgress' && roomStatus == 'accepting') {
         print('🎮 ゲーム終了検知: inProgress → accepting');
-
-        // ゲーム選択画面に戻る前に、現在のゲーム情報をクリアする
-        ref.read(currentGameProvider.notifier).clearGame();
-
-        // gamePhaseを初期状態にリセット
-        _updateAndSaveGamePhase(GamePhase.initial);
 
         // 全ての監視を停止
         _stopAllMonitoring();
@@ -192,11 +179,13 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
         // ゲーム選択画面に遷移
         if (!_isDisposed) {
-          _executeNavigation('selectGame', () {
+          try {
             final navigationService = ref.read(navigationServiceProvider);
             navigationService.navigateToSelectGame();
             print('🎮 ゲーム選択画面への遷移完了');
-          });
+          } catch (e) {
+            print('❌ Navigation error: $e');
+          }
 
           state = const AsyncValue.data(GameStatus.waiting);
         }
@@ -234,28 +223,18 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
-  // 遷移処理の完全一元化
-  void _executeNavigation(String screenKey, VoidCallback navigationCallback) {
-    // 既に同じ画面への遷移中または完了している場合はスキップ
-    if (_navigationInProgress || _lastNavigatedScreen == screenKey) {
-      print(
-          '🔍 Navigation skipped: $screenKey (inProgress: $_navigationInProgress, last: $_lastNavigatedScreen)');
+  // GameTitlePageへの遷移処理を分離
+  void _navigateToGameTitle() {
+    if (_isDisposed) {
+      print('🔍 Notifier is disposed, skipping navigation to GameTitle');
       return;
     }
 
-    _navigationInProgress = true;
-    _lastNavigatedScreen = screenKey;
-
     try {
-      navigationCallback();
-      print('🎮 Navigation completed: $screenKey');
+      final navigationService = ref.read(navigationServiceProvider);
+      navigationService.navigateToGameTitle();
     } catch (e) {
-      print('❌ Navigation error: $e');
-    } finally {
-      // 少し遅延を入れて次の遷移を可能にする
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _navigationInProgress = false;
-      });
+      print('❌ Navigation error (likely disposed): $e');
     }
   }
 
@@ -292,11 +271,23 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
   void _handleCurrentGameCollectionUpdate(
       String roomId, QuerySnapshot querySnapshot) {
-    if (_isDisposed) return;
+    if (_isDisposed) {
+      print('🔍 Notifier is disposed, skipping currentGame collection update');
+      return;
+    }
+
+    print('🔍 currentGame documents count: ${querySnapshot.docs.length}');
 
     if (querySnapshot.docs.isEmpty) {
+      print('🔍 No currentGame documents found');
       _stopGameMonitoring();
-      state = const AsyncValue.data(GameStatus.waiting);
+
+      // ★ 削除: ここでのゲーム選択画面遷移は行わない ★
+      // room.statusの変化で遷移するため、ここでの遷移は不要
+
+      if (!_isDisposed) {
+        state = const AsyncValue.data(GameStatus.waiting);
+      }
       return;
     }
 
@@ -304,64 +295,41 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     final gameId = gameDoc.id;
     final gameData = gameDoc.data() as Map<String, dynamic>;
 
-    // 新しいゲームを検知したら必ずクリア
-    if (_currentGameId != gameId && _currentGameId != null) {
-      print('🔄 New game detected - clearing previous game data');
-      ref.read(currentGameProvider.notifier).clearGame();
-      _resetNavigationFlags();
-      _hasNavigatedToGameTitle = false;
+    print('🔍 Found gameId: $gameId');
+
+    // ゲームデータを読み込んでから遷移
+    _loadGameDataAndNavigate(roomId, gameId, gameData);
+
+    // 既に同じgameIdを監視中の場合はスキップ
+    if (_currentGameId == gameId) {
+      print('🔍 Already monitoring gameId: $gameId');
+      return;
     }
 
-    // データ読み込みと遷移
-    if (!_hasNavigatedToGameTitle || _currentGameId != gameId) {
-      _loadGameDataAndNavigateToTitle(roomId, gameId, gameData);
-    }
-
+    // 新しいgameIdの詳細監視を開始
     _currentGameId = gameId;
     _startGameDetailMonitoring(roomId, gameId);
   }
 
-  // 初回のゲームデータ読み込みとタイトル遷移のみ
-  Future<void> _loadGameDataAndNavigateToTitle(
+  Future<void> _loadGameDataAndNavigate(
       String roomId, String gameId, Map<String, dynamic> gameData) async {
-    // 復帰処理中の場合は、タイトル画面への自動遷移をスキップする
-    final userState = ref.read(userProvider);
-    if (userState.isRestoring) {
-      print('🔍 復帰中のためタイトルへの自動遷移をスキップ');
-      // ゲームデータの読み込みは行うが、画面遷移は行わない
-      await ref
-          .read(currentGameProvider.notifier)
-          .loadFromCurrentGame(roomId, gameId);
-      _hasNavigatedToGameTitle = true; // 遷移したことにして、重複処理を防ぐ
-      return; // ここで処理を中断
-    }
-
     try {
+      // currentGameサブドキュメントからゲームデータを読み込み
       await ref
           .read(currentGameProvider.notifier)
           .loadFromCurrentGame(roomId, gameId);
 
-      print('🎮 Game data loaded successfully - Navigating to GameTitle!');
+      // 読み込み成功後に遷移
+      if (!_hasNavigatedToGameTitle) {
+        print('🎮 Game data loaded successfully - Navigating to GameTitle!');
+        _navigateToGameTitle();
+        _hasNavigatedToGameTitle = true;
+      }
 
-      _executeNavigation('gameTitle', () {
-        final navigationService = ref.read(navigationServiceProvider);
-        navigationService.navigateToGameTitle();
-      });
-
-      _hasNavigatedToGameTitle = true;
-
+      // ゲーム状態更新
       final gameStatus = _parseGameStatus(gameData['gameStatus']);
-      print('🔍 Initial game status after load: $gameStatus');
-
       if (!_isDisposed) {
         state = AsyncValue.data(gameStatus);
-
-        // 復帰時の処理を簡略化
-        final userState = ref.read(userProvider);
-        if (userState.isRestoring) {
-          print('🔍 復帰時 - 現在の状態: $gameStatus');
-          // 復帰時は特別な処理は不要（既にlocalStorageから正確なgamePhaseを取得済み）
-        }
       }
     } catch (e) {
       print('❌ Failed to load game data: $e');
@@ -428,21 +396,15 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     if (!_isDisposed) {
       state = AsyncValue.data(gameStatus);
-
-      // 復帰処理か通常処理かで分岐
-      final userState = ref.read(userProvider);
-      if (userState.isRestoring) {
-        print('🔍 復帰中のため自動遷移なし');
-      } else {
-        _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
-      }
+      // 重複チェック付きの状態変化処理
+      _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
     }
   }
 
-  // 重複チェック付きの状態変化処理
+  // 重複チェック付きの状態変化処理を改善
   void _handleGameStateChangeWithDuplicationCheck(
       GameStatus currentStatus, Map<String, dynamic> currentGame) {
-    // 既存の重複チェック処理
+    // 前回と同じ状態で、かつ特定の条件の場合はスキップ
     if (_previousGameStatus == currentStatus) {
       switch (currentStatus) {
         case GameStatus.playing:
@@ -458,14 +420,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           }
           break;
         case GameStatus.parentTurn:
-          if (_hasNavigatedToParentTurn) {
-            print('🔍 すでにparentTurnページに遷移済みのためスキップ');
-            return;
-          }
           break;
         case GameStatus.result:
           if (_hasNavigatedToResult) {
-            print('🔍 すでにresultページに遷移済みのためスキップ');
+            print('🔍 すでにCheckAnswerページに遷移済みのためスキップ');
             return;
           }
           break;
@@ -478,7 +436,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       }
     }
 
+    // 前回の状態を更新
     _previousGameStatus = currentStatus;
+
+    // 実際の遷移処理を実行
     _handleGameStateChange(currentStatus, currentGame);
   }
 
@@ -492,18 +453,13 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGameId = null;
   }
 
-  // リセット処理
+  // リセット処理にも追加
   void _resetNavigationFlags() {
     _hasNavigatedToGameTitle = false;
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
     _hasNavigatedToPlaying = false;
-    _hasNavigatedToChildTurn = false;
-    _hasNavigatedToParentTurn = false;
-    _hasNavigatedToResult = false;
     _currentGameId = null;
-    _navigationInProgress = false;
-    _lastNavigatedScreen = null;
   }
 
   GameStatus _parseGameStatus(dynamic status) {
@@ -521,7 +477,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
-  // ★修正: 遷移ロジックの一元化（gamePhase更新処理を追加）
+  // ゲーム状態変化に基づく遷移処理
   void _handleGameStateChange(
       GameStatus status, Map<String, dynamic> currentGame) {
     if (_isDisposed) {
@@ -529,74 +485,56 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       return;
     }
 
-    final navigationService = ref.read(navigationServiceProvider);
+    try {
+      final navigationService = ref.read(navigationServiceProvider);
 
-    switch (status) {
-      case GameStatus.playing:
-        print('🎮 Navigating to PlayingPage with currentGame: $currentGame');
-        _executeNavigation('playing', () {
+      switch (status) {
+        case GameStatus.playing:
+          print('🎮 Navigating to PlayingPage with currentGame: $currentGame');
           navigationService.navigateToPlayingPage();
           _hasNavigatedToPlaying = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
-        });
-        break;
-
-      case GameStatus.childTurn:
-        print('🎮 Navigating to ChildTurn');
-        _executeNavigation('childTurn', () {
-          // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
-          ref.read(currentGameProvider.notifier).updateGameData(currentGame);
+          _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
+          break;
+        case GameStatus.childTurn:
+          print('🎮 Navigating to ChildTurn');
           navigationService.navigateToChildTurn(currentGame);
           _hasNavigatedToChildTurn = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
-        });
-        break;
-
-      case GameStatus.parentTurn:
-        print('🎮 Navigating to ParentTurn');
-        _executeNavigation('parentTurn', () {
-          // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
-          ref.read(currentGameProvider.notifier).updateGameData(currentGame);
+          _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
+          break;
+        case GameStatus.parentTurn:
+          print('🎮 Navigating to ParentTurn');
           navigationService.navigateToParentTurn(currentGame);
-          _hasNavigatedToParentTurn = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
-        });
-        break;
-
-      case GameStatus.result:
-        print('🎮 NavinavigateToResult(currentGame)');
-        _executeNavigation('checkAnswer', () {
-          // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
-          ref.read(currentGameProvider.notifier).updateGameData(currentGame);
-          navigationService.navigateToCheckAnswer(currentGame);
+          _currentGamePhase = GamePhase.started; // ゲーム開始段階に更新
+          break;
+        case GameStatus.result:
+          print('🎮 Navigating to CheckAnswer');
           _hasNavigatedToResult = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
-        });
-        break;
-
-      case GameStatus.waiting:
-        print('🎮 Waiting status detected - current phase: $_currentGamePhase');
-
-        if (_currentGamePhase == GamePhase.started) {
-          print('🎮 Game ended - navigating to result page');
-          _executeNavigation('result', () {
-            // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
-            ref.read(currentGameProvider.notifier).updateGameData(currentGame);
+          navigationService.navigateToCheckAnswer(currentGame);
+          break;
+        case GameStatus.waiting:
+          print(
+              '🎮 Waiting status detected - current phase: $_currentGamePhase');
+          if (_currentGamePhase == GamePhase.started) {
+            // ゲーム中からwaitingになった場合は必ず結果画面に遷移
+            print('🎮 Game ended - navigating to result');
             navigationService.navigateToResult(currentGame);
-            _hasNavigatedToResult = true;
-            _updateAndSaveGamePhase(GamePhase.ended); // ★追加: gamePhase更新
-          });
-        } else {
-          print('🎮 Initial waiting - staying in GameTitle');
-        }
-        break;
+            _currentGamePhase = GamePhase.ended; // ゲーム終了段階に更新
+          } else {
+            // 初期状態やゲーム終了後のwaiting = ゲームタイトル画面への遷移（既に処理済みの場合はスキップ）
+            print(
+                '🎮 Initial waiting or post-game waiting - staying in current state');
+          }
+          break;
+      }
+    } catch (e) {
+      print('❌ Navigation error (likely disposed): $e');
     }
   }
 
   void stopMonitoring() {
     print('🔄 Stopping all monitoring...');
 
-    // disposed フラグを設定して新しい監視を防ぐ
+    // ★ 修正: disposed フラグを設定して新しい監視を防ぐ ★
     _isDisposed = true;
 
     // 全ての監視を停止
