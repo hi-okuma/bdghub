@@ -9,6 +9,7 @@ import '/components/game_list_widget.dart';
 import '/components/custom_widgets.dart';
 import '/components/app_theme.dart';
 import 'top_page.dart';
+import 'package:bodogehub/models/game_enums.dart';
 import '/Pages/0000_HubMain/game_detail_page.dart';
 import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
