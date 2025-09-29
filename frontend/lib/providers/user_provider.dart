@@ -237,7 +237,7 @@ class UserNotifier extends StateNotifier<UserState> {
   }
 
   // leaveRoom時にgamePhaseもクリア
-  void leaveRoom() async {
+  Future<void> leaveRoom() async {
     print('🚪 部屋退出前の状態: $state');
     final currentRoomId = state.roomId;
 

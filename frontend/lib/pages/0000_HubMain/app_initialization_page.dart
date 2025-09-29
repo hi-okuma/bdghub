@@ -34,20 +34,36 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
   Future<void> _initializeApp() async {
     try {
+      // 最初に認証と復帰処理を試みる
       await AuthService.ensureAuthenticated();
-
-      if (widget.urlRoomId != null && widget.urlRoomId!.isNotEmpty) {
-        _navigateToJoinRoom(widget.urlRoomId!);
-        return;
-      }
-
       final restoreSuccess =
           await ref.read(userProvider.notifier).tryRestoreFromStorage();
 
       if (restoreSuccess) {
-        await _handleDetailedGameStateRestore();
+        // 復帰に成功した場合
+        final restoredRoomId = ref.read(userProvider).roomId;
+
+        // URLのroomIdと復元したroomIdが一致するか、
+        // あるいはURLにroomIdがなくとも復帰情報があれば、詳細な復帰処理を行う
+        if (widget.urlRoomId == null ||
+            widget.urlRoomId!.isEmpty ||
+            restoredRoomId == widget.urlRoomId) {
+          await _handleDetailedGameStateRestore();
+        } else {
+          // 復元された部屋とURLの部屋が違う場合、URLを優先して参加フローへ
+          // (あるいは、進行中のセッションがあると警告を出すなどの実装も可能)
+          await ref.read(userProvider.notifier).leaveRoom(); // 古いセッション情報をクリア
+          _navigateToJoinRoom(widget.urlRoomId!);
+        }
       } else {
-        _navigateToTop();
+        // 復帰に失敗した場合
+        if (widget.urlRoomId != null && widget.urlRoomId!.isNotEmpty) {
+          // URLにroomIdがあれば、参加フローへ
+          _navigateToJoinRoom(widget.urlRoomId!);
+        } else {
+          // 何も情報がなければTopPageへ
+          _navigateToTop();
+        }
       }
     } catch (e) {
       print('❌ アプリ初期化エラー: $e');
