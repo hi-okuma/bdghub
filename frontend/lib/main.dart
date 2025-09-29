@@ -17,7 +17,7 @@ import 'test_UIscreen.dart';
 import 'package:bodogehub/config/environment_config.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized(); // 最初に呼び出す
 
   try {
     // 環境を自動判定して初期化
@@ -34,14 +34,15 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  await FirebaseAppCheck.instance.activate(
-    webProvider: ReCaptchaV3Provider(dotenv.env['SITE_KEY']!),
-  );
-
-  // Firebase Auth の初期化確認（オプション）
-  print('🔥 Firebase Auth 初期化完了');
-  if (AuthService.isAuthenticated()) {
-    print('🔐 既存の認証を確認: ${AuthService.getCurrentUID()}');
+  // SITE_KEYがnullでないことを確認してからactivateを呼ぶ
+  final siteKey = dotenv.env['SITE_KEY'];
+  if (siteKey != null) {
+    await FirebaseAppCheck.instance.activate(
+      webProvider: ReCaptchaV3Provider(siteKey),
+    );
+  } else {
+    print('Error: SITE_KEY is not defined in .env file');
+    // ここでエラー処理を行うか、App Checkなしで続行するかを決定
   }
 
   // UIテスト用フラグ
