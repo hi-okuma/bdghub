@@ -317,13 +317,9 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Row(
-          children: [
-            const Text(
-              'ボドゲハブ',
-              style: AppTextStyles.bdghubHeaderStyle,
-            ),
-          ],
+        title: const Text(
+          'ボドゲハブ',
+          style: AppTextStyles.bdghubHeaderStyle,
         ),
       ),
       body: bodyContent,
