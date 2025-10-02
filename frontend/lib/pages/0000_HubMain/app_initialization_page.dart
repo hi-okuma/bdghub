@@ -225,23 +225,23 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(AppBorderRadius.brandLogo),
-              ),
               child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.large),
-                child: Icon(
-                  Icons.videogame_asset_outlined,
-                  color: Colors.white,
-                  size: AppIconSizes.xxLarge,
-                ),
-              ),
+                  padding: const EdgeInsets.all(AppSpacing.large),
+                  child:
+                      // Icon(
+                      //   Icons.videogame_asset_outlined,
+                      //   color: Colors.white,
+                      //   size: AppIconSizes.xxLarge,
+                      // ),
+                      Image.asset(
+                    'images/bdghub_icon_main.png',
+                    height: AppIconSizes.appIcon,
+                  )),
             ),
             const SizedBox(height: AppSpacing.xxLarge),
             const Text(
-              'ボードゲームハブ',
-              style: AppTextStyles.h5,
+              'ボドゲハブ',
+              style: AppTextStyles.bdghubTitleStyle,
             ),
             const SizedBox(height: AppSpacing.xxLarge),
             const CircularProgressIndicator(),

@@ -70,6 +70,7 @@ flutter:
 
 #  To add assets to your application, add an assets section, like this:
   assets:
+    - assets/images/
     - assets/.env.dev
     - assets/.env.stg
     - assets/.env.prd
@@ -95,6 +96,9 @@ flutter:
           weight: 300
         - asset: assets/fonts/NotoSansJP-Thin.ttf
           weight: 100
+    - family: ZouFont
+      fonts:
+        - asset: assets/fonts/002zouver.2-Regular.ttf
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

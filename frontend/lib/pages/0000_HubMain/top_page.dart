@@ -317,28 +317,9 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(AppBorderRadius.brandLogo),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xSmall),
-                child: Icon(
-                  Icons.videogame_asset_outlined,
-                  color: Colors.white,
-                  size: AppIconSizes.medium,
-                ),
-              ),
-            ),
-            SizedBox(width: AppSpacing.small),
-            const Text(
-              'ボードゲームハブ',
-              style: AppTextStyles.title,
-            ),
-          ],
+        title: const Text(
+          'ボドゲハブ',
+          style: AppTextStyles.bdghubHeaderStyle,
         ),
       ),
       body: bodyContent,
