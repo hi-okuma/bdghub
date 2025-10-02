@@ -318,7 +318,7 @@ class AppLayout {
   static const int maxProfileLength = 100;
   static const int maxProfileLines = 2;
   static const double tabHeight = 36;
-  static const double tutorialImageSize = 400.0;
+  static const double tutorialImageSize = 340.0;
   static const double circleIndicatorStroke = 2;
 }
 
