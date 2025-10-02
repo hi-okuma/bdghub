@@ -185,48 +185,49 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
 
                 // ゲーム紹介画像（カルーセル）
                 Expanded(
-                  child: Container(
-                    child: Stack(
-                      alignment: Alignment.center,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // カルーセル
-                        PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _currentImageIndex = index;
-                            });
-                          },
-                          itemCount: gameImages.length,
-                          itemBuilder: (context, index) {
-                            final imageUrl = gameImages[index];
+                        // カルーセル（PageView）
+                        Container(
+                          height: AppLayout.tutorialImageSize, // PageViewの高さを指定
+                          child: PageView.builder(
+                            controller: _pageController,
+                            onPageChanged: (index) {
+                              setState(() {
+                                _currentImageIndex = index;
+                              });
+                            },
+                            itemCount: gameImages.length,
+                            itemBuilder: (context, index) {
+                              final imageUrl = gameImages[index];
 
-                            return Center(
-                              child: GameThumbnail(
-                                thumbnailUrl: imageUrl,
-                                size: AppLayout.tutorialImageSize,
-                              ),
-                            );
-                          },
-                        ),
-                        // インジケーター
-                        Positioned(
-                          bottom: AppSpacing.large,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              gameImages.length,
-                              (index) => Container(
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.xSmall),
-                                width: AppSpacing.small,
-                                height: AppSpacing.small,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: _currentImageIndex == index
-                                      ? AppTheme.selectedBackgroundColor
-                                      : AppTheme.disabledBackgroundColor,
+                              return Center(
+                                child: GameThumbnail(
+                                  thumbnailUrl: imageUrl,
+                                  size: AppLayout.tutorialImageSize,
                                 ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.medium),
+                        // インジケーター
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            gameImages.length,
+                            (index) => Container(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xSmall),
+                              width: AppSpacing.small,
+                              height: AppSpacing.small,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _currentImageIndex == index
+                                    ? AppTheme.primaryColor
+                                    : AppTheme.disabledBackgroundColor,
                               ),
                             ),
                           ),
