@@ -319,15 +319,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         centerTitle: false,
         title: Row(
           children: [
-            Container(
-              child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xSmall),
-                  child: Image.asset(
-                    'images/bdghub_icon_main.png',
-                    height: AppIconSizes.large,
-                  )),
-            ),
-            SizedBox(width: AppSpacing.small),
             const Text(
               'ボドゲハブ',
               style: AppTextStyles.bdghubHeaderStyle,
