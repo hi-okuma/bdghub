@@ -320,23 +320,17 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         title: Row(
           children: [
             Container(
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.circular(AppBorderRadius.brandLogo),
-              ),
               child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xSmall),
-                child: Icon(
-                  Icons.videogame_asset_outlined,
-                  color: Colors.white,
-                  size: AppIconSizes.medium,
-                ),
-              ),
+                  padding: const EdgeInsets.all(AppSpacing.xSmall),
+                  child: Image.asset(
+                    'images/bdghub_icon_main.png',
+                    height: AppIconSizes.large,
+                  )),
             ),
             SizedBox(width: AppSpacing.small),
             const Text(
-              'ボードゲームハブ',
-              style: AppTextStyles.title,
+              'ボドゲハブ',
+              style: AppTextStyles.bdghubHeaderStyle,
             ),
           ],
         ),

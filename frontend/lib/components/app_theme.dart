@@ -228,6 +228,8 @@ class AppTextStyles {
   static const double subtitle2FontSize = 14.0;
   static const double bodyFontSize = 14.0;
   static const double captionFontSize = 11.0;
+  static const double bdghubTitleFontSize = 40.0;
+  static const double bdghubHeaderFontSize = 28.0;
   // static const double smallFontSize = 10.0;
 
   // タイトルスタイル
@@ -293,6 +295,16 @@ class AppTextStyles {
     fontSize: subtitle2FontSize,
     color: AppTheme.errorColor,
   );
+
+  static const TextStyle bdghubTitleStyle = TextStyle(
+      fontSize: bdghubTitleFontSize,
+      color: AppTheme.primaryColor,
+      fontFamily: 'ZouFont');
+
+  static const TextStyle bdghubHeaderStyle = TextStyle(
+      fontSize: bdghubHeaderFontSize,
+      color: AppTheme.primaryColor,
+      fontFamily: 'ZouFont');
 }
 
 // アイコンサイズ定数
@@ -303,6 +315,7 @@ class AppIconSizes {
   static const double large = 32.0;
   static const double xLarge = 40.0;
   static const double xxLarge = 48.0;
+  static const double appIcon = 220.0;
   static const double gameCardThumbnail = 112.0;
   static const double gameDetailThumbnail = 100.0;
   static const double rankIcon = 28.0;
