@@ -227,14 +227,8 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
             Container(
               child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.large),
-                  child:
-                      // Icon(
-                      //   Icons.videogame_asset_outlined,
-                      //   color: Colors.white,
-                      //   size: AppIconSizes.xxLarge,
-                      // ),
-                      Image.asset(
-                    'images/bdghub_icon_main.png',
+                  child: Image.asset(
+                    'assets/images/bdghub_icon_main.png',
                     height: AppIconSizes.appIcon,
                   )),
             ),
