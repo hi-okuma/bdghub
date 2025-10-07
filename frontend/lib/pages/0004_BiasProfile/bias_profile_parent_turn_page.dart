@@ -23,7 +23,7 @@ class BiasProfileParentTurnPage extends ConsumerStatefulWidget {
 class _BiasProfileParentTurnPageState
     extends ConsumerState<BiasProfileParentTurnPage> with GameExitHandler {
   String? _errorMessage;
-  int? _selectedImageIndex;
+  int _selectedImageIndex = 0;
 
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
@@ -176,7 +176,7 @@ class _BiasProfileParentTurnPageState
                           height: AppSpacing.medium,
                         ),
                         Text(
-                          '子プレイヤーが入力した偏見をもとに\n5枚の画像の中から正解の人物を当てよう\n（画像は横にスワイプできます）',
+                          '子プレイヤーが入力した偏見をもとに\n5枚の画像の中から正解の人物を当てよう',
                           style: AppTextStyles.body,
                           textAlign: TextAlign.center,
                         )
@@ -195,7 +195,7 @@ class _BiasProfileParentTurnPageState
                           height: AppSpacing.medium,
                         ),
                         Text(
-                          '親が回答している間、他のプレイヤーが入力した\n偏見を覗いてみましょう\n（画像は横にスワイプできます）',
+                          '親が回答している間、他のプレイヤーが入力した\n偏見を覗いてみましょう',
                           style: AppTextStyles.body,
                           textAlign: TextAlign.center,
                         )
@@ -205,108 +205,93 @@ class _BiasProfileParentTurnPageState
             Padding(
               padding: const EdgeInsets.symmetric(
                   vertical: AppSpacing.medium, horizontal: AppSpacing.large),
-              child: Row(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Expanded(
-                    child: Container(
-                      height: MediaQuery.of(context).size.height * 0.4,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: currentImages.length,
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              right: index < currentImages.length
-                                  ? AppSpacing.xSmall
-                                  : 0,
-                            ),
-                            child: AspectRatio(
-                              aspectRatio: 7 / 10,
-                              child: Stack(
-                                children: [
-                                  Opacity(
-                                    opacity: _selectedImageIndex == index
-                                        ? 0.5
-                                        : 1.0,
-                                    child: Card(
-                                      elevation: AppElevation.medium,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                            AppBorderRadius.small),
-                                        // 枠線の部分を削除
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: InkWell(
-                                        onTap: isCurrentParent
-                                            ? () {
-                                                setState(() {
-                                                  _selectedImageIndex = index;
-                                                });
-                                              }
-                                            : null,
-                                        child: Image.network(
-                                          currentImages[index],
-                                          fit: BoxFit.cover,
-                                          loadingBuilder: (context, child,
-                                              loadingProgress) {
-                                            if (loadingProgress == null)
-                                              return child;
-                                            return Center(
-                                              child: CircularProgressIndicator(
-                                                value: loadingProgress
-                                                            .expectedTotalBytes !=
-                                                        null
-                                                    ? loadingProgress
-                                                            .cumulativeBytesLoaded /
-                                                        loadingProgress
-                                                            .expectedTotalBytes!
-                                                    : null,
-                                              ),
-                                            );
-                                          },
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return const Center(
-                                              child: Text(
-                                                '画像の読み込みに\n失敗しました',
-                                                style: AppTextStyles.body,
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
+                  // 画像表示エリア
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.4,
+                    child: AspectRatio(
+                      aspectRatio: 7 / 10,
+                      child: Card(
+                        elevation: AppElevation.medium,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppBorderRadius.small),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: currentImages.isNotEmpty
+                            ? Image.network(
+                                currentImages[_selectedImageIndex],
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
                                     ),
-                                  ),
-                                  // チェックマークを右下に配置
-                                  if (_selectedImageIndex == index)
-                                    Positioned(
-                                      right: 15,
-                                      bottom: 25,
-                                      child: Container(
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.check_circle,
-                                          color: AppTheme.primaryColor,
-                                          size: AppIconSizes.large,
-                                        ),
-                                      ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Text(
+                                      '画像の読み込みに\n失敗しました',
+                                      style: AppTextStyles.body,
+                                      textAlign: TextAlign.center,
                                     ),
-                                ],
+                                  );
+                                },
+                              )
+                            : const Center(
+                                child: Text('画像がありません'),
                               ),
-                            ),
-                          );
-                        },
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: AppSpacing.medium),
+
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(currentImages.length, (index) {
+                        return Padding(
+                          padding: EdgeInsets.only(right: AppSpacing.small),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedImageIndex = index;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _selectedImageIndex == index
+                                  ? AppTheme.primaryColor
+                                  : AppTheme.selectedBackgroundColor,
+                              foregroundColor: _selectedImageIndex == index
+                                  ? Colors.white
+                                  : AppTheme.secondaryTextColor,
+                              elevation: AppElevation.none,
+                              padding: EdgeInsets.zero,
+                            ),
+                            child: Text('${index + 1}枚目'),
+                          ),
+                        );
+                      }),
                     ),
                   ),
                 ],
               ),
             ),
+            SizedBox(height: AppSpacing.medium),
             Expanded(
               child: Padding(
                 padding:
@@ -359,55 +344,51 @@ class _BiasProfileParentTurnPageState
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: _selectedImageIndex != null
-                                ? () async {
-                                    // API呼び出しのエラーハンドリング追加
-                                    try {
-                                      final result =
-                                          await ApiService.determineAnswer0004(
-                                        roomId,
-                                        currentUser.uid!,
-                                        _selectedImageIndex!,
-                                      );
+                            onPressed: () async {
+                              // API呼び出しのエラーハンドリング追加
+                              try {
+                                final result =
+                                    await ApiService.determineAnswer0004(
+                                  roomId,
+                                  currentUser.uid!,
+                                  _selectedImageIndex,
+                                );
 
-                                      if (result['success'] == true) {
-                                        print('💡 回答を提出: $_selectedImageIndex');
+                                if (result['success'] == true) {
+                                  print('💡 回答を提出: $_selectedImageIndex');
 
-                                        // 成功時のスナックバー表示
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text('回答を送信しました'),
-                                              backgroundColor:
-                                                  AppTheme.successColor,
-                                              duration: Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        // APIからの失敗レスポンス
-                                        if (mounted) {
-                                          ApiErrorHandler.handleApiError(
-                                              context, result, setError);
-                                        }
-                                      }
-                                    } catch (e) {
-                                      print('❌ 回答にに失敗: $e');
-
-                                      if (mounted) {
-                                        // http.Response型のエラーかどうかで処理を分ける
-                                        if (e is http.Response) {
-                                          ApiErrorHandler.handleHttpError(
-                                              context, e, setError);
-                                        } else {
-                                          ApiErrorHandler.handleException(
-                                              context, e, setError);
-                                        }
-                                      }
-                                    }
+                                  // 成功時のスナックバー表示
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('回答を送信しました'),
+                                        backgroundColor: AppTheme.successColor,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
-                                : null,
+                                } else {
+                                  // APIからの失敗レスポンス
+                                  if (mounted) {
+                                    ApiErrorHandler.handleApiError(
+                                        context, result, setError);
+                                  }
+                                }
+                              } catch (e) {
+                                print('❌ 回答にに失敗: $e');
+
+                                if (mounted) {
+                                  // http.Response型のエラーかどうかで処理を分ける
+                                  if (e is http.Response) {
+                                    ApiErrorHandler.handleHttpError(
+                                        context, e, setError);
+                                  } else {
+                                    ApiErrorHandler.handleException(
+                                        context, e, setError);
+                                  }
+                                }
+                              }
+                            },
                             child: const Text('この人物に決定'),
                           ),
                         ),
