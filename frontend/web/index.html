@@ -1,40 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A boradgame platform project.">
 
-  <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="bodogehub">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>bodogehub</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    @font-face {
+      font-family: 'ZouFont';
+      src: url('assets/assets/fonts/002zouver.2-Regular.ttf') format('truetype');
+    }
+    .app-title {
+      font-family: 'ZouFont', sans-serif;
+      font-size: 48px;
+      font-weight: bold;
+      color: #E07000;
+      margin-top: 24px;
+    }
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .shiny-icon-container {
+      position: relative;
+      /* 画像のサイズにコンテナのサイズを合わせる */
+      width: 227px;
+      height: 213px;
+      overflow: hidden;
+      border-radius: 18px;
+    }
+
+    .shiny-icon-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: skewX(-25deg);
+      animation: shine 2.5s infinite linear;
+    }
+    @keyframes shine {
+      0% {
+        left: -100%;
+      }
+      100% {
+        left: 200%;
+      }
+    }
+  </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
-  <script>
-  </script>
+<div id="loading-indicator" class="loading-container">
+  <div class="shiny-icon-container">
+    <img src="assets/assets/images/bdghub_icon_main.png" alt="Loading..." style="width: 100%; height: 100%;"/>
+  </div>
+  <div class="app-title">ボドゲハブ</div>
+</div>
+<script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

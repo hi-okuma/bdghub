@@ -221,27 +221,7 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.large),
-                  child: Image.asset(
-                    'assets/images/bdghub_icon_main.png',
-                    height: AppIconSizes.appIcon,
-                  )),
-            ),
-            const SizedBox(height: AppSpacing.xxLarge),
-            const Text(
-              'ボドゲハブ',
-              style: AppTextStyles.bdghubTitleStyle,
-            ),
-            const SizedBox(height: AppSpacing.xxLarge),
-            const CircularProgressIndicator(),
-            const SizedBox(height: AppSpacing.large),
-          ],
-        ),
+        child: const CircularProgressIndicator(),
       ),
     );
   }
