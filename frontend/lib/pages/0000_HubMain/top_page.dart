@@ -8,7 +8,6 @@ import 'package:bodogehub/Pages/0000_HubMain/game_detail_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../etc/legal_document_page.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
@@ -20,6 +19,8 @@ class TopPage extends StatefulWidget {
 }
 
 class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
+  Uri termsOfServiceUrl = Uri.parse(dotenv.env['TERMS_OF_SERVICE_URL'] ?? '');
+  Uri privacyPolicyUrl = Uri.parse(dotenv.env['PRIVACY_POLICY_URL'] ?? '');
   Uri formUrl = Uri.parse(dotenv.env['FORM_URL'] ?? '');
   List<Map<String, dynamic>> games = [];
   String selectedFilter = 'すべて';
@@ -332,55 +333,16 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
           padding: EdgeInsets.zero,
           children: [
             ListTile(
-              title: const Text('利用規約 (.txt)'),
+              title: const Text('利用規約'),
               onTap: () {
-                Navigator.pop(context); // Drawerを閉じる
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const LegalDocumentPage(
-                    title: '利用規約',
-                    assetPath: 'assets/texts/terms_of_service.txt',
-                  ),
-                ));
+                launchUrl(termsOfServiceUrl);
               },
             ),
             ListTile(
-              title: const Text('利用規約 (.md)'),
-              onTap: () {
-                Navigator.pop(context); // Drawerを閉じる
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const LegalDocumentPage(
-                    title: '利用規約',
-                    assetPath: 'assets/texts/terms_of_service.md',
-                    isMarkdown: true, // Markdownとして表示
-                  ),
-                ));
-              },
-            ),
-            ListTile(
-              title: const Text('プライバシーポリシー (.txt)'),
-              onTap: () {
-                Navigator.pop(context); // Drawerを閉じる
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const LegalDocumentPage(
-                    title: 'プライバシーポリシー',
-                    assetPath: 'assets/texts/privacy_policy.txt',
-                  ),
-                ));
-              },
-            ),
-            ListTile(
-              title: const Text('プライバシーポリシー (.md)'),
-              onTap: () {
-                Navigator.pop(context); // Drawerを閉じる
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const LegalDocumentPage(
-                    title: 'プライバシーポリシー',
-                    assetPath: 'assets/texts/privacy_policy.md',
-                    isMarkdown: true, // Markdownとして表示
-                  ),
-                ));
-              },
-            ),
+                title: const Text('プライバシーポリシー'),
+                onTap: () {
+                  launchUrl(privacyPolicyUrl);
+                }),
             ListTile(
               title: const Text('ご意見箱'),
               onTap: () {
