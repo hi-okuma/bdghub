@@ -6,6 +6,9 @@ import 'package:bodogehub/utils/game_service.dart';
 import 'package:flutter/material.dart';
 import 'package:bodogehub/Pages/0000_HubMain/game_detail_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../etc/legal_document_page.dart';
 
 class TopPage extends StatefulWidget {
   final String? roomId;
@@ -17,6 +20,7 @@ class TopPage extends StatefulWidget {
 }
 
 class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
+  Uri formUrl = Uri.parse(dotenv.env['FORM_URL'] ?? '');
   List<Map<String, dynamic>> games = [];
   String selectedFilter = 'すべて';
 
@@ -320,6 +324,70 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         title: const Text(
           'ボドゲハブ',
           style: AppTextStyles.bdghubHeaderStyle,
+        ),
+      ),
+      // Drawerウィジェット内を以下のように修正
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            ListTile(
+              title: const Text('利用規約 (.txt)'),
+              onTap: () {
+                Navigator.pop(context); // Drawerを閉じる
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const LegalDocumentPage(
+                    title: '利用規約',
+                    assetPath: 'assets/texts/terms_of_service.txt',
+                  ),
+                ));
+              },
+            ),
+            ListTile(
+              title: const Text('利用規約 (.md)'),
+              onTap: () {
+                Navigator.pop(context); // Drawerを閉じる
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const LegalDocumentPage(
+                    title: '利用規約',
+                    assetPath: 'assets/texts/terms_of_service.md',
+                    isMarkdown: true, // Markdownとして表示
+                  ),
+                ));
+              },
+            ),
+            ListTile(
+              title: const Text('プライバシーポリシー (.txt)'),
+              onTap: () {
+                Navigator.pop(context); // Drawerを閉じる
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const LegalDocumentPage(
+                    title: 'プライバシーポリシー',
+                    assetPath: 'assets/texts/privacy_policy.txt',
+                  ),
+                ));
+              },
+            ),
+            ListTile(
+              title: const Text('プライバシーポリシー (.md)'),
+              onTap: () {
+                Navigator.pop(context); // Drawerを閉じる
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const LegalDocumentPage(
+                    title: 'プライバシーポリシー',
+                    assetPath: 'assets/texts/privacy_policy.md',
+                    isMarkdown: true, // Markdownとして表示
+                  ),
+                ));
+              },
+            ),
+            ListTile(
+              title: const Text('ご意見箱'),
+              onTap: () {
+                launchUrl(formUrl);
+              },
+            ),
+          ],
         ),
       ),
       body: bodyContent,

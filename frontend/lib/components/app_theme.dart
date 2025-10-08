@@ -71,6 +71,15 @@ class AppTheme {
         ),
       ),
 
+      //Drawerテーマ
+      drawerTheme: DrawerThemeData(
+        backgroundColor: AppTheme.backgroundColor,
+        elevation: AppElevation.none,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.none),
+        ),
+      ),
+
       // ElevatedButtonテーマ
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -197,6 +206,7 @@ class AppSpacing {
 
 // ボーダー半径定数
 class AppBorderRadius {
+  static const double none = 0.0;
   static const double small = 4.0;
   static const double medium = 8.0;
   static const double large = 12.0;
