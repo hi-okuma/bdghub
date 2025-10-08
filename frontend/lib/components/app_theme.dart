@@ -308,11 +308,13 @@ class AppTextStyles {
 
   static const TextStyle bdghubTitleStyle = TextStyle(
       fontSize: bdghubTitleFontSize,
+      fontWeight: FontWeight.normal,
       color: AppTheme.primaryColor,
       fontFamily: 'ZouFont');
 
   static const TextStyle bdghubHeaderStyle = TextStyle(
       fontSize: bdghubHeaderFontSize,
+      fontWeight: FontWeight.normal,
       color: AppTheme.primaryColor,
       fontFamily: 'ZouFont');
 }
