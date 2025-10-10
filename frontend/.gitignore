@@ -165,3 +165,7 @@ app.*.symbols
 *.env.dev
 *.env.stg
 *.env.prd
+
+# index.html
+web/index.html
+web/index.html.backup
