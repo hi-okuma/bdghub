@@ -2,6 +2,7 @@ import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/models/game_enums.dart';
@@ -35,10 +36,10 @@ class NavigationService {
       case GameStatus.waiting:
         // ★修正：ゲーム終了後のwaitingかどうかで判定
         if (isGameEnded) {
-          print('🎮 Game ended waiting - navigating to result page');
+          Logger.log('🎮 Game ended waiting - navigating to result page');
           navigateToResult(gameData);
         } else {
-          print('🎮 Initial waiting - navigating to game title');
+          Logger.log('🎮 Initial waiting - navigating to game title');
           _navigator!.pushReplacement(
             MaterialPageRoute(builder: (context) => const GameTitlePage()),
           );
@@ -66,17 +67,17 @@ class NavigationService {
       Map<String, dynamic> gameData, GamePhase gamePhase) {
     if (_navigator == null) return;
 
-    print('🎮 フェーズ考慮の画面遷移: $gameStatus, phase: $gamePhase');
+    Logger.log('🎮 フェーズ考慮の画面遷移: $gameStatus, phase: $gamePhase');
 
     switch (gameStatus) {
       case GameStatus.waiting:
         if (gamePhase == GamePhase.ended) {
           // ゲーム進行中または終了後のwaiting = 結果画面
-          print('🎮 Game phase waiting - navigating to result page');
+          Logger.log('🎮 Game phase waiting - navigating to result page');
           navigateToResult(gameData);
         } else {
           // 初期状態のwaiting = ゲームタイトル
-          print('🎮 Initial waiting - navigating to game title');
+          Logger.log('🎮 Initial waiting - navigating to game title');
           navigateToGameTitle();
         }
         break;
@@ -217,11 +218,11 @@ class NavigationService {
   void navigateToSelectGame() {
     final context = navigatorKey.currentContext;
     if (context == null) {
-      print('❌ Navigation context is null for navigateToSelectGame');
+      Logger.log('❌ Navigation context is null for navigateToSelectGame');
       return;
     }
 
-    print('🎮 Navigating to SelectGamePage');
+    Logger.log('🎮 Navigating to SelectGamePage');
 
     // 現在のスタックをクリアしてゲーム選択画面に遷移
     Navigator.of(context).pushAndRemoveUntil(
@@ -241,7 +242,7 @@ class NavigationService {
   void _showGameEndedDialogIfNeeded() {
     final currentContext = navigatorKey.currentContext;
     if (currentContext == null) {
-      print('❌ Context is null for dialog');
+      Logger.log('❌ Context is null for dialog');
       return;
     }
 
@@ -250,12 +251,12 @@ class NavigationService {
 
     // ホストの場合はダイアログを表示しない
     if (isHost) {
-      print('🎮 Host player - no dialog needed');
+      Logger.log('🎮 Host player - no dialog needed');
       return;
     }
 
     // 子プレイヤーの場合はダイアログを表示
-    print('🎮 Showing game ended dialog for child player');
+    Logger.log('🎮 Showing game ended dialog for child player');
 
     showDialog(
       context: currentContext,

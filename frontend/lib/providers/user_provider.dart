@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -35,12 +36,12 @@ class UserNotifier extends StateNotifier<UserState> {
       // gamePhaseの保存
       if (gamePhase != null) {
         await prefs.setString(_gamePhaseKey, gamePhase.name);
-        print('💾 gamePhase保存: $gamePhase');
+        Logger.log('💾 gamePhase保存: $gamePhase');
       }
 
-      print('💾 ローカルストレージに保存: roomId=$roomId, nickname=$nickname');
+      Logger.log('💾 ローカルストレージに保存: roomId=$roomId, nickname=$nickname');
     } catch (e) {
-      print('⚠️ ローカルストレージ保存エラー: $e');
+      Logger.log('⚠️ ローカルストレージ保存エラー: $e');
     }
   }
 
@@ -58,9 +59,9 @@ class UserNotifier extends StateNotifier<UserState> {
       if (gamePhaseStr != null) {
         try {
           gamePhase = GamePhase.values.byName(gamePhaseStr);
-          print('💾 gamePhase復元: $gamePhase');
+          Logger.log('💾 gamePhase復元: $gamePhase');
         } catch (e) {
-          print('⚠️ gamePhase復元エラー: $e');
+          Logger.log('⚠️ gamePhase復元エラー: $e');
           gamePhase = GamePhase.initial; // デフォルト値
         }
       }
@@ -75,7 +76,7 @@ class UserNotifier extends StateNotifier<UserState> {
         };
       }
     } catch (e) {
-      print('⚠️ ローカルストレージ読み込みエラー: $e');
+      Logger.log('⚠️ ローカルストレージ読み込みエラー: $e');
     }
     return null;
   }
@@ -88,9 +89,9 @@ class UserNotifier extends StateNotifier<UserState> {
       await prefs.remove(_userUidKey);
       await prefs.remove(_isHostKey);
       await prefs.remove(_gamePhaseKey); // 追加
-      print('🗑️ ローカルストレージをクリア');
+      Logger.log('🗑️ ローカルストレージをクリア');
     } catch (e) {
-      print('⚠️ ローカルストレージクリアエラー: $e');
+      Logger.log('⚠️ ローカルストレージクリアエラー: $e');
     }
   }
 
@@ -109,7 +110,7 @@ class UserNotifier extends StateNotifier<UserState> {
       );
     }
 
-    print('🎮 GamePhase更新: $gamePhase');
+    Logger.log('🎮 GamePhase更新: $gamePhase');
   }
 
   // 既存メソッドを修正（gamePhaseも保存するように）
@@ -138,7 +139,7 @@ class UserNotifier extends StateNotifier<UserState> {
       gamePhase: GamePhase.initial, // 追加
     );
 
-    print('🏠 部屋作成: $state');
+    Logger.log('🏠 部屋作成: $state');
   }
 
   void joinRoom({
@@ -166,22 +167,23 @@ class UserNotifier extends StateNotifier<UserState> {
       gamePhase: GamePhase.initial, // 追加
     );
 
-    print('👥 部屋参加: $state');
+    Logger.log('👥 部屋参加: $state');
   }
 
   Future<bool> tryRestoreFromStorage() async {
     try {
       final data = await _loadFromStorage();
       if (data == null) {
-        print('🔍 復帰データなし');
+        Logger.log('🔍 復帰データなし');
         return false;
       }
 
-      print('🔍 復帰データ発見: ${data['roomId']} (gamePhase: ${data['gamePhase']})');
+      Logger.log(
+          '🔍 復帰データ発見: ${data['roomId']} (gamePhase: ${data['gamePhase']})');
 
       final currentUid = await AuthService.ensureAuthenticated();
       if (currentUid != data['uid']) {
-        print('⚠️ UIDが変更されているため復帰をスキップ');
+        Logger.log('⚠️ UIDが変更されているため復帰をスキップ');
         await _clearStorage();
         return false;
       }
@@ -192,7 +194,7 @@ class UserNotifier extends StateNotifier<UserState> {
           .get();
 
       if (!roomSnapshot.exists) {
-        print('⚠️ 部屋が存在しないため復帰失敗');
+        Logger.log('⚠️ 部屋が存在しないため復帰失敗');
         await _clearStorage();
         return false;
       }
@@ -201,7 +203,7 @@ class UserNotifier extends StateNotifier<UserState> {
       final players = roomData?['players'] as Map<String, dynamic>? ?? {};
 
       if (!players.containsKey(currentUid)) {
-        print('⚠️ プレイヤーが部屋から削除されているため復帰失敗');
+        Logger.log('⚠️ プレイヤーが部屋から削除されているため復帰失敗');
         await _clearStorage();
         return false;
       }
@@ -219,18 +221,19 @@ class UserNotifier extends StateNotifier<UserState> {
         gamePhase: data['gamePhase'] ?? GamePhase.initial, // 追加
       );
 
-      print('✅ 復帰成功: ${data['roomId']} (復帰モード, gamePhase: ${state.gamePhase})');
+      Logger.log(
+          '✅ 復帰成功: ${data['roomId']} (復帰モード, gamePhase: ${state.gamePhase})');
 
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           state = state.copyWith(isRestoring: false);
-          print('🔄 復帰モード終了');
+          Logger.log('🔄 復帰モード終了');
         }
       });
 
       return true;
     } catch (e) {
-      print('❌ 復帰処理エラー: $e');
+      Logger.log('❌ 復帰処理エラー: $e');
       await _clearStorage();
       return false;
     }
@@ -238,7 +241,7 @@ class UserNotifier extends StateNotifier<UserState> {
 
   // leaveRoom時にgamePhaseもクリア
   Future<void> leaveRoom() async {
-    print('🚪 部屋退出前の状態: $state');
+    Logger.log('🚪 部屋退出前の状態: $state');
     final currentRoomId = state.roomId;
 
     await _clearStorage();
@@ -248,25 +251,25 @@ class UserNotifier extends StateNotifier<UserState> {
         final gameStateNotifier =
             _ref.read(roomGameStateProvider(currentRoomId).notifier);
         gameStateNotifier.stopMonitoring();
-        print('🔄 ゲーム状態監視を停止: $currentRoomId');
+        Logger.log('🔄 ゲーム状態監視を停止: $currentRoomId');
 
         Future.delayed(Duration(milliseconds: 100), () {
           try {
             _ref.invalidate(roomStreamProvider(currentRoomId));
             _ref.invalidate(playersProvider(currentRoomId));
             _ref.invalidate(roomGameStateProvider(currentRoomId));
-            print('🔄 関連プロバイダーをクリア: $currentRoomId');
+            Logger.log('🔄 関連プロバイダーをクリア: $currentRoomId');
           } catch (e) {
-            print('⚠️ 遅延プロバイダークリーンアップエラー: $e');
+            Logger.log('⚠️ 遅延プロバイダークリーンアップエラー: $e');
           }
         });
       } catch (e) {
-        print('⚠️ プロバイダークリーンアップエラー: $e');
+        Logger.log('⚠️ プロバイダークリーンアップエラー: $e');
       }
     }
 
     state = const UserState();
-    print('🚪 部屋退出後の状態: $state');
+    Logger.log('🚪 部屋退出後の状態: $state');
   }
 
   void _cleanupBeforeJoin(String roomId) {
@@ -274,27 +277,27 @@ class UserNotifier extends StateNotifier<UserState> {
       _ref.invalidate(roomStreamProvider(roomId));
       _ref.invalidate(playersProvider(roomId));
       _ref.invalidate(roomGameStateProvider(roomId));
-      print('🔄 参加前プロバイダークリーンアップ: $roomId');
+      Logger.log('🔄 参加前プロバイダークリーンアップ: $roomId');
     } catch (e) {
-      print('⚠️ 参加前クリーンアップエラー: $e');
+      Logger.log('⚠️ 参加前クリーンアップエラー: $e');
     }
   }
 
   void updateHostStatus(bool isHost) {
     if (state.isHost != isHost) {
-      print('👑 ホスト権限変更: ${state.isHost} → $isHost (${state.nickname})');
+      Logger.log('👑 ホスト権限変更: ${state.isHost} → $isHost (${state.nickname})');
       state = state.copyWith(isHost: isHost);
     }
   }
 
   void updateConnection(bool isConnected) {
     state = state.copyWith(isConnected: isConnected);
-    print('🔗 接続状態更新: $isConnected');
+    Logger.log('🔗 接続状態更新: $isConnected');
   }
 
   void disconnect() {
     state = state.copyWith(isConnected: false);
-    print('❌ 切断: $state');
+    Logger.log('❌ 切断: $state');
   }
 }
 

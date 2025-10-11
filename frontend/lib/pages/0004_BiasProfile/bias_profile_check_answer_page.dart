@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -201,7 +202,7 @@ class _BiasProfileCheckAnswerPageState
                                 });
                               }
                             } catch (e) {
-                              print('❌ 送信に失敗: $e');
+                              Logger.log('❌ 送信に失敗: $e');
 
                               if (mounted) {
                                 // http.Response型のエラーかどうかで処理を分ける
@@ -403,7 +404,7 @@ class _BiasProfileCheckAnswerPageState
                                       currentUser.uid!,
                                       ''); // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
                                   if (result['success'] == true) {
-                                    print('プレイヤー${currentUser.uid} 準備完了');
+                                    Logger.log('プレイヤー${currentUser.uid} 準備完了');
 
                                     // 成功時のスナックバー表示
                                     if (mounted) {
@@ -425,7 +426,7 @@ class _BiasProfileCheckAnswerPageState
                                     }
                                   }
                                 } catch (e) {
-                                  print('❌ 準備完了に失敗: $e');
+                                  Logger.log('❌ 準備完了に失敗: $e');
 
                                   if (mounted) {
                                     // http.Response型のエラーかどうかで処理を分ける

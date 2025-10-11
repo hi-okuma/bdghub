@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -287,7 +288,7 @@ class _BiasProfileChildTurnPageState
                                                 profileText);
 
                                         if (result['success'] == true) {
-                                          print('💡 ヒント提出: $profileText');
+                                          Logger.log('💡 ヒント提出: $profileText');
 
                                           // 成功時のスナックバー表示
                                           if (mounted) {
@@ -312,7 +313,7 @@ class _BiasProfileChildTurnPageState
                                           }
                                         }
                                       } catch (e) {
-                                        print('❌ ヒント提出に失敗: $e');
+                                        Logger.log('❌ ヒント提出に失敗: $e');
 
                                         if (mounted) {
                                           // http.Response型のエラーかどうかで処理を分ける

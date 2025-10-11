@@ -16,6 +16,8 @@ import 'package:bodogehub/services/auth_service.dart';
 import 'test_UIscreen.dart';
 import 'package:bodogehub/config/environment_config.dart';
 
+import 'utils/logger.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // 最初に呼び出す
 
@@ -23,7 +25,7 @@ Future<void> main() async {
     // 環境を自動判定して初期化
     await EnvironmentConfig.initialize();
   } catch (e) {
-    print('Error loading .env.dev file: $e');
+    Logger.log('Error loading .env.dev file: $e');
     // .envファイルが読み込めない場合でも続行
   }
 
@@ -41,7 +43,7 @@ Future<void> main() async {
       webProvider: ReCaptchaV3Provider(siteKey),
     );
   } else {
-    print('Error: SITE_KEY is not defined in .env file');
+    Logger.log('Error: SITE_KEY is not defined in .env file');
     // ここでエラー処理を行うか、App Checkなしで続行するかを決定
   }
 
@@ -70,7 +72,7 @@ String? _getRoomIdFromUrl() {
       final params = uri.queryParameters;
       return params['roomId'];
     } catch (e) {
-      print('Error getting roomId from URL: $e');
+      Logger.log('Error getting roomId from URL: $e');
       return null;
     }
   }

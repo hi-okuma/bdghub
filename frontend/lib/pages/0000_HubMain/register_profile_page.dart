@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../0000_HubMain/select_game_page.dart';
@@ -69,7 +70,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
     try {
       // 匿名認証でUIDを取得
       final uid = await AuthService.ensureAuthenticated();
-      print('🔐 認証完了、UID: $uid');
+      Logger.log('🔐 認証完了、UID: $uid');
 
       final Map<String, dynamic> responseData;
 
@@ -118,7 +119,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
               );
         }
       } catch (e) {
-        print('⚠️ Provider状態更新エラー: $e');
+        Logger.log('⚠️ Provider状態更新エラー: $e');
         if (!mounted) return;
         setState(() {
           _errorMessage = 'データの保存に失敗しました';

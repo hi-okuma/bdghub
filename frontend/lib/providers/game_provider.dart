@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -89,7 +90,7 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
             }
           }
         } catch (e) {
-          print('assetsサブコレクションの取得エラー: $e');
+          Logger.log('assetsサブコレクションの取得エラー: $e');
           // assetsが存在しない場合は無視して続行
         }
 
@@ -111,7 +112,7 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
         );
       }
     } catch (e) {
-      print('ゲーム情報の取得エラー: $e');
+      Logger.log('ゲーム情報の取得エラー: $e');
       // エラー時はデフォルト値を設定
       _setDefaultGameData(gameId);
     }
@@ -139,7 +140,7 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
       gameData: currentGameData, // ← 直接置換
     );
 
-    print('🎮 Game loaded from currentGame: $gameId');
+    Logger.log('🎮 Game loaded from currentGame: $gameId');
   }
 
   // 既存のgame_service.dartで取得したデータから設定（互換性維持）
@@ -164,7 +165,7 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
   }
 
   void updateGameData(Map<String, dynamic> newGameData) {
-    print('🔄 Updating game data (full replace)');
+    Logger.log('🔄 Updating game data (full replace)');
     state = state.copyWith(
       gameData: newGameData, // マージせず完全置換
     );

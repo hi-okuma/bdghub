@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   void clearGameState() {
     // プロバイダーの状態をクリア
     ref.read(currentGameProvider.notifier).clearGame();
-    print('🔄 ゲーム終了: currentGameProviderをクリア完了');
+    Logger.log('🔄 ゲーム終了: currentGameProviderをクリア完了');
   }
 
   /// 統合されたゲーム終了処理
@@ -66,7 +67,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
       }
 
       if (result['success'] == true) {
-        print('✅ ゲーム終了処理が完了しました');
+        Logger.log('✅ ゲーム終了処理が完了しました');
 
         // 4. ★修正★ 手動遷移を削除
         // room.statusがwaitingに変更されることで、
@@ -92,7 +93,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         }
       }
     } catch (e) {
-      print('❌ ゲーム終了処理に失敗: $e');
+      Logger.log('❌ ゲーム終了処理に失敗: $e');
 
       if (mounted) {
         Navigator.of(context).pop(); // ローディングダイアログを閉じる（エラー時）

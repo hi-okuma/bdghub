@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -355,7 +356,7 @@ class _BiasProfileParentTurnPageState
                                 );
 
                                 if (result['success'] == true) {
-                                  print('💡 回答を提出: $_selectedImageIndex');
+                                  Logger.log('💡 回答を提出: $_selectedImageIndex');
 
                                   // 成功時のスナックバー表示
                                   if (mounted) {
@@ -375,7 +376,7 @@ class _BiasProfileParentTurnPageState
                                   }
                                 }
                               } catch (e) {
-                                print('❌ 回答にに失敗: $e');
+                                Logger.log('❌ 回答にに失敗: $e');
 
                                 if (mounted) {
                                   // http.Response型のエラーかどうかで処理を分ける

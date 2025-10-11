@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -93,10 +94,10 @@ Future<List<Map<String, dynamic>>> fetchGamesFromFirestore() async {
     } else {
       // ドキュメントが存在しない場合はダミーデータを使用
       _gameList = getDummyGames();
-      print('Firestoreにデータが存在しないため、ダミーデータを使用します');
+      Logger.log('Firestoreにデータが存在しないため、ダミーデータを使用します');
     }
   } catch (e) {
-    print('Firestoreからのデータ取得エラー: $e');
+    Logger.log('Firestoreからのデータ取得エラー: $e');
     // エラー時はダミーデータを使用
     _gameList = getDummyGames();
   }
