@@ -218,7 +218,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
       // roomStatusがinProgressになった時点でcurrentGameサブコレクションの監視を開始
       if (roomStatus == 'inProgress' && !_hasNavigatedToGameTitle) {
-        print(
+        Logger.log(
             '🎮 Room status is inProgress - Starting currentGame monitoring...');
         _startCurrentGameCollectionMonitoring(roomId);
       }
@@ -240,7 +240,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   void _executeNavigation(String screenKey, VoidCallback navigationCallback) {
     // 既に同じ画面への遷移中または完了している場合はスキップ
     if (_navigationInProgress || _lastNavigatedScreen == screenKey) {
-      print(
+      Logger.log(
           '🔍 Navigation skipped: $screenKey (inProgress: $_navigationInProgress, last: $_lastNavigatedScreen)');
       return;
     }

@@ -178,7 +178,7 @@ class _BiasProfileCheckAnswerPageState
                               );
 
                               if (result['success'] == true) {
-                                print(
+                                Logger.log(
                                     '💡 わかるde賞を提出: ${_getNicknameByUid(uid)}の回答');
 
                                 // 成功時のスナックバー表示

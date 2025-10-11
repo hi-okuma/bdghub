@@ -121,7 +121,7 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
       final gameData = gameDoc.data();
       final gameStatus = _parseGameStatus(gameData['gameStatus']);
 
-      print(
+      Logger.log(
           '🔍 Game ID: $gameId, Game Status: $gameStatus, Saved Phase: $savedGamePhase');
 
       // currentGameProviderにデータ読み込み
