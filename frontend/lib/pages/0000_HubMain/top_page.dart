@@ -1,3 +1,5 @@
+import 'package:bodogehub/utils/logger.dart';
+
 import '../0000_HubMain/register_profile_page.dart';
 import '../../components/game_list_widget.dart';
 import '../../components/custom_widgets.dart';
@@ -89,7 +91,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         _isGameLoading = false;
       });
     } catch (e) {
-      print('ゲームデータの取得エラー: $e');
+      Logger.log('ゲームデータの取得エラー: $e');
       setState(() {
         _gameList = getDummyGames();
         _isGameLoading = false;
@@ -159,7 +161,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
       setState(() {
         _isLoading = false;
         _errorMessage = 'データの取得中にエラーが発生しました';
-        print('Firestoreエラー: $error');
+        Logger.log('Firestoreエラー: $error');
       });
     }
   }

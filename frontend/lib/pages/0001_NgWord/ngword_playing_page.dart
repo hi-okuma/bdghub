@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -285,7 +286,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
       final result = await ApiService.declare0001(roomId, uid);
 
       if (result['success'] == true) {
-        print('✅ 申告情報を送信しました: $uid');
+        Logger.log('✅ 申告情報を送信しました: $uid');
 
         setState(() {
           _hasReported = true;
@@ -311,7 +312,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
         }
       }
     } catch (e) {
-      print('❌ 申告情報の送信に失敗: $e');
+      Logger.log('❌ 申告情報の送信に失敗: $e');
 
       if (mounted) {
         // http.Response型のエラーかどうかで処理を分ける

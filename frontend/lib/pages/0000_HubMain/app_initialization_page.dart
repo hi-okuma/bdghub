@@ -1,5 +1,6 @@
 // frontend/lib/pages/app_initialization_page.dart
 
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -66,7 +67,7 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
         }
       }
     } catch (e) {
-      print('❌ アプリ初期化エラー: $e');
+      Logger.log('❌ アプリ初期化エラー: $e');
       _showErrorAndNavigateToTop('アプリの初期化に失敗しました');
     }
   }
@@ -82,7 +83,7 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
         return;
       }
 
-      print('🔍 詳細ゲーム状態復帰開始: $roomId (savedGamePhase: $savedGamePhase)');
+      Logger.log('🔍 詳細ゲーム状態復帰開始: $roomId (savedGamePhase: $savedGamePhase)');
 
       // 部屋の基本状態確認
       final roomDoc = await FirebaseFirestore.instance
@@ -135,25 +136,25 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
       if (gameStatus == GameStatus.waiting) {
         if (savedGamePhase == GamePhase.ended) {
-          print('🔍 ゲーム終了後のwaiting → 結果画面に遷移');
+          Logger.log('🔍 ゲーム終了後のwaiting → 結果画面に遷移');
           navigationService.navigateToResult(gameData);
         } else {
-          print('🔍 ゲーム開始前のwaiting → ゲームタイトルに遷移');
+          Logger.log('🔍 ゲーム開始前のwaiting → ゲームタイトルに遷移');
           navigationService.navigateToGameTitle();
         }
       } else {
-        print('🔍 ゲーム進行中 → 適切な画面に遷移');
+        Logger.log('🔍 ゲーム進行中 → 適切な画面に遷移');
         navigationService.navigateToGameScreenByStatus(gameStatus, gameData,
             isRestore: true);
       }
 
       // 遷移後に状態監視を開始
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        print('🔍 復帰後にゲーム状態監視を開始: $roomId');
+        Logger.log('🔍 復帰後にゲーム状態監視を開始: $roomId');
         ref.read(roomGameStateProvider(roomId));
       });
     } catch (e) {
-      print('❌ 詳細ゲーム状態復帰エラー: $e');
+      Logger.log('❌ 詳細ゲーム状態復帰エラー: $e');
       _showErrorAndNavigateToTop('ゲーム状態の復帰に失敗しました');
     }
   }

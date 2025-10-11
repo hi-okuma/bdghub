@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,7 +35,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
   @override
   Future<GameStatus> build(String roomId) async {
-    print('🔍 RoomGameStateNotifier.build called with roomId: $roomId');
+    Logger.log('🔍 RoomGameStateNotifier.build called with roomId: $roomId');
 
     // ユーザー状態をチェック
     try {
@@ -42,21 +43,21 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
       // uidが無効な場合は監視を開始しない
       if (userState.uid == null || userState.uid!.isEmpty) {
-        print('🔍 Invalid user state - skipping monitoring');
+        Logger.log('🔍 Invalid user state - skipping monitoring');
         return GameStatus.waiting;
       }
 
       // roomIdが無効な場合も監視を開始しない
       if (roomId.isEmpty) {
-        print('🔍 Invalid roomId - skipping monitoring');
+        Logger.log('🔍 Invalid roomId - skipping monitoring');
         return GameStatus.waiting;
       }
 
       // 保存されたgamePhaseを取得して初期化
       _currentGamePhase = userState.gamePhase ?? GamePhase.initial;
-      print('🔍 Initial GamePhase from storage: $_currentGamePhase');
+      Logger.log('🔍 Initial GamePhase from storage: $_currentGamePhase');
     } catch (e) {
-      print('🔍 Error reading user state - skipping monitoring: $e');
+      Logger.log('🔍 Error reading user state - skipping monitoring: $e');
       return GameStatus.waiting;
     }
 
@@ -71,7 +72,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _lastNavigatedScreen = null;
 
     ref.onDispose(() {
-      print('🔍 Disposing RoomGameStateNotifier');
+      Logger.log('🔍 Disposing RoomGameStateNotifier');
       _isDisposed = true;
       _roomSubscription?.cancel();
       _currentGameCollectionSubscription?.cancel();
@@ -91,28 +92,28 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       // UserNotifierのgamePhaseも更新
       final userNotifier = ref.read(userProvider.notifier);
       userNotifier.updateGamePhase(newPhase);
-      print('🎮 GamePhase更新・保存: $newPhase');
+      Logger.log('🎮 GamePhase更新・保存: $newPhase');
     } catch (e) {
-      print('⚠️ GamePhase保存エラー: $e');
+      Logger.log('⚠️ GamePhase保存エラー: $e');
     }
   }
 
   void _startMonitoring(String roomId) {
-    print('🔍 Starting room monitoring for roomId: $roomId');
+    Logger.log('🔍 Starting room monitoring for roomId: $roomId');
 
     if (_isDisposed) {
-      print('🔍 Already disposed - skipping monitoring');
+      Logger.log('🔍 Already disposed - skipping monitoring');
       return;
     }
 
     try {
       final userState = ref.read(userProvider);
       if (userState.uid == null || userState.uid!.isEmpty) {
-        print('🔍 Invalid user state in _startMonitoring - aborting');
+        Logger.log('🔍 Invalid user state in _startMonitoring - aborting');
         return;
       }
     } catch (e) {
-      print('🔍 Error reading user state in _startMonitoring: $e');
+      Logger.log('🔍 Error reading user state in _startMonitoring: $e');
       return;
     }
 
@@ -126,23 +127,23 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         .listen(
       (doc) {
         try {
-          print('🔍 Room document update received');
+          Logger.log('🔍 Room document update received');
 
           if (_isDisposed) {
-            print('🔍 Disposed during room update - stopping');
+            Logger.log('🔍 Disposed during room update - stopping');
             return;
           }
 
           _handleRoomUpdate(roomId, doc);
         } catch (e, stackTrace) {
-          print('❌ Exception in room listen callback: $e');
-          print('❌ StackTrace: $stackTrace');
+          Logger.log('❌ Exception in room listen callback: $e');
+          Logger.log('❌ StackTrace: $stackTrace');
         }
       },
       onError: (error) {
-        print('❌ Room monitoring error: $error');
+        Logger.log('❌ Room monitoring error: $error');
         if (error.toString().contains('permission-denied')) {
-          print('🔍 Permission denied - stopping monitoring gracefully');
+          Logger.log('🔍 Permission denied - stopping monitoring gracefully');
           _stopAllMonitoring();
         } else if (!_isDisposed) {
           state = AsyncValue.error(error, StackTrace.current);
@@ -154,12 +155,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   void _handleRoomUpdate(String roomId, DocumentSnapshot doc) {
     try {
       if (_isDisposed) {
-        print('🔍 Notifier is disposed, skipping room update');
+        Logger.log('🔍 Notifier is disposed, skipping room update');
         return;
       }
 
       if (!doc.exists) {
-        print('❌ Room document does not exist');
+        Logger.log('❌ Room document does not exist');
         _stopAllMonitoring();
         _resetNavigationFlags();
         if (!_isDisposed) {
@@ -174,11 +175,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       // room statusの変化を検知
       _previousRoomStatus = _currentRoomStatus;
       _currentRoomStatus = roomStatus;
-      print('🔍 Room status: $roomStatus (previous: $_previousRoomStatus)');
+      Logger.log(
+          '🔍 Room status: $roomStatus (previous: $_previousRoomStatus)');
 
       // ★修正: inProgressからacceptingへの変化でgamePhaseをリセット
       if (_previousRoomStatus == 'inProgress' && roomStatus == 'accepting') {
-        print('🎮 ゲーム終了検知: inProgress → accepting');
+        Logger.log('🎮 ゲーム終了検知: inProgress → accepting');
 
         // ゲーム選択画面に戻る前に、現在のゲーム情報をクリアする
         ref.read(currentGameProvider.notifier).clearGame();
@@ -195,7 +197,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           _executeNavigation('selectGame', () {
             final navigationService = ref.read(navigationServiceProvider);
             navigationService.navigateToSelectGame();
-            print('🎮 ゲーム選択画面への遷移完了');
+            Logger.log('🎮 ゲーム選択画面への遷移完了');
           });
 
           state = const AsyncValue.data(GameStatus.waiting);
@@ -205,7 +207,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
       // 部屋のステータスチェック
       if (roomStatus != 'inProgress') {
-        print('🔍 Room not in progress, stopping all monitoring');
+        Logger.log('🔍 Room not in progress, stopping all monitoring');
         _stopAllMonitoring();
         _resetNavigationFlags();
         if (!_isDisposed) {
@@ -222,12 +224,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       }
 
       if (_isDisposed) {
-        print('🔍 Notifier was disposed during processing, aborting');
+        Logger.log('🔍 Notifier was disposed during processing, aborting');
         return;
       }
     } catch (e, stackTrace) {
-      print('❌ Exception in _handleRoomUpdate: $e');
-      print('❌ StackTrace: $stackTrace');
+      Logger.log('❌ Exception in _handleRoomUpdate: $e');
+      Logger.log('❌ StackTrace: $stackTrace');
       if (!_isDisposed) {
         state = AsyncValue.error(e, stackTrace);
       }
@@ -248,9 +250,9 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     try {
       navigationCallback();
-      print('🎮 Navigation completed: $screenKey');
+      Logger.log('🎮 Navigation completed: $screenKey');
     } catch (e) {
-      print('❌ Navigation error: $e');
+      Logger.log('❌ Navigation error: $e');
     } finally {
       // 少し遅延を入れて次の遷移を可能にする
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -264,7 +266,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _currentGameCollectionSubscription?.cancel();
 
     final collectionPath = 'rooms/$roomId/currentGame';
-    print('🔍 Monitoring currentGame collection: $collectionPath');
+    Logger.log('🔍 Monitoring currentGame collection: $collectionPath');
 
     _currentGameCollectionSubscription = FirebaseFirestore.instance
         .collection('rooms')
@@ -274,15 +276,15 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         .listen(
       (querySnapshot) {
         try {
-          print('🔍 currentGame collection update received');
+          Logger.log('🔍 currentGame collection update received');
           _handleCurrentGameCollectionUpdate(roomId, querySnapshot);
         } catch (e, stackTrace) {
-          print('❌ Exception in currentGame collection callback: $e');
-          print('❌ StackTrace: $stackTrace');
+          Logger.log('❌ Exception in currentGame collection callback: $e');
+          Logger.log('❌ StackTrace: $stackTrace');
         }
       },
       onError: (error) {
-        print('❌ currentGame collection monitoring error: $error');
+        Logger.log('❌ currentGame collection monitoring error: $error');
         if (!_isDisposed) {
           state = AsyncValue.error(error, StackTrace.current);
         }
@@ -306,7 +308,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     // 新しいゲームを検知したら必ずクリア
     if (_currentGameId != gameId && _currentGameId != null) {
-      print('🔄 New game detected - clearing previous game data');
+      Logger.log('🔄 New game detected - clearing previous game data');
       ref.read(currentGameProvider.notifier).clearGame();
       _resetNavigationFlags();
       _hasNavigatedToGameTitle = false;
@@ -327,7 +329,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     // 復帰処理中の場合は、タイトル画面への自動遷移をスキップする
     final userState = ref.read(userProvider);
     if (userState.isRestoring) {
-      print('🔍 復帰中のためタイトルへの自動遷移をスキップ');
+      Logger.log('🔍 復帰中のためタイトルへの自動遷移をスキップ');
       // ゲームデータの読み込みは行うが、画面遷移は行わない
       await ref
           .read(currentGameProvider.notifier)
@@ -341,7 +343,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           .read(currentGameProvider.notifier)
           .loadFromCurrentGame(roomId, gameId);
 
-      print('🎮 Game data loaded successfully - Navigating to GameTitle!');
+      Logger.log('🎮 Game data loaded successfully - Navigating to GameTitle!');
 
       _executeNavigation('gameTitle', () {
         final navigationService = ref.read(navigationServiceProvider);
@@ -351,7 +353,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       _hasNavigatedToGameTitle = true;
 
       final gameStatus = _parseGameStatus(gameData['gameStatus']);
-      print('🔍 Initial game status after load: $gameStatus');
+      Logger.log('🔍 Initial game status after load: $gameStatus');
 
       if (!_isDisposed) {
         state = AsyncValue.data(gameStatus);
@@ -359,12 +361,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         // 復帰時の処理を簡略化
         final userState = ref.read(userProvider);
         if (userState.isRestoring) {
-          print('🔍 復帰時 - 現在の状態: $gameStatus');
+          Logger.log('🔍 復帰時 - 現在の状態: $gameStatus');
           // 復帰時は特別な処理は不要（既にlocalStorageから正確なgamePhaseを取得済み）
         }
       }
     } catch (e) {
-      print('❌ Failed to load game data: $e');
+      Logger.log('❌ Failed to load game data: $e');
       if (!_isDisposed) {
         state = AsyncValue.error(e, StackTrace.current);
       }
@@ -376,7 +378,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _gameSubscription?.cancel();
 
     final docPath = 'rooms/$roomId/currentGame/$gameId';
-    print('🔍 Starting detailed monitoring for: $docPath');
+    Logger.log('🔍 Starting detailed monitoring for: $docPath');
 
     _gameSubscription = FirebaseFirestore.instance
         .collection('rooms')
@@ -386,15 +388,15 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         .snapshots()
         .listen(
       (doc) {
-        print('🔍 Game detail document update received');
-        print('🔍 Document exists: ${doc.exists}');
+        Logger.log('🔍 Game detail document update received');
+        Logger.log('🔍 Document exists: ${doc.exists}');
         if (doc.exists) {
-          print('🔍 Document data: ${doc.data()}');
+          Logger.log('🔍 Document data: ${doc.data()}');
         }
         _handleGameDetailUpdate(doc);
       },
       onError: (error) {
-        print('❌ Game detail monitoring error: $error');
+        Logger.log('❌ Game detail monitoring error: $error');
         if (!_isDisposed) {
           state = AsyncValue.error(error, StackTrace.current);
         }
@@ -404,12 +406,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
   void _handleGameDetailUpdate(DocumentSnapshot doc) {
     if (_isDisposed) {
-      print('🔍 Notifier is disposed, skipping game detail update');
+      Logger.log('🔍 Notifier is disposed, skipping game detail update');
       return;
     }
 
     if (!doc.exists) {
-      print('❌ Game detail document does not exist');
+      Logger.log('❌ Game detail document does not exist');
       // ドキュメントが存在しない場合は前回の状態をリセット
       _resetNavigationFlags();
       if (!_isDisposed) {
@@ -419,12 +421,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
 
     final gameData = doc.data() as Map<String, dynamic>;
-    print('🔍 Game detail data: $gameData');
-    print('🔍 Raw gameStatus: ${gameData['gameStatus']}');
+    Logger.log('🔍 Game detail data: $gameData');
+    Logger.log('🔍 Raw gameStatus: ${gameData['gameStatus']}');
 
     // ゲーム状態の解析
     final gameStatus = _parseGameStatus(gameData['gameStatus']);
-    print('🔍 Parsed gameStatus: $gameStatus');
+    Logger.log('🔍 Parsed gameStatus: $gameStatus');
 
     if (!_isDisposed) {
       state = AsyncValue.data(gameStatus);
@@ -432,7 +434,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       // 復帰処理か通常処理かで分岐
       final userState = ref.read(userProvider);
       if (userState.isRestoring) {
-        print('🔍 復帰中のため自動遷移なし');
+        Logger.log('🔍 復帰中のため自動遷移なし');
       } else {
         _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
       }
@@ -447,31 +449,31 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       switch (currentStatus) {
         case GameStatus.playing:
           if (_hasNavigatedToPlaying) {
-            print('🔍 すでにplayingページに遷移済みのためスキップ');
+            Logger.log('🔍 すでにplayingページに遷移済みのためスキップ');
             return;
           }
           break;
         case GameStatus.childTurn:
           if (_hasNavigatedToChildTurn) {
-            print('🔍 すでにchildTurnページに遷移済みのためスキップ');
+            Logger.log('🔍 すでにchildTurnページに遷移済みのためスキップ');
             return;
           }
           break;
         case GameStatus.parentTurn:
           if (_hasNavigatedToParentTurn) {
-            print('🔍 すでにparentTurnページに遷移済みのためスキップ');
+            Logger.log('🔍 すでにparentTurnページに遷移済みのためスキップ');
             return;
           }
           break;
         case GameStatus.result:
           if (_hasNavigatedToResult) {
-            print('🔍 すでにresultページに遷移済みのためスキップ');
+            Logger.log('🔍 すでにresultページに遷移済みのためスキップ');
             return;
           }
           break;
         case GameStatus.waiting:
           if (_currentGamePhase != GamePhase.started) {
-            print('🔍 ゲーム開始前のwaitingのためスキップ');
+            Logger.log('🔍 ゲーム開始前のwaitingのためスキップ');
             return;
           }
           break;
@@ -525,7 +527,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   void _handleGameStateChange(
       GameStatus status, Map<String, dynamic> currentGame) {
     if (_isDisposed) {
-      print('🔍 Notifier is disposed, skipping navigation');
+      Logger.log('🔍 Notifier is disposed, skipping navigation');
       return;
     }
 
@@ -533,7 +535,8 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
     switch (status) {
       case GameStatus.playing:
-        print('🎮 Navigating to PlayingPage with currentGame: $currentGame');
+        Logger.log(
+            '🎮 Navigating to PlayingPage with currentGame: $currentGame');
         _executeNavigation('playing', () {
           navigationService.navigateToPlayingPage();
           _hasNavigatedToPlaying = true;
@@ -542,7 +545,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         break;
 
       case GameStatus.childTurn:
-        print('🎮 Navigating to ChildTurn');
+        Logger.log('🎮 Navigating to ChildTurn');
         _executeNavigation('childTurn', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
@@ -553,7 +556,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         break;
 
       case GameStatus.parentTurn:
-        print('🎮 Navigating to ParentTurn');
+        Logger.log('🎮 Navigating to ParentTurn');
         _executeNavigation('parentTurn', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
@@ -564,7 +567,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         break;
 
       case GameStatus.result:
-        print('🎮 NavinavigateToResult(currentGame)');
+        Logger.log('🎮 NavinavigateToResult(currentGame)');
         _executeNavigation('checkAnswer', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
@@ -575,10 +578,11 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         break;
 
       case GameStatus.waiting:
-        print('🎮 Waiting status detected - current phase: $_currentGamePhase');
+        Logger.log(
+            '🎮 Waiting status detected - current phase: $_currentGamePhase');
 
         if (_currentGamePhase == GamePhase.started) {
-          print('🎮 Game ended - navigating to result page');
+          Logger.log('🎮 Game ended - navigating to result page');
           _executeNavigation('result', () {
             // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
             ref.read(currentGameProvider.notifier).updateGameData(currentGame);
@@ -587,14 +591,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
             _updateAndSaveGamePhase(GamePhase.ended); // ★追加: gamePhase更新
           });
         } else {
-          print('🎮 Initial waiting - staying in GameTitle');
+          Logger.log('🎮 Initial waiting - staying in GameTitle');
         }
         break;
     }
   }
 
   void stopMonitoring() {
-    print('🔄 Stopping all monitoring...');
+    Logger.log('🔄 Stopping all monitoring...');
 
     // disposed フラグを設定して新しい監視を防ぐ
     _isDisposed = true;
@@ -619,10 +623,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         state = const AsyncValue.data(GameStatus.waiting);
       }
     } catch (e) {
-      print('⚠️ Error setting final state: $e');
+      Logger.log('⚠️ Error setting final state: $e');
     }
 
-    print('🔄 All monitoring stopped');
+    Logger.log('🔄 All monitoring stopped');
   }
 }
 

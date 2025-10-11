@@ -1,6 +1,8 @@
 // lib/config/environment_config.dart
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import '../utils/logger.dart';
+
 enum Environment { development, staging, production }
 
 class EnvironmentConfig {
@@ -45,8 +47,8 @@ class EnvironmentConfig {
 
   // デバッグ用の情報表示
   static void printCurrentConfig() {
-    print('🔧 Current Environment: ${currentEnvironment.name}');
-    print('🌐 Project ID: ${dotenv.env['PROJECT_ID']}');
-    print('🔗 Host URL: $hostUrl');
+    Logger.log('🔧 Current Environment: ${currentEnvironment.name}');
+    Logger.log('🌐 Project ID: ${dotenv.env['PROJECT_ID']}');
+    Logger.log('🔗 Host URL: $hostUrl');
   }
 }

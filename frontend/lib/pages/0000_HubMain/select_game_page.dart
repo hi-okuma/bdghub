@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -87,7 +88,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         _isGameLoading = false;
       });
     } catch (e) {
-      print('ゲームデータの取得エラー: $e');
+      Logger.log('ゲームデータの取得エラー: $e');
       setState(() {
         _gameList = getDummyGames();
         _isGameLoading = false;
@@ -101,7 +102,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     final roomId = userState.roomId;
 
     if (roomId == null || roomId.isEmpty) {
-      print('❌ roomIdが無効なため、ゲーム状態監視を開始できません');
+      Logger.log('❌ roomIdが無効なため、ゲーム状態監視を開始できません');
       return;
     }
 
@@ -112,24 +113,24 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         .get()
         .then((doc) {
       if (!doc.exists) {
-        print('❌ 部屋が存在しないため、ゲーム状態監視を開始しません');
+        Logger.log('❌ 部屋が存在しないため、ゲーム状態監視を開始しません');
         return;
       }
 
       final data = doc.data() as Map<String, dynamic>?;
       final roomStatus = data?['status'] as String?;
 
-      print('🔍 Room status確認: $roomStatus');
+      Logger.log('🔍 Room status確認: $roomStatus');
 
       // inProgressの場合のみ監視開始
       if (roomStatus == 'inProgress') {
-        print('🔍 ゲーム状態監視を開始: $roomId');
+        Logger.log('🔍 ゲーム状態監視を開始: $roomId');
         ref.read(roomGameStateProvider(roomId));
       } else {
-        print('🔍 Room status is $roomStatus - ゲーム状態監視は開始しません');
+        Logger.log('🔍 Room status is $roomStatus - ゲーム状態監視は開始しません');
       }
     }).catchError((error) {
-      print('❌ Room status確認エラー: $error');
+      Logger.log('❌ Room status確認エラー: $error');
     });
   }
 
@@ -194,7 +195,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
             print(
                 '🔍 DEBUG: currentGame docs count: ${snapshot.data!.docs.length}');
             for (var doc in snapshot.data!.docs) {
-              print('🔍 DEBUG: gameId=${doc.id}, data=${doc.data()}');
+              Logger.log('🔍 DEBUG: gameId=${doc.id}, data=${doc.data()}');
             }
           }
           return const SizedBox.shrink(); // 非表示ウィジェット
@@ -209,10 +210,10 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       // デバッグ用：現在の状態をリアルタイム表示
       gameStateAsync.whenOrNull(
         data: (status) {
-          print('🎮 現在のゲーム状態: $status');
+          Logger.log('🎮 現在のゲーム状態: $status');
 
           final isHost = ref.read(isHostProvider);
-          print('🎮 プレイヤー種別: ${isHost ? "ホスト" : "子プレイヤー"}');
+          Logger.log('🎮 プレイヤー種別: ${isHost ? "ホスト" : "子プレイヤー"}');
         },
         loading: () => print('🔄 ゲーム状態読み込み中...'),
         error: (error, _) => print('❌ ゲーム状態エラー: $error'),
@@ -222,33 +223,34 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       ref.listen(roomGameStateProvider(roomId), (previous, next) {
         // previousがnullの場合（初回読み込み）はスキップ
         if (previous == null) {
-          print('🎮 初回読み込みのためリスナーをスキップ');
+          Logger.log('🎮 初回読み込みのためリスナーをスキップ');
           return;
         }
 
         next.whenOrNull(
           data: (status) {
             final nickname = userState.nickname ?? "Unknown";
-            print('🎮 [$nickname] ゲーム状態変化: $previous → $status');
+            Logger.log('🎮 [$nickname] ゲーム状態変化: $previous → $status');
 
             // ★修正: 実際に状態が変化した場合のみ処理 ★
             final previousStatus = previous?.valueOrNull;
             if (previousStatus == status) {
-              print('🎮 [$nickname] 同じ状態のため処理をスキップ: $status');
+              Logger.log('🎮 [$nickname] 同じ状態のため処理をスキップ: $status');
               return;
             }
 
             // playingになった場合のみGameTitlePageに遷移
             if (status == GameStatus.playing) {
-              print('🎮 [$nickname] GameTitlePageに遷移します！');
+              Logger.log('🎮 [$nickname] GameTitlePageに遷移します！');
               // NavigationServiceで自動遷移される
             } else if (status == GameStatus.waiting &&
                 previousStatus != GameStatus.waiting) {
-              print('🎮 [$nickname] ゲーム終了を検知しましたが、既にSelectGamePageにいるためスキップ');
+              Logger.log(
+                  '🎮 [$nickname] ゲーム終了を検知しましたが、既にSelectGamePageにいるためスキップ');
             }
           },
           error: (error, stackTrace) {
-            print('❌ [${userState.nickname}] ゲーム状態監視エラー: $error');
+            Logger.log('❌ [${userState.nickname}] ゲーム状態監視エラー: $error');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('ゲーム状態の監視エラー: $error')),
             );
@@ -541,7 +543,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     try {
       final userState = ref.read(userProvider);
 
-      print('🚪 退出開始: ${userState.nickname} が部屋 ${userState.roomId} から退出');
+      Logger.log('🚪 退出開始: ${userState.nickname} が部屋 ${userState.roomId} から退出');
 
       // ApiServiceを使用して退出処理
       final responseData = await ApiService.leaveRoom(
@@ -549,7 +551,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         userState.uid!,
       );
 
-      print('🚪 API退出成功');
+      Logger.log('🚪 API退出成功');
 
       // 状態クリアを先に実行
       ref.read(userProvider.notifier).leaveRoom();
@@ -569,7 +571,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         );
       }
     } catch (e) {
-      print('🚪 退出エラー: $e');
+      Logger.log('🚪 退出エラー: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('通信エラー: $e')),
       );

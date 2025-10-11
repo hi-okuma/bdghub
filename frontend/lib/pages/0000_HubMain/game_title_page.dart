@@ -1,4 +1,5 @@
 import 'package:bodogehub/utils/game_exit_handler.dart';
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
@@ -62,7 +63,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
           .read(currentGameProvider.notifier)
           .loadGameFromFirestore(gameId);
     } catch (e) {
-      print('ゲームデータ読み込みエラー: $e');
+      Logger.log('ゲームデータ読み込みエラー: $e');
       // エラーでもデフォルトデータは設定済み
     }
 
@@ -105,7 +106,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
           data: (status) {
             // waiting状態になったらゲーム選択画面に戻る
             if (status == GameStatus.waiting) {
-              print('🎮 ゲーム終了検知：ゲーム選択画面に戻ります');
+              Logger.log('🎮 ゲーム終了検知：ゲーム選択画面に戻ります');
             }
           },
           error: (error, stackTrace) {
@@ -301,12 +302,12 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     }
 
     try {
-      print('準備完了状態を更新: $nickname in room $roomId');
+      Logger.log('準備完了状態を更新: $nickname in room $roomId');
 
       // ★ API呼び出し実装
       final response = await ApiService.setReady(roomId, uid, gameId);
 
-      print('準備完了状態の更新成功: $response');
+      Logger.log('準備完了状態の更新成功: $response');
 
       // 成功時のフィードバック（オプション）
       ScaffoldMessenger.of(context).showSnackBar(
@@ -317,7 +318,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       // gameStatus が 'waiting' → 'playing' に自動更新され、
       // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
-      print('準備完了状態の更新エラー: $e');
+      Logger.log('準備完了状態の更新エラー: $e');
 
       // ★ エラー時の状態復旧
       setState(() {

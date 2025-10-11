@@ -1,3 +1,4 @@
+import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -304,12 +305,12 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
     }
 
     try {
-      print('準備完了状態を更新: $nickname in room $roomId');
+      Logger.log('準備完了状態を更新: $nickname in room $roomId');
 
       // ★ API呼び出し実装
       final response = await ApiService.setReady(roomId, uid, gameId);
 
-      print('準備完了状態の更新成功: $response');
+      Logger.log('準備完了状態の更新成功: $response');
 
       // 成功時のフィードバック（オプション）
       ScaffoldMessenger.of(context).showSnackBar(
@@ -320,7 +321,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
       // gameStatus が 'waiting' → 'playing' に自動更新され、
       // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
-      print('準備完了状態の更新エラー: $e');
+      Logger.log('準備完了状態の更新エラー: $e');
 
       // ★ エラー時の状態復旧
       setState(() {
