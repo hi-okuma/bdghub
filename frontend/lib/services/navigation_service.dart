@@ -29,7 +29,7 @@ class NavigationService {
       {bool isRestore = false, bool isGameEnded = false}) {
     if (_navigator == null) return;
 
-    print(
+    Logger.log(
         '🎮 復帰時の画面遷移: $gameStatus (restore: $isRestore, gameEnded: $isGameEnded)');
 
     switch (gameStatus) {

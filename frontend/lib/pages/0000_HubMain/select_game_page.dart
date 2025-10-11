@@ -192,7 +192,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         stream: currentGameStream,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            print(
+            Logger.log(
                 '🔍 DEBUG: currentGame docs count: ${snapshot.data!.docs.length}');
             for (var doc in snapshot.data!.docs) {
               Logger.log('🔍 DEBUG: gameId=${doc.id}, data=${doc.data()}');
@@ -215,8 +215,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
           final isHost = ref.read(isHostProvider);
           Logger.log('🎮 プレイヤー種別: ${isHost ? "ホスト" : "子プレイヤー"}');
         },
-        loading: () => print('🔄 ゲーム状態読み込み中...'),
-        error: (error, _) => print('❌ ゲーム状態エラー: $error'),
+        loading: () => Logger.log('🔄 ゲーム状態読み込み中...'),
+        error: (error, _) => Logger.log('❌ ゲーム状態エラー: $error'),
       );
 
       // ★修正: リスナーで適切な状態変化のみ処理 ★
