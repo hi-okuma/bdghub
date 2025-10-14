@@ -1,5 +1,6 @@
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
@@ -21,7 +22,6 @@ class GameTitlePage extends ConsumerStatefulWidget {
 
 class _GameTitlePageState extends ConsumerState<GameTitlePage>
     with GameExitHandler {
-  String? _errorMessage;
   int _currentImageIndex = 0;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
@@ -37,9 +37,9 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
   @override
   void setError(String message) {
     if (mounted) {
-      setState(() {
-        _errorMessage = message;
-      });
+      // エラーはErrorHandlerでグローバルに処理されるため、
+      // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
+      Logger.log('GameTitlePageでエラー発生: $message');
     }
   }
 
@@ -305,14 +305,16 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       Logger.log('準備完了状態を更新: $nickname in room $roomId');
 
       // ★ API呼び出し実装
-      final response = await ApiService.setReady(roomId, uid, gameId);
+      await ApiService.setReady(context, roomId, uid, gameId);
 
-      Logger.log('準備完了状態の更新成功: $response');
+      Logger.log('準備完了状態の更新成功');
 
       // 成功時のフィードバック（オプション）
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('準備完了しました！')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('準備完了しました！')),
+        );
+      }
 
       // 全員の準備が完了すると、Cloud Functionsにより
       // gameStatus が 'waiting' → 'playing' に自動更新され、
@@ -325,10 +327,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
         _isPreparationCompleted = false;
       });
 
-      // エラーメッセージ表示
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('準備完了の更新に失敗しました: $e')),
-      );
+      // エラーダイアログはErrorHandlerで表示されるため、ここではスナックバーは不要
     }
   }
 }

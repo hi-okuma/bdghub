@@ -1,7 +1,7 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
@@ -10,7 +10,6 @@ import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/services/navigation_service.dart';
-import 'package:bodogehub/utils/error_handler.dart';
 
 /// ゲーム終了処理の共通ロジックを提供するミックスイン
 mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
@@ -27,83 +26,66 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   /// 統合されたゲーム終了処理
   Future<void> exitGame(String roomId) async {
     if (roomId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('部屋情報が見つかりません')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('部屋情報が見つかりません')),
+        );
+      }
       return;
     }
 
-    try {
-      // 1. ローディング表示
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: Dialog(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.large),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.medium),
-                  Text(
-                    'ゲームを終了しています...',
-                    style: AppTextStyles.body,
-                  ),
-                ],
-              ),
+    // ローディング表示
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Dialog(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.large),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppSpacing.medium),
+                Text(
+                  'ゲームを終了しています...',
+                  style: AppTextStyles.body,
+                ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    );
 
-      // 2. API呼び出し（ゲーム終了処理）
-      final result = await ApiService.endGame(roomId);
+    try {
+      // API呼び出し（ゲーム終了処理）
+      await ApiService.endGame(context, roomId);
 
-      // 3. ローディングダイアログを閉じる
+      Logger.log('✅ ゲーム終了処理が完了しました');
+
+      // 状態をクリア
       if (mounted) {
-        Navigator.of(context).pop(); // ローディングダイアログを閉じる
+        clearGameState();
+
+        // 成功時のメッセージ表示
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('ゲームを終了しました'),
+            backgroundColor: AppTheme.successColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
-
-      if (result['success'] == true) {
-        Logger.log('✅ ゲーム終了処理が完了しました');
-
-        // 4. ★修正★ 手動遷移を削除
-        // room.statusがwaitingに変更されることで、
-        // 全プレイヤー（ホスト含む）が自動的に画面遷移する
-
-        // 5. 状態をクリア
-        if (mounted) {
-          clearGameState();
-
-          // 6. 成功時のメッセージ表示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('ゲームを終了しました'),
-              backgroundColor: AppTheme.successColor,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        // 7. APIからの失敗レスポンス処理
-        if (mounted) {
-          ApiErrorHandler.handleApiError(context, result, setError);
-        }
-      }
+      // room.statusがwaitingに変更されることで、
+      // 全プレイヤー（ホスト含む）が自動的に画面遷移する
     } catch (e) {
       Logger.log('❌ ゲーム終了処理に失敗: $e');
-
+      // エラーダイアログはErrorHandlerで表示される
+    } finally {
+      // ローディングダイアログを閉じる
       if (mounted) {
-        Navigator.of(context).pop(); // ローディングダイアログを閉じる（エラー時）
-
-        // 8. エラーハンドリング
-        if (e is http.Response) {
-          ApiErrorHandler.handleHttpError(context, e, setError);
-        } else {
-          ApiErrorHandler.handleException(context, e, setError);
-        }
+        Navigator.of(context).pop();
       }
     }
   }

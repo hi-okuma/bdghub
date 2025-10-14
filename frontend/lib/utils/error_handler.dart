@@ -1,55 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:cloud_functions/cloud_functions.dart';
 
-class ApiErrorHandler {
-  static void handleApiError(
-    BuildContext context,
-    Map<String, dynamic> responseData,
-    Function(String) setError,
-  ) {
-    final String errorMsg = responseData.containsKey('message')
-        ? responseData['message']
-        : '操作に失敗しました';
+import '../components/app_theme.dart';
 
-    setError(errorMsg);
-    _showSnackBar(context, errorMsg);
+class ErrorHandler {
+  /// Firebase Functions (onCall) からのエラーを処理する
+  static void handleFirebaseFunctionsException(
+      BuildContext context, FirebaseFunctionsException e) {
+    // FunctionsExceptionに含まれるメッセージを直接使用する
+    final message = e.message ?? '不明なエラーが発生しました。';
+    _showErrorSnackBar(context, message);
   }
 
-  static void handleHttpError(
-    BuildContext context,
-    http.Response response,
-    Function(String) setError,
-  ) {
-    try {
-      final Map<String, dynamic> errorData = jsonDecode(response.body);
-      final String errorMsg = errorData.containsKey('message')
-          ? '${errorData['message']}'
-          : 'エラー: ${response.statusCode}';
+  /// その他の予期せぬエラーを処理する
+  static void handleGenericError(BuildContext context, Object e) {
+    const message = '予期せぬエラーが発生しました。';
+    _showErrorSnackBar(context, message);
+  }
 
-      setError(errorMsg);
-      _showSnackBar(context, errorMsg);
-    } catch (e) {
-      final String errorMsg = '応答の解析に失敗しました: ${response.body}';
-      setError(errorMsg);
-      _showSnackBar(context, errorMsg);
+  /// エラーメッセージをスナックバーで表示する共通メソッド
+  static void _showErrorSnackBar(BuildContext context, String message) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppTheme.error1Color,
+        ),
+      );
     }
-  }
-
-  static void handleException(
-    BuildContext context,
-    dynamic e,
-    Function(String) setError,
-  ) {
-    final String errorMsg = '通信エラー: $e';
-    setError(errorMsg);
-    _showSnackBar(context, errorMsg);
-  }
-
-  static void _showSnackBar(BuildContext context, String message) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 }
