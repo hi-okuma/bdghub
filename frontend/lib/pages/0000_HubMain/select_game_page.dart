@@ -1,4 +1,5 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -542,11 +543,16 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   void _leaveRoom() async {
     try {
       final userState = ref.read(userProvider);
+      if (userState.roomId == null || userState.uid == null) {
+        Logger.log('🚪 退出エラー: roomId or uid is null');
+        return;
+      }
 
       Logger.log('🚪 退出開始: ${userState.nickname} が部屋 ${userState.roomId} から退出');
 
       // ApiServiceを使用して退出処理
-      final responseData = await ApiService.leaveRoom(
+      await ApiService.leaveRoom(
+        context,
         userState.roomId!,
         userState.uid!,
       );
@@ -572,9 +578,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       }
     } catch (e) {
       Logger.log('🚪 退出エラー: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('通信エラー: $e')),
-      );
+      // エラーダイアログはErrorHandlerで表示される
     }
   }
 }

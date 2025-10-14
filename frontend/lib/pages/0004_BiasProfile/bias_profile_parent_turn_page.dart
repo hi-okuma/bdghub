@@ -1,7 +1,7 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
@@ -9,7 +9,6 @@ import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
-import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/validation_utils.dart';
 
@@ -30,6 +29,9 @@ class _BiasProfileParentTurnPageState
   @override
   void setError(String message) {
     if (mounted) {
+      // エラーはErrorHandlerでグローバルに処理されるため、
+      // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
+      Logger.log('BiasProfileParentTurnPageでエラー発生: $message');
       setState(() {
         _errorMessage = message;
       });
@@ -348,46 +350,28 @@ class _BiasProfileParentTurnPageState
                             onPressed: () async {
                               // API呼び出しのエラーハンドリング追加
                               try {
-                                final result =
-                                    await ApiService.determineAnswer0004(
+                                await ApiService.determineAnswer0004(
+                                  context,
                                   roomId,
                                   currentUser.uid!,
                                   _selectedImageIndex,
                                 );
 
-                                if (result['success'] == true) {
-                                  Logger.log('💡 回答を提出: $_selectedImageIndex');
+                                Logger.log('💡 回答を提出: $_selectedImageIndex');
 
-                                  // 成功時のスナックバー表示
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('回答を送信しました'),
-                                        backgroundColor: AppTheme.successColor,
-                                        duration: Duration(seconds: 2),
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  // APIからの失敗レスポンス
-                                  if (mounted) {
-                                    ApiErrorHandler.handleApiError(
-                                        context, result, setError);
-                                  }
+                                // 成功時のスナックバー表示
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('回答を送信しました'),
+                                      backgroundColor: AppTheme.successColor,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
                                 }
                               } catch (e) {
                                 Logger.log('❌ 回答にに失敗: $e');
-
-                                if (mounted) {
-                                  // http.Response型のエラーかどうかで処理を分ける
-                                  if (e is http.Response) {
-                                    ApiErrorHandler.handleHttpError(
-                                        context, e, setError);
-                                  } else {
-                                    ApiErrorHandler.handleException(
-                                        context, e, setError);
-                                  }
-                                }
+                                // エラーダイアログはErrorHandlerで表示される
                               }
                             },
                             child: const Text('この人物に決定'),
