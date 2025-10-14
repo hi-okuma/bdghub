@@ -1,137 +1,210 @@
-import 'dart:convert';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:http/http.dart' as http;
+import 'package:bodogehub/utils/error_handler.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 class ApiService {
-  // リージョンが東京(asia-northeast1)の場合、指定が必要
   static final _functions =
       FirebaseFunctions.instanceFor(region: 'asia-northeast1');
 
-  // 共通のCloud Functions呼び出しメソッド
-  static Future<Map<String, dynamic>> _callFunction(
+  static Future<dynamic> _callFunction(
     String functionName,
-    Map<String, dynamic> parameters,
-  ) async {
+    BuildContext context,
+    Map<String, dynamic> parameters, {
+    bool handleError = true,
+  }) async {
+    final callable = _functions.httpsCallable(functionName);
     try {
-      final callable = _functions.httpsCallable(functionName);
       final result = await callable.call(parameters);
       return result.data;
     } on FirebaseFunctionsException catch (e) {
-      // Firebase Functions特有のエラー
-      throw Exception('Firebase Functions error (${e.code}): ${e.message}');
+      // handleErrorがtrueの場合のみスナックバーを表示
+      if (handleError) {
+        ErrorHandler.handleFirebaseFunctionsException(context, e);
+      }
+      rethrow;
     } catch (e) {
-      // その他の予期しないエラー
-      throw Exception('Unexpected error: $e');
+      if (handleError) {
+        ErrorHandler.handleGenericError(context, e);
+      }
+      rethrow;
     }
   }
 
-  // 各APIメソッドをシンプルに
-  static Future<Map<String, dynamic>> createRoom(
+  static Future<dynamic> createRoom(
+    BuildContext context,
     String nickname,
-    String uid,
-  ) async {
-    return _callFunction('createRoom', {
-      'nickname': nickname,
-      'uid': uid,
-    });
+    String uid, {
+    bool handleError = false,
+  }) async {
+    return _callFunction(
+      'createRoom',
+      context,
+      {
+        'nickname': nickname,
+        'uid': uid,
+      },
+      handleError: handleError,
+    );
   }
 
-  static Future<Map<String, dynamic>> joinRoom(
+  static Future<dynamic> joinRoom(
+    BuildContext context,
     String nickname,
     String roomId,
-    String uid,
-  ) async {
-    return _callFunction('joinRoom', {
-      'nickname': nickname,
-      'roomId': roomId,
-      'uid': uid,
-    });
+    String uid, {
+    bool handleError = false,
+  }) async {
+    return _callFunction(
+      'joinRoom',
+      context,
+      {
+        'nickname': nickname,
+        'roomId': roomId,
+        'uid': uid,
+      },
+      handleError: handleError,
+    );
   }
 
-  static Future<Map<String, dynamic>> startGame(
+  static Future<dynamic> startGame(
+    BuildContext context,
     String roomId,
-    String gameId,
-  ) async {
-    return _callFunction('startGame', {
-      'roomId': roomId,
-      'gameId': gameId,
-    });
+    String gameId, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'startGame',
+      context,
+      {
+        'roomId': roomId,
+        'gameId': gameId,
+      },
+      handleError: handleError,
+    );
   }
 
-  static Future<Map<String, dynamic>> endGame(
-    String roomId,
-  ) async {
-    return _callFunction('endGame', {
-      'roomId': roomId,
-    });
+  static Future<dynamic> endGame(
+    BuildContext context,
+    String roomId, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'endGame',
+      context,
+      {
+        'roomId': roomId,
+      },
+      handleError: handleError,
+    );
   }
 
-  static Future<Map<String, dynamic>> setReady(
-    String roomId,
-    String uid,
-    String gameId,
-  ) async {
-    return _callFunction('setReady', {
-      'roomId': roomId,
-      'uid': uid,
-      'gameId': gameId,
-    });
-  }
-
-  static Future<Map<String, dynamic>> leaveRoom(
-    String roomId,
-    String uid,
-  ) async {
-    return _callFunction('leaveRoom', {
-      'roomId': roomId,
-      'uid': uid,
-    });
-  }
-
-  static Future<Map<String, dynamic>> declare0001(
-    String roomId,
-    String uid,
-  ) async {
-    return _callFunction('declare0001', {
-      'roomId': roomId,
-      'uid': uid,
-    });
-  }
-
-  static Future<Map<String, dynamic>> submitHint0004(
+  static Future<dynamic> setReady(
+    BuildContext context,
     String roomId,
     String uid,
-    String hint,
-  ) async {
-    return _callFunction('submitHint0004', {
-      'roomId': roomId,
-      'uid': uid,
-      'hint': hint,
-    });
+    String gameId, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'setReady',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'gameId': gameId,
+      },
+      handleError: handleError,
+    );
   }
 
-  static Future<Map<String, dynamic>> determineAnswer0004(
+  static Future<dynamic> leaveRoom(
+    BuildContext context,
     String roomId,
-    String uid,
-    int imageIndex,
-  ) async {
-    return _callFunction('determineAnswer0004', {
-      'roomId': roomId,
-      'uid': uid,
-      'imageIndex': imageIndex,
-    });
+    String uid, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'leaveRoom',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+      },
+      handleError: handleError,
+    );
   }
 
-  static Future<Map<String, dynamic>> proceedToNext0004(
+  static Future<dynamic> declare0001(
+    BuildContext context,
+    String roomId,
+    String uid, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'declare0001',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+      },
+      handleError: handleError,
+    );
+  }
+
+  static Future<dynamic> submitHint0004(
+    BuildContext context,
     String roomId,
     String uid,
-    String? bestHintPlayerUid,
-  ) async {
-    return _callFunction('proceedToNext0004', {
-      'roomId': roomId,
-      'uid': uid,
-      'bestHintPlayerUid': bestHintPlayerUid,
-    });
+    String hint, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'submitHint0004',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'hint': hint,
+      },
+      handleError: handleError,
+    );
+  }
+
+  static Future<dynamic> determineAnswer0004(
+    BuildContext context,
+    String roomId,
+    String uid,
+    int imageIndex, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'determineAnswer0004',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'imageIndex': imageIndex,
+      },
+      handleError: handleError,
+    );
+  }
+
+  static Future<dynamic> proceedToNext0004(
+    BuildContext context,
+    String roomId,
+    String uid,
+    String? bestHintPlayerUid, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'proceedToNext0004',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'bestHintPlayerUid': bestHintPlayerUid,
+      },
+      handleError: handleError,
+    );
   }
 }

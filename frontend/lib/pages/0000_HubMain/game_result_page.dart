@@ -1,7 +1,7 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
@@ -9,7 +9,6 @@ import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
-import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
 // 全ゲーム共通の結果表示用プレイヤーデータ
@@ -40,7 +39,6 @@ class GameResultPage extends ConsumerStatefulWidget {
 
 class _GameResultPageState extends ConsumerState<GameResultPage>
     with GameExitHandler {
-  String? _errorMessage;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
@@ -49,9 +47,9 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   @override
   void setError(String message) {
     if (mounted) {
-      setState(() {
-        _errorMessage = message;
-      });
+      // エラーはErrorHandlerでグローバルに処理されるため、
+      // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
+      Logger.log('GameResultPageでエラー発生: $message');
     }
   }
 
@@ -308,14 +306,16 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
       Logger.log('準備完了状態を更新: $nickname in room $roomId');
 
       // ★ API呼び出し実装
-      final response = await ApiService.setReady(roomId, uid, gameId);
+      await ApiService.setReady(context, roomId, uid, gameId);
 
-      Logger.log('準備完了状態の更新成功: $response');
+      Logger.log('準備完了状態の更新成功');
 
       // 成功時のフィードバック（オプション）
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('準備完了しました！')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('準備完了しました！')),
+        );
+      }
 
       // 全員の準備が完了すると、Cloud Functionsにより
       // gameStatus が 'waiting' → 'playing' に自動更新され、
@@ -328,10 +328,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
         _isPreparationCompleted = false;
       });
 
-      // エラーメッセージ表示
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('準備完了の更新に失敗しました: $e')),
-      );
+      // エラーダイアログはErrorHandlerで表示されるため、ここでは不要
     }
   }
 

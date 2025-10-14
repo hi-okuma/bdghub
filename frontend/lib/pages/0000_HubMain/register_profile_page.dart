@@ -1,13 +1,13 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../utils/error_handler.dart';
 import '../0000_HubMain/select_game_page.dart';
 import '../../components/custom_widgets.dart';
 import '../../components/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/navigation_service.dart';
-import '../../utils/error_handler.dart';
 import '../../utils/validation_utils.dart';
 import '/providers/user_provider.dart';
 
@@ -76,27 +76,17 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
 
       if (widget.isJoiningRoom) {
         responseData = await ApiService.joinRoom(
+          context,
           _nicknameController.text,
           _roomIdController.text,
           uid,
         );
       } else {
         responseData = await ApiService.createRoom(
+          context,
           _nicknameController.text,
           uid,
         );
-      }
-
-      // APIエラーレスポンスのチェック
-      if (responseData.containsKey('success') &&
-          responseData['success'] == false) {
-        ApiErrorHandler.handleApiError(context, responseData, (error) {
-          setState(() {
-            _errorMessage = error;
-            _isLoading = false;
-          });
-        });
-        return;
       }
 
       final String roomId = widget.isJoiningRoom
@@ -104,28 +94,18 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
           : responseData['roomId'];
 
       // Riverpodにユーザー情報を保存
-      try {
-        if (widget.isJoiningRoom) {
-          ref.read(userProvider.notifier).joinRoom(
-                nickname: _nicknameController.text,
-                roomId: roomId,
-                uid: uid,
-              );
-        } else {
-          ref.read(userProvider.notifier).createRoom(
-                nickname: _nicknameController.text,
-                roomId: roomId,
-                uid: uid,
-              );
-        }
-      } catch (e) {
-        Logger.log('⚠️ Provider状態更新エラー: $e');
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = 'データの保存に失敗しました';
-          _isLoading = false;
-        });
-        return;
+      if (widget.isJoiningRoom) {
+        ref.read(userProvider.notifier).joinRoom(
+              nickname: _nicknameController.text,
+              roomId: roomId,
+              uid: uid,
+            );
+      } else {
+        ref.read(userProvider.notifier).createRoom(
+              nickname: _nicknameController.text,
+              roomId: roomId,
+              uid: uid,
+            );
       }
 
       if (!mounted) return;
@@ -143,12 +123,19 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(successMessage)),
       );
+    } on FirebaseFunctionsException catch (e) {
+      // ApiServiceのエラーはErrorHandlerで処理される
+      // その他のエラー（認証、Provider更新など）のためにcatchは残す
+      Logger.log('部屋の作成/参加プロセスでエラー: $e');
+      setState(() {
+        _errorMessage = e.message ?? '部屋の作成/参加中にエラーが発生しました';
+        _isLoading = false;
+      });
     } catch (e) {
-      ApiErrorHandler.handleException(context, e, (error) {
-        setState(() {
-          _errorMessage = error;
-          _isLoading = false;
-        });
+      Logger.log('予期せぬエラー: $e');
+      setState(() {
+        _errorMessage = '予期せぬエラーが発生しました。';
+        _isLoading = false;
       });
     }
   }
