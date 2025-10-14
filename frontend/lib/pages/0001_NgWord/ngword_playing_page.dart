@@ -1,7 +1,6 @@
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
@@ -9,7 +8,6 @@ import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
-import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
 // NGワードゲーム画面用のプレイヤー表示データ
@@ -45,15 +43,14 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
   bool _hasReported = false;
   bool _isWaitingForOthers = false;
   bool _isSubmittingReport = false; // 追加
-  String? _errorMessage; // エラーメッセージ用の状態
 
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {
     if (mounted) {
-      setState(() {
-        _errorMessage = message;
-      });
+      // エラーはErrorHandlerでグローバルに処理されるため、
+      // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
+      Logger.log('NgWordPlayingPageでエラー発生: $message');
     }
   }
 
@@ -282,47 +279,37 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
 
   // API経由で申告情報を送信する処理
   Future<void> _submitReport(String roomId, String uid) async {
+    setState(() {
+      _isSubmittingReport = true;
+    });
     try {
-      final result = await ApiService.declare0001(roomId, uid);
+      await ApiService.declare0001(context, roomId, uid);
 
-      if (result['success'] == true) {
-        Logger.log('✅ 申告情報を送信しました: $uid');
+      Logger.log('✅ 申告情報を送信しました: $uid');
 
-        setState(() {
-          _hasReported = true;
-          _isWaitingForOthers = true;
-          _isSubmittingReport = false; // 追加
-        });
+      setState(() {
+        _hasReported = true;
+        _isWaitingForOthers = true;
+      });
 
-        // 成功時のスナックバー表示
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('申告を受け付けました'),
-              backgroundColor: AppTheme.successColor,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        // APIからの失敗レスポンス
-        if (mounted) {
-          ApiErrorHandler.handleApiError(context, result, setError);
-          _resetReportState();
-        }
+      // 成功時のスナックバー表示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('申告を受け付けました'),
+            backgroundColor: AppTheme.successColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       Logger.log('❌ 申告情報の送信に失敗: $e');
-
-      if (mounted) {
-        // http.Response型のエラーかどうかで処理を分ける
-        if (e is http.Response) {
-          ApiErrorHandler.handleHttpError(context, e, setError);
-        } else {
-          ApiErrorHandler.handleException(context, e, setError);
-        }
-        _resetReportState();
-      }
+      // エラーダイアログはErrorHandlerで表示されるので、ここではUIの状態をリセットするだけ
+      _resetReportState();
+    } finally {
+      setState(() {
+        _isSubmittingReport = false;
+      });
     }
   }
 

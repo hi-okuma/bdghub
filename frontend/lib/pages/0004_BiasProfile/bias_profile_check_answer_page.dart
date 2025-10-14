@@ -1,14 +1,14 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
-import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
 class BiasProfileCheckAnswerPage extends ConsumerStatefulWidget {
@@ -21,7 +21,6 @@ class BiasProfileCheckAnswerPage extends ConsumerStatefulWidget {
 
 class _BiasProfileCheckAnswerPageState
     extends ConsumerState<BiasProfileCheckAnswerPage> with GameExitHandler {
-  String? _errorMessage;
   int? parentSelectedIndex;
   bool isLoading = false;
   bool hasProceeded = false;
@@ -30,9 +29,9 @@ class _BiasProfileCheckAnswerPageState
   @override
   void setError(String message) {
     if (mounted) {
-      setState(() {
-        _errorMessage = message;
-      });
+      // エラーはErrorHandlerでグローバルに処理されるため、
+      // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
+      Logger.log('BiasProfileCheckAnswerPageでエラー発生: $message');
     }
   }
 
@@ -171,49 +170,30 @@ class _BiasProfileCheckAnswerPageState
 
                             // API呼び出しのエラーハンドリング追加
                             try {
-                              final result = await ApiService.proceedToNext0004(
+                              await ApiService.proceedToNext0004(
+                                context,
                                 roomId,
                                 currentUser.uid!,
                                 uid,
                               );
 
-                              if (result['success'] == true) {
-                                Logger.log(
-                                    '💡 わかるde賞を提出: ${_getNicknameByUid(uid)}の回答');
+                              Logger.log(
+                                  '💡 わかるde賞を提出: ${_getNicknameByUid(uid)}の回答');
 
-                                // 成功時のスナックバー表示
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('わかるde賞を提出しました'),
-                                      backgroundColor: AppTheme.successColor,
-                                      duration: AppAnimations.snackBarDuration,
-                                    ),
-                                  );
-                                }
-                              } else {
-                                // APIからの失敗レスポンス
-                                if (mounted) {
-                                  ApiErrorHandler.handleApiError(
-                                      context, result, setError);
-                                }
-                                setDialogState(() {
-                                  dialogIsLoading = false;
-                                });
+                              // 成功時のスナックバー表示
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('わかるde賞を提出しました'),
+                                    backgroundColor: AppTheme.successColor,
+                                    duration: AppAnimations.snackBarDuration,
+                                  ),
+                                );
+                                Navigator.of(context).pop(); // ダイアログを閉じる
                               }
                             } catch (e) {
                               Logger.log('❌ 送信に失敗: $e');
-
-                              if (mounted) {
-                                // http.Response型のエラーかどうかで処理を分ける
-                                if (e is http.Response) {
-                                  ApiErrorHandler.handleHttpError(
-                                      context, e, setError);
-                                } else {
-                                  ApiErrorHandler.handleException(
-                                      context, e, setError);
-                                }
-                              }
+                              // エラーダイアログはErrorHandlerで表示される
                               setDialogState(() {
                                 dialogIsLoading = false;
                               });
@@ -399,52 +379,35 @@ class _BiasProfileCheckAnswerPageState
 
                                 // API呼び出しのエラーハンドリング追加
                                 try {
-                                  final result = await ApiService.proceedToNext0004(
+                                  await ApiService.proceedToNext0004(
+                                      context,
                                       roomId,
                                       currentUser.uid!,
                                       ''); // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
-                                  if (result['success'] == true) {
-                                    Logger.log('プレイヤー${currentUser.uid} 準備完了');
+                                  Logger.log('プレイヤー${currentUser.uid} 準備完了');
 
-                                    // 成功時のスナックバー表示
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text('準備完了！'),
-                                          backgroundColor:
-                                              AppTheme.successColor,
-                                          duration: Duration(seconds: 2),
-                                        ),
-                                      );
-                                    }
-                                  } else {
-                                    // APIからの失敗レスポンス
-                                    if (mounted) {
-                                      ApiErrorHandler.handleApiError(
-                                          context, result, setError);
-                                    }
+                                  // 成功時のスナックバー表示
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('準備完了！'),
+                                        backgroundColor: AppTheme.successColor,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
                                   }
+                                  setState(() {
+                                    hasProceeded = true;
+                                  });
                                 } catch (e) {
                                   Logger.log('❌ 準備完了に失敗: $e');
-
-                                  if (mounted) {
-                                    // http.Response型のエラーかどうかで処理を分ける
-                                    if (e is http.Response) {
-                                      ApiErrorHandler.handleHttpError(
-                                          context, e, setError);
-                                    } else {
-                                      ApiErrorHandler.handleException(
-                                          context, e, setError);
-                                    }
-                                    setState(() {
-                                      hasProceeded = false;
-                                    });
-                                  }
+                                  // エラーダイアログはErrorHandlerで表示される
+                                  setState(() {
+                                    hasProceeded = false;
+                                  });
                                 } finally {
                                   setState(() {
                                     isLoading = false;
-                                    hasProceeded = true;
                                   });
                                 }
                               },

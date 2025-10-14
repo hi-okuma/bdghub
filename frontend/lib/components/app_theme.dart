@@ -303,7 +303,7 @@ class AppTextStyles {
 
   static const TextStyle errorText = TextStyle(
     fontSize: subtitle2FontSize,
-    color: AppTheme.errorColor,
+    color: AppTheme.secondaryTextColor,
   );
 
   static const TextStyle bdghubTitleStyle = TextStyle(

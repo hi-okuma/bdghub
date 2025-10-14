@@ -1,7 +1,7 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:http/http.dart' as http;
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
@@ -9,7 +9,6 @@ import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
-import 'package:bodogehub/utils/error_handler.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/validation_utils.dart';
 
@@ -27,8 +26,11 @@ class _BiasProfileChildTurnPageState
   @override
   void setError(String message) {
     if (mounted) {
+      // エラーはErrorHandlerでグローバルに処理されるため、
+      // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
+      Logger.log('BiasProfileChildTurnPageでエラー発生: $message');
       setState(() {
-        _errorMessage = message;
+        _errorMessage = message; // 必要に応じてローカルなエラーメッセージも設定
       });
     }
   }
@@ -256,13 +258,6 @@ class _BiasProfileChildTurnPageState
                                       // バリデーション
                                       final profileText =
                                           _profileController.text.trim();
-                                      if (profileText.isEmpty) {
-                                        setState(() {
-                                          _errorMessage = 'ヒントを入力してください';
-                                        });
-                                        return;
-                                      }
-
                                       final validation =
                                           ValidationUtils.validateProfile(
                                               profileText);
@@ -281,53 +276,29 @@ class _BiasProfileChildTurnPageState
 
                                       // API呼び出しのエラーハンドリング追加
                                       try {
-                                        final result =
-                                            await ApiService.submitHint0004(
-                                                roomId,
-                                                currentUser.uid!,
-                                                profileText);
+                                        await ApiService.submitHint0004(
+                                            context,
+                                            roomId,
+                                            currentUser.uid!,
+                                            profileText);
 
-                                        if (result['success'] == true) {
-                                          Logger.log('💡 ヒント提出: $profileText');
+                                        Logger.log('💡 ヒント提出: $profileText');
 
-                                          // 成功時のスナックバー表示
-                                          if (mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text('提出を受け付けました'),
-                                                backgroundColor:
-                                                    AppTheme.successColor,
-                                                duration: Duration(seconds: 2),
-                                              ),
-                                            );
-                                          }
-                                        } else {
-                                          // APIからの失敗レスポンス
-                                          if (mounted) {
-                                            ApiErrorHandler.handleApiError(
-                                                context, result, setError);
-                                            setState(() {
-                                              _isSubmitting = false;
-                                            });
-                                          }
+                                        // 成功時のスナックバー表示
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text('提出を受け付けました'),
+                                              backgroundColor:
+                                                  AppTheme.successColor,
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
                                         }
                                       } catch (e) {
                                         Logger.log('❌ ヒント提出に失敗: $e');
-
-                                        if (mounted) {
-                                          // http.Response型のエラーかどうかで処理を分ける
-                                          if (e is http.Response) {
-                                            ApiErrorHandler.handleHttpError(
-                                                context, e, setError);
-                                          } else {
-                                            ApiErrorHandler.handleException(
-                                                context, e, setError);
-                                          }
-                                          setState(() {
-                                            _isSubmitting = false;
-                                          });
-                                        }
+                                        // エラーダイアログはErrorHandlerで表示される
                                       } finally {
                                         setState(() {
                                           _isSubmitting = false; // ★通信終了

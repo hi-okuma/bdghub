@@ -1,9 +1,10 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../components/custom_widgets.dart';
 import '../../components/app_theme.dart';
 import '../../services/api_service.dart';
-import '../../utils/error_handler.dart';
+import '../../utils/logger.dart';
 import '../../utils/genre_utils.dart';
 import 'game_title_page.dart';
 import '/models/user_state.dart';
@@ -30,32 +31,20 @@ class GameDetailPage extends ConsumerStatefulWidget {
 }
 
 class _GameDetailPageState extends ConsumerState<GameDetailPage> {
-  String? _errorMessage;
   bool _isLoading = false;
 
   Future<void> _startGame() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
     try {
       // ★ シンプル：API呼び出しのみ ★
       final responseData = await ApiService.startGame(
+        context,
         widget.roomId!,
         widget.gameId,
       );
-
-      // APIエラーレスポンスのチェック
-      if (responseData.containsKey('success') &&
-          responseData['success'] == false) {
-        ApiErrorHandler.handleApiError(context, responseData, (error) {
-          setState(() {
-            _errorMessage = error;
-          });
-        });
-        return;
-      }
 
       if (!mounted) return;
 
@@ -64,11 +53,8 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
         const SnackBar(content: Text('ゲームを開始しています...')),
       );
     } catch (e) {
-      ApiErrorHandler.handleException(context, e, (error) {
-        setState(() {
-          _errorMessage = error;
-        });
-      });
+      // エラーはErrorHandlerで処理されるが、ローディング解除のためにcatchは残す
+      Logger.log('ゲーム開始APIエラー: $e');
     } finally {
       if (mounted) {
         setState(() {
