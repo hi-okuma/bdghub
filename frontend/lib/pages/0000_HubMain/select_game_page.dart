@@ -364,9 +364,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                       SizedBox(
                         width: AppSpacing.small,
                       ),
-                      Expanded(
-                          child:
-                              Text('現在、リロードや戻る操作をすると部屋を退出してしまう不具合が発生しています。')),
+                      Expanded(child: Text('リロードや戻る操作をすると部屋を退出してしまう場合があります')),
                     ],
                   ),
                 ),
