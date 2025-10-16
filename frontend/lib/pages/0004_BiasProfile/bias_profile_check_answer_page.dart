@@ -111,9 +111,54 @@ class _BiasProfileCheckAnswerPageState
       return players[uid]?['nickname'] ?? 'Unknown';
     }
 
+    // 待機中の閉じられないダイアログ
+    void _showWaitingDialog(String topic, String? hint, String uid) {
+      showDialog(
+        context: context,
+        barrierDismissible: false, // 外側タップで閉じられない
+        builder: (BuildContext context) {
+          return PopScope(
+            canPop: false, // バックボタンでも閉じられない
+            child: AlertDialog(
+              title: Text(topic),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$hint', style: AppTextStyles.body),
+                  const SizedBox(height: AppSpacing.large),
+                  Text(_getNicknameByUid(uid),
+                      style: AppTextStyles.body
+                          .copyWith(color: AppTheme.secondaryTextColor)),
+                  const SizedBox(height: AppSpacing.large),
+                  const Center(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: AppIconSizes.large,
+                          height: AppIconSizes.large,
+                          child: CircularProgressIndicator(
+                              strokeWidth: AppLayout.circleIndicatorStroke),
+                        ),
+                        SizedBox(height: AppSpacing.small),
+                        Text('他プレイヤー待ち...', style: AppTextStyles.body),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              // アクションボタンは表示しない
+            ),
+          );
+        },
+      );
+    }
+
     void _showTopicDialog(String topic, String? hint, String uid) {
       showDialog(
         context: context,
+        barrierDismissible: true, // 最初は閉じられる
         builder: (BuildContext context) {
           bool dialogIsLoading = false;
 
@@ -130,27 +175,6 @@ class _BiasProfileCheckAnswerPageState
                     Text(_getNicknameByUid(uid),
                         style: AppTextStyles.body
                             .copyWith(color: AppTheme.secondaryTextColor)),
-                    if (dialogIsLoading) ...[
-                      const Center(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(
-                                  0, AppSpacing.large, 0, 0),
-                              child: SizedBox(
-                                width: AppIconSizes.large,
-                                height: AppIconSizes.large,
-                                child: CircularProgressIndicator(
-                                    strokeWidth:
-                                        AppLayout.circleIndicatorStroke),
-                              ),
-                            ),
-                            Text('他プレイヤー待ち...', style: AppTextStyles.body),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
                 actions: [
@@ -189,8 +213,13 @@ class _BiasProfileCheckAnswerPageState
                                     duration: AppAnimations.snackBarDuration,
                                   ),
                                 );
-                                Navigator.of(context).pop(); // ダイアログを閉じる
                               }
+
+                              // 現在のダイアログを閉じる
+                              Navigator.of(context).pop();
+
+                              // 閉じられない新しいダイアログを表示
+                              _showWaitingDialog(topic, hint, uid);
                             } catch (e) {
                               Logger.log('❌ 送信に失敗: $e');
                               // エラーダイアログはErrorHandlerで表示される
@@ -380,10 +409,8 @@ class _BiasProfileCheckAnswerPageState
                                 // API呼び出しのエラーハンドリング追加
                                 try {
                                   await ApiService.proceedToNext0004(
-                                      context,
-                                      roomId,
-                                      currentUser.uid!,
-                                      ''); // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
+                                      context, roomId, currentUser.uid!, '');
+                                  // 子プレイヤーによるAPI実行のため、bestHintPlayerUidは空文字でリクエスト実行
                                   Logger.log('プレイヤー${currentUser.uid} 準備完了');
 
                                   // 成功時のスナックバー表示

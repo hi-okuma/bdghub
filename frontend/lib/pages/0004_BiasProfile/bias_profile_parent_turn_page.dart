@@ -374,7 +374,7 @@ class _BiasProfileParentTurnPageState
                                 // エラーダイアログはErrorHandlerで表示される
                               }
                             },
-                            child: const Text('この人物に決定'),
+                            child: const Text('この人物に決定する'),
                           ),
                         ),
                       ],
