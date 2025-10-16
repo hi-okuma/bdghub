@@ -39,8 +39,8 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   final List<CustomTab> tabs = <CustomTab>[
     CustomTab(label: '全て'),
     CustomTab(label: '定番'),
-    CustomTab(label: 'カード'),
-    CustomTab(label: '協力'),
+    // CustomTab(label: 'カード'),
+    // CustomTab(label: '協力'),
   ];
 
   @override
@@ -65,12 +65,12 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
             case 1:
               _selectedGenre = {GameGenre.popular};
               break;
-            case 2:
-              _selectedGenre = {GameGenre.card};
-              break;
-            case 3:
-              _selectedGenre = {GameGenre.cooperation};
-              break;
+            // case 2:
+            //   _selectedGenre = {GameGenre.card};
+            //   break;
+            // case 3:
+            //   _selectedGenre = {GameGenre.cooperation};
+            //   break;
           }
         });
       }
@@ -290,29 +290,29 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                           onGameSelected: _onGameSelected,
                         ),
                         // カードゲーム
-                        GameListWidget(
-                          games: _gameList.where((game) {
-                            if (game['genre'] is List) {
-                              List<GameGenre> genres =
-                                  List<GameGenre>.from(game['genre']);
-                              return genres.contains(GameGenre.card);
-                            }
-                            return game['genre'] == GameGenre.card;
-                          }).toList(),
-                          onGameSelected: _onGameSelected,
-                        ),
+                        // GameListWidget(
+                        //   games: _gameList.where((game) {
+                        //     if (game['genre'] is List) {
+                        //       List<GameGenre> genres =
+                        //           List<GameGenre>.from(game['genre']);
+                        //       return genres.contains(GameGenre.card);
+                        //     }
+                        //     return game['genre'] == GameGenre.card;
+                        //   }).toList(),
+                        //   onGameSelected: _onGameSelected,
+                        // ),
                         // 協力ゲーム
-                        GameListWidget(
-                          games: _gameList.where((game) {
-                            if (game['genre'] is List) {
-                              List<GameGenre> genres =
-                                  List<GameGenre>.from(game['genre']);
-                              return genres.contains(GameGenre.cooperation);
-                            }
-                            return game['genre'] == GameGenre.cooperation;
-                          }).toList(),
-                          onGameSelected: _onGameSelected,
-                        ),
+                        // GameListWidget(
+                        //   games: _gameList.where((game) {
+                        //     if (game['genre'] is List) {
+                        //       List<GameGenre> genres =
+                        //           List<GameGenre>.from(game['genre']);
+                        //       return genres.contains(GameGenre.cooperation);
+                        //     }
+                        //     return game['genre'] == GameGenre.cooperation;
+                        //   }).toList(),
+                        //   onGameSelected: _onGameSelected,
+                        // ),
                       ],
                     ),
                   ),
