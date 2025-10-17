@@ -424,6 +424,12 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     Logger.log('🔍 Game detail data: $gameData');
     Logger.log('🔍 Raw gameStatus: ${gameData['gameStatus']}');
 
+    // ★修正: 常にcurrentGameProviderを更新（画面遷移の有無に関わらず）
+    // これにより、同じ画面にいる間にFirestoreのデータが更新された場合も
+    // UIに反映されるようになる（例: hints提出後のボタン非活性化）
+    ref.read(currentGameProvider.notifier).updateGameData(gameData);
+    Logger.log('📊 currentGameProvider updated with latest gameData');
+
     // ゲーム状態の解析
     final gameStatus = _parseGameStatus(gameData['gameStatus']);
     Logger.log('🔍 Parsed gameStatus: $gameStatus');
@@ -435,6 +441,14 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       final userState = ref.read(userProvider);
       if (userState.isRestoring) {
         Logger.log('🔍 復帰中のため自動遷移なし');
+        // ★修正: 復帰時も現在の画面に対応するナビゲーションフラグを設定
+        // これにより、復帰後にFirestoreが更新されても重複遷移を防ぐ
+        _setNavigationFlagsForCurrentStatus(gameStatus);
+        Logger.log('🔍 復帰時のナビゲーションフラグ設定完了: $gameStatus');
+        
+        // ★追加: 復帰処理が完了したことをUserProviderに通知
+        // これにより、固定時間ではなくイベント駆動で復帰モードを解除できる
+        _completeRestoration();
       } else {
         _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
       }
@@ -520,6 +534,48 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         return GameStatus.result;
       default:
         return GameStatus.waiting;
+    }
+  }
+
+  // ★追加: 復帰時に現在の画面状態に応じてナビゲーションフラグを設定
+  // 画面遷移は行わず、フラグのみ設定することで、復帰後のFirestore更新時の重複遷移を防ぐ
+  void _setNavigationFlagsForCurrentStatus(GameStatus status) {
+    switch (status) {
+      case GameStatus.playing:
+        _hasNavigatedToPlaying = true;
+        _previousGameStatus = GameStatus.playing;
+        break;
+      case GameStatus.childTurn:
+        _hasNavigatedToChildTurn = true;
+        _previousGameStatus = GameStatus.childTurn;
+        break;
+      case GameStatus.parentTurn:
+        _hasNavigatedToParentTurn = true;
+        _previousGameStatus = GameStatus.parentTurn;
+        break;
+      case GameStatus.result:
+        _hasNavigatedToResult = true;
+        _previousGameStatus = GameStatus.result;
+        break;
+      case GameStatus.waiting:
+        // waitingの場合は特にフラグ設定不要
+        break;
+    }
+  }
+
+  // ★追加: 復帰処理完了をUserProviderに通知
+  void _completeRestoration() {
+    try {
+      final userNotifier = ref.read(userProvider.notifier);
+      // 少し遅延を入れて、Firestoreリスナーの初期化が確実に完了するようにする
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!_isDisposed) {
+          userNotifier.completeRestoration();
+          Logger.log('✅ 復帰処理完了通知をUserProviderに送信');
+        }
+      });
+    } catch (e) {
+      Logger.log('⚠️ 復帰処理完了通知エラー: $e');
     }
   }
 
