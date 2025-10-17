@@ -24,6 +24,7 @@ class BiasProfileChildTurnPage extends ConsumerStatefulWidget {
 class _BiasProfileChildTurnPageState
     extends ConsumerState<BiasProfileChildTurnPage> with GameExitHandler {
   Future<void>? _precacheFuture;
+  int _imageReloadTrigger = 0;
 
   @override
   void initState() {
@@ -137,6 +138,12 @@ class _BiasProfileChildTurnPageState
     final hints = gameData?['hints'] as Map<String, dynamic>? ?? {};
     final hasSubmittedHint = hints.containsKey(currentUser.uid);
 
+    // 表示する画像のURLを動的に決定する
+    // _imageReloadTrigger が 0 のときは元のURL、1以上のときはパラメータを付与
+    final imageUrlToShow = _imageReloadTrigger > 0
+        ? '$answerImage&reload=$_imageReloadTrigger'
+        : answerImage;
+
     bool isSoftwareKeyboardVisible =
         MediaQuery.of(context).viewInsets.bottom > 0;
 
@@ -194,7 +201,7 @@ class _BiasProfileChildTurnPageState
                           Flexible(
                             flex: isSoftwareKeyboardVisible ? 2 : 4,
                             child: Center(
-                              child: Container(
+                              child: SizedBox(
                                 height:
                                     MediaQuery.of(context).size.height * 0.5,
                                 child: AspectRatio(
@@ -210,13 +217,18 @@ class _BiasProfileChildTurnPageState
                                                 AppBorderRadius.small),
                                           ),
                                           clipBehavior: Clip.antiAlias,
+                                          color:
+                                              AppTheme.selectedBackgroundColor,
                                           child: Image.network(
-                                            answerImage,
+                                            imageUrlToShow,
+                                            // URLに再読み込みトリガーを追加
+                                            key: ValueKey(imageUrlToShow),
                                             fit: BoxFit.cover,
                                             loadingBuilder: (context, child,
                                                 loadingProgress) {
-                                              if (loadingProgress == null)
+                                              if (loadingProgress == null) {
                                                 return child;
+                                              }
                                               return Center(
                                                 child:
                                                     CircularProgressIndicator(
@@ -233,11 +245,38 @@ class _BiasProfileChildTurnPageState
                                             },
                                             errorBuilder:
                                                 (context, error, stackTrace) {
-                                              return const Center(
-                                                child: Text(
-                                                  '画像の読み込みに\n失敗しました',
-                                                  style: AppTextStyles.body,
-                                                  textAlign: TextAlign.center,
+                                              return Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    TextButton(
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            _imageReloadTrigger++;
+                                                          });
+                                                        },
+                                                        child: Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          mainAxisAlignment:
+                                                              MainAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            const Icon(
+                                                              Icons.refresh,
+                                                              color: AppTheme
+                                                                  .primaryColor,
+                                                            ),
+                                                            const Text(
+                                                              '再読み込み',
+                                                              style: TextStyle(
+                                                                  color: AppTheme
+                                                                      .primaryColor),
+                                                            ),
+                                                          ],
+                                                        )),
+                                                  ],
                                                 ),
                                               );
                                             },
