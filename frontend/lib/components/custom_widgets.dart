@@ -84,6 +84,7 @@ class GameThumbnail extends StatelessWidget {
       width: size,
       height: size,
       clipBehavior: Clip.antiAlias,
+      color: AppTheme.selectedBackgroundColor,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
       ),
@@ -101,16 +102,16 @@ class GameThumbnail extends StatelessWidget {
               },
               errorBuilder: (context, error, stackTrace) {
                 return Icon(
-                  Icons.broken_image,
+                  Icons.broken_image_outlined,
                   size: size! * 0.6,
-                  color: AppTheme.secondaryTextColor,
+                  color: AppTheme.borderColor1,
                 );
               },
             )
           : Icon(
-              Icons.casino,
+              Icons.image_outlined,
               size: size! * 0.6,
-              color: AppTheme.secondaryTextColor,
+              color: AppTheme.borderColor1,
             ),
     );
   }
