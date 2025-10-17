@@ -24,6 +24,8 @@ class _BiasProfileCheckAnswerPageState
   int? parentSelectedIndex;
   bool isLoading = false;
   bool hasProceeded = false;
+  int _answerImageReloadTrigger = 0;
+  int _selectedImageReloadTrigger = 0;
 
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
@@ -110,6 +112,16 @@ class _BiasProfileCheckAnswerPageState
     String _getNicknameByUid(String uid) {
       return players[uid]?['nickname'] ?? 'Unknown';
     }
+
+    // 表示する画像のURLを動的に決定する
+    // _imageReloadTrigger が 0 のときは元のURL、1以上のときはパラメータを付与
+    final answerImageUrlToShow = _answerImageReloadTrigger > 0
+        ? '${currentImages[answerImageIndex]}&reload=$_answerImageReloadTrigger'
+        : currentImages[answerImageIndex];
+
+    final selectedImageUrlToShow = _selectedImageReloadTrigger > 0
+        ? '${currentImages[parentSelectedIndex!]}&reload=$_selectedImageReloadTrigger'
+        : currentImages[parentSelectedIndex!];
 
     // 待機中の閉じられないダイアログ
     void _showWaitingDialog(String topic, String? hint, String uid) {
@@ -275,7 +287,7 @@ class _BiasProfileCheckAnswerPageState
                         style: AppTextStyles.body
                             .copyWith(color: AppTheme.secondaryTextColor),
                       ),
-                      Container(
+                      SizedBox(
                         height: MediaQuery.of(context).size.height * 0.28,
                         child: AspectRatio(
                           aspectRatio: 7 / 10,
@@ -286,9 +298,57 @@ class _BiasProfileCheckAnswerPageState
                                   BorderRadius.circular(AppBorderRadius.small),
                             ),
                             clipBehavior: Clip.antiAlias,
+                            color: AppTheme.selectedBackgroundColor,
                             child: Image.network(
-                              currentImages[answerImageIndex],
+                              answerImageUrlToShow,
+                              key: ValueKey(answerImageUrlToShow),
                               fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _answerImageReloadTrigger++;
+                                            });
+                                          },
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.refresh,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                              const Text(
+                                                '再読み込み',
+                                                style: TextStyle(
+                                                    color:
+                                                        AppTheme.primaryColor),
+                                              ),
+                                            ],
+                                          )),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ),
@@ -305,7 +365,7 @@ class _BiasProfileCheckAnswerPageState
                         style: AppTextStyles.body
                             .copyWith(color: AppTheme.secondaryTextColor),
                       ),
-                      Container(
+                      SizedBox(
                         height: MediaQuery.of(context).size.height * 0.28,
                         child: AspectRatio(
                           aspectRatio: 7 / 10,
@@ -316,9 +376,57 @@ class _BiasProfileCheckAnswerPageState
                                   BorderRadius.circular(AppBorderRadius.small),
                             ),
                             clipBehavior: Clip.antiAlias,
+                            color: AppTheme.selectedBackgroundColor,
                             child: Image.network(
-                              currentImages[parentSelectedIndex!],
+                              selectedImageUrlToShow, // URLに再読み込みトリガーを追加
+                              key: ValueKey(selectedImageUrlToShow),
                               fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedImageReloadTrigger++;
+                                            });
+                                          },
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                Icons.refresh,
+                                                color: AppTheme.primaryColor,
+                                              ),
+                                              const Text(
+                                                '再読み込み',
+                                                style: TextStyle(
+                                                    color:
+                                                        AppTheme.primaryColor),
+                                              ),
+                                            ],
+                                          )),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ),
