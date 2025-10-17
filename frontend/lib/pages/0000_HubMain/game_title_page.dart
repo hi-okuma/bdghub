@@ -208,6 +208,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                                 child: GameThumbnail(
                                   thumbnailUrl: imageUrl,
                                   size: AppLayout.tutorialImageSize,
+                                  iconSize: AppLayout.tutorialIconSize,
                                 ),
                               );
                             },

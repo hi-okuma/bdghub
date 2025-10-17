@@ -48,6 +48,7 @@ class GameListWidget extends StatelessWidget {
               GameThumbnail(
                 thumbnailUrl: game['thumbnailUrl'],
                 size: AppIconSizes.gameCardThumbnail,
+                iconSize: AppLayout.iconSize,
               ),
               const SizedBox(width: AppSpacing.medium),
 

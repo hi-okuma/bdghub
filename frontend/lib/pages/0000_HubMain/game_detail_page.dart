@@ -146,6 +146,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
             GameThumbnail(
               thumbnailUrl: widget.game['thumbnailUrl'],
               size: AppIconSizes.gameDetailThumbnail,
+              iconSize: AppLayout.iconSize,
             ),
             const SizedBox(width: AppSpacing.medium),
 

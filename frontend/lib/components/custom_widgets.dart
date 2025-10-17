@@ -68,13 +68,15 @@ class PlayerBadge extends StatelessWidget {
 // ゲームサムネイルウィジェット
 class GameThumbnail extends StatelessWidget {
   final String? thumbnailUrl;
-  final double? size;
+  final double size;
+  final double iconSize;
   final double borderRadius;
 
   const GameThumbnail({
     Key? key,
     this.thumbnailUrl,
-    this.size,
+    required this.size,
+    required this.iconSize,
     this.borderRadius = AppBorderRadius.large,
   }) : super(key: key);
 
@@ -84,8 +86,8 @@ class GameThumbnail extends StatelessWidget {
       width: size,
       height: size,
       clipBehavior: Clip.antiAlias,
-      color: AppTheme.selectedBackgroundColor,
       decoration: BoxDecoration(
+        color: AppTheme.selectedBackgroundColor,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       child: (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
@@ -103,14 +105,14 @@ class GameThumbnail extends StatelessWidget {
               errorBuilder: (context, error, stackTrace) {
                 return Icon(
                   Icons.broken_image_outlined,
-                  size: size! * 0.6,
+                  size: iconSize,
                   color: AppTheme.borderColor1,
                 );
               },
             )
           : Icon(
               Icons.image_outlined,
-              size: size! * 0.6,
+              size: iconSize,
               color: AppTheme.borderColor1,
             ),
     );
