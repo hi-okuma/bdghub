@@ -224,10 +224,12 @@ class UserNotifier extends StateNotifier<UserState> {
       Logger.log(
           '✅ 復帰成功: ${data['roomId']} (復帰モード, gamePhase: ${state.gamePhase})');
 
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
+      // ★修正: タイマーを10秒に延長（フォールバック用の安全装置）
+      // 通常はGameStateProviderからの通知で早期に完了する
+      Future.delayed(const Duration(seconds: 10), () {
+        if (mounted && state.isRestoring) {
           state = state.copyWith(isRestoring: false);
-          Logger.log('🔄 復帰モード終了');
+          Logger.log('⏰ 復帰モード終了（タイムアウト）');
         }
       });
 
@@ -236,6 +238,15 @@ class UserNotifier extends StateNotifier<UserState> {
       Logger.log('❌ 復帰処理エラー: $e');
       await _clearStorage();
       return false;
+    }
+  }
+
+  // ★追加: 復帰処理の明示的な完了メソッド
+  // GameStateProviderからの通知を受けてisRestoringをfalseにする
+  void completeRestoration() {
+    if (state.isRestoring) {
+      state = state.copyWith(isRestoring: false);
+      Logger.log('✅ 復帰モード終了（完了通知）');
     }
   }
 
