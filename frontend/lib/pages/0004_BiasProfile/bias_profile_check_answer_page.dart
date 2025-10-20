@@ -25,6 +25,20 @@ class _BiasProfileCheckAnswerPageState
   int _answerImageReloadTrigger = 0;
   int _selectedImageReloadTrigger = 0;
 
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {
@@ -439,39 +453,45 @@ class _BiasProfileCheckAnswerPageState
                       ),
                       const SizedBox(height: AppSpacing.large),
                       Expanded(
-                        child: ListView.builder(
-                            itemCount: sortedTopics.length,
-                            itemBuilder: (context, index) {
-                              return Card(
-                                margin: const EdgeInsets.only(
-                                    bottom: AppSpacing.medium),
-                                child: InkWell(
-                                  onTap: () {
-                                    final topicEntry = sortedTopics[index];
-                                    final topicKey = topicEntry.key;
-                                    final topic = topicEntry.value;
-                                    final hint = hints[topicKey] as String?;
-                                    _showTopicDialog(topic, hint, topicKey);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: AppSpacing.medium,
-                                        horizontal: AppSpacing.large),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          sortedTopics[index].value,
-                                          style: AppTextStyles.subtitle2,
-                                        ),
-                                        const Icon(Icons.chevron_right),
-                                      ],
+                        child: Scrollbar(
+                          thumbVisibility: true,
+                          controller: _scrollController,
+                          child: ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              controller: _scrollController,
+                              itemCount: sortedTopics.length,
+                              itemBuilder: (context, index) {
+                                return Card(
+                                  margin: const EdgeInsets.only(
+                                      bottom: AppSpacing.medium),
+                                  child: InkWell(
+                                    onTap: () {
+                                      final topicEntry = sortedTopics[index];
+                                      final topicKey = topicEntry.key;
+                                      final topic = topicEntry.value;
+                                      final hint = hints[topicKey] as String?;
+                                      _showTopicDialog(topic, hint, topicKey);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: AppSpacing.medium,
+                                          horizontal: AppSpacing.large),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            sortedTopics[index].value,
+                                            style: AppTextStyles.subtitle2,
+                                          ),
+                                          const Icon(Icons.chevron_right),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }),
+                                );
+                              }),
+                        ),
                       )
                     ],
                   ),
