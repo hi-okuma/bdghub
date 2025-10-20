@@ -1,13 +1,10 @@
 import 'package:bodogehub/utils/logger.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
-import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
-import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/validation_utils.dart';
@@ -103,7 +100,7 @@ class _BiasProfileChildTurnPageState
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return PopScope(
+      return const PopScope(
         canPop: false,
         child: Scaffold(
           body: Center(
@@ -229,18 +226,9 @@ class _BiasProfileChildTurnPageState
                                               if (loadingProgress == null) {
                                                 return child;
                                               }
-                                              return Center(
+                                              return const Center(
                                                 child:
-                                                    CircularProgressIndicator(
-                                                  value: loadingProgress
-                                                              .expectedTotalBytes !=
-                                                          null
-                                                      ? loadingProgress
-                                                              .cumulativeBytesLoaded /
-                                                          loadingProgress
-                                                              .expectedTotalBytes!
-                                                      : null,
-                                                ),
+                                                    CircularProgressIndicator(),
                                               );
                                             },
                                             errorBuilder:
@@ -256,19 +244,19 @@ class _BiasProfileChildTurnPageState
                                                             _imageReloadTrigger++;
                                                           });
                                                         },
-                                                        child: Row(
+                                                        child: const Row(
                                                           mainAxisSize:
                                                               MainAxisSize.min,
                                                           mainAxisAlignment:
                                                               MainAxisAlignment
                                                                   .center,
                                                           children: [
-                                                            const Icon(
+                                                            Icon(
                                                               Icons.refresh,
                                                               color: AppTheme
                                                                   .primaryColor,
                                                             ),
-                                                            const Text(
+                                                            Text(
                                                               '再読み込み',
                                                               style: TextStyle(
                                                                   color: AppTheme
@@ -312,7 +300,7 @@ class _BiasProfileChildTurnPageState
                                         _errorMessage!,
                                         style: AppTextStyles.errorText,
                                       )
-                                    : SizedBox.shrink(),
+                                    : const SizedBox.shrink(),
                               ],
                             ),
                           ),
@@ -321,7 +309,7 @@ class _BiasProfileChildTurnPageState
                             child: Row(
                               children: [
                                 Expanded(
-                                  child: LoadingButton(
+                                  child: ElevatedLoadingButton(
                                     text: hasSubmittedHint ? '他プレイヤー待ち' : '提出',
                                     isLoading: _isSubmitting,
                                     onPressed: (hasSubmittedHint ||
@@ -364,7 +352,7 @@ class _BiasProfileChildTurnPageState
                                               if (mounted) {
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
-                                                  SnackBar(
+                                                  const SnackBar(
                                                     content: Text('提出を受け付けました'),
                                                     backgroundColor:
                                                         AppTheme.successColor,

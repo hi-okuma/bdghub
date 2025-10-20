@@ -6,7 +6,6 @@ import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
-import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -109,7 +108,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return PopScope(
+      return const PopScope(
         canPop: false,
         child: Scaffold(
           body: Center(
@@ -197,7 +196,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
             Expanded(
               child: ShaderMask(
                 shaderCallback: (Rect bounds) {
-                  return LinearGradient(
+                  return const LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: [0.0, 0.9, 0.95, 0.98],
@@ -295,7 +294,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
       // 成功時のスナックバー表示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('申告を受け付けました'),
             backgroundColor: AppTheme.successColor,
             duration: Duration(seconds: 2),
@@ -325,7 +324,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
   Widget _buildPlayerCard(NgWordPlayer player, List<NgWordPlayer> allPlayers) {
     // 現在のユーザーの場合は何も表示しない
     if (player.isCurrentUser) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
     return Card(
@@ -359,7 +358,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
               ],
             ),
 
-            SizedBox(height: AppSpacing.small),
+            const SizedBox(height: AppSpacing.small),
 
             // NGワード表示
             RichText(

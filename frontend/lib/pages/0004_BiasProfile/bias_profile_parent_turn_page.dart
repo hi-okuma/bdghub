@@ -1,5 +1,4 @@
 import 'package:bodogehub/utils/logger.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
@@ -7,10 +6,8 @@ import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
-import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
-import 'package:bodogehub/utils/validation_utils.dart';
 
 class BiasProfileParentTurnPage extends ConsumerStatefulWidget {
   const BiasProfileParentTurnPage({super.key});
@@ -168,8 +165,8 @@ class _BiasProfileParentTurnPageState
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             isCurrentParent
-                ? Center(
-                    child: const Column(
+                ? const Center(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
@@ -187,8 +184,8 @@ class _BiasProfileParentTurnPageState
                       ],
                     ),
                   )
-                : Center(
-                    child: const Column(
+                : const Center(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
@@ -234,17 +231,8 @@ class _BiasProfileParentTurnPageState
                                 loadingBuilder:
                                     (context, child, loadingProgress) {
                                   if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                              : null,
-                                    ),
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
                                   );
                                 },
                                 errorBuilder: (context, error, stackTrace) {
@@ -259,16 +247,16 @@ class _BiasProfileParentTurnPageState
                                                 _imageReloadTrigger++;
                                               });
                                             },
-                                            child: Row(
+                                            child: const Row(
                                               mainAxisSize: MainAxisSize.min,
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                const Icon(
+                                                Icon(
                                                   Icons.refresh,
                                                   color: AppTheme.primaryColor,
                                                 ),
-                                                const Text(
+                                                Text(
                                                   '再読み込み',
                                                   style: TextStyle(
                                                       color: AppTheme
@@ -296,7 +284,8 @@ class _BiasProfileParentTurnPageState
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(currentImages.length, (index) {
                         return Padding(
-                          padding: EdgeInsets.only(right: AppSpacing.small),
+                          padding:
+                              const EdgeInsets.only(right: AppSpacing.small),
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
@@ -322,7 +311,7 @@ class _BiasProfileParentTurnPageState
                 ],
               ),
             ),
-            SizedBox(height: AppSpacing.medium),
+            const SizedBox(height: AppSpacing.medium),
             Expanded(
               child: Padding(
                 padding:

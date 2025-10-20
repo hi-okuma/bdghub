@@ -1,5 +1,4 @@
 import 'package:bodogehub/utils/logger.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
@@ -7,7 +6,6 @@ import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
-import 'package:bodogehub/providers/game_state_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -91,7 +89,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
 
     // 部屋情報がない場合のエラーハンドリング
     if (roomId == null) {
-      return PopScope(
+      return const PopScope(
         canPop: false,
         child: Scaffold(
           body: Center(
@@ -250,7 +248,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
                   Expanded(
                     child: SizedBox(
                       width: double.infinity,
-                      child: LoadingButton(
+                      child: ElevatedLoadingButton(
                         text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
                         isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
                         onPressed: _isPreparationCompleted || _isUpdatingReady

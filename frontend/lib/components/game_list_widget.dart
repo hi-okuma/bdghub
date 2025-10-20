@@ -78,7 +78,7 @@ class GameListWidget extends StatelessWidget {
                                 ]),
                           ),
                           // 矢印アイコン
-                          Icon(
+                          const Icon(
                             Icons.chevron_right,
                             size: AppIconSizes.small,
                             color: AppTheme.secondaryTextColor,

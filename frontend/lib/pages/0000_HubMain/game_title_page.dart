@@ -1,14 +1,11 @@
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/logger.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
 import '/components/custom_widgets.dart';
-import '/models/user_state.dart';
 import '/models/game_enums.dart';
 import '/providers/user_provider.dart';
-import '/providers/room_provider.dart';
 import '/providers/game_provider.dart';
 import '/providers/game_state_provider.dart';
 import '/services/api_service.dart';
@@ -81,9 +78,9 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return PopScope(
+      return const PopScope(
         canPop: false,
-        child: const Scaffold(
+        child: Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
       );

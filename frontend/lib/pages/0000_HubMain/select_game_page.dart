@@ -1,5 +1,4 @@
 import 'package:bodogehub/utils/logger.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -151,8 +150,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     String shareUrl = dotenv.env['SHARE_URL']! + '$roomId';
     Clipboard.setData(ClipboardData(text: shareUrl)).then((_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('URLをコピーしました'),
+        const SnackBar(
+          content: Text('URLをコピーしました'),
           duration: AppAnimations.snackBarDuration,
         ),
       );
@@ -269,7 +268,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 '部屋コード',
                 style: AppTextStyles.caption,
               ),
@@ -287,16 +286,16 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             onPressed: _showExitDialog,
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.logout,
                   color: AppTheme.primaryColor,
                   size: AppIconSizes.xSmall,
                 ),
-                const SizedBox(width: AppSpacing.small),
-                const Text(
+                SizedBox(width: AppSpacing.small),
+                Text(
                   '退出する',
                   style: TextStyle(
                     color: AppTheme.primaryColor,
@@ -314,7 +313,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               onPressed: _copyRoomUrl,
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
@@ -325,7 +324,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   SizedBox(
                     width: AppSpacing.small,
                   ),
-                  const Text(
+                  Text(
                     'URL',
                     style: TextStyle(
                       color: Colors.white,
@@ -351,8 +350,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   color: AppTheme.errorBackgroundColor,
                   borderRadius: BorderRadius.circular(AppBorderRadius.small),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.medium),
+                child: const Padding(
+                  padding: EdgeInsets.all(AppSpacing.medium),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -378,7 +377,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     '参加者',
                     style: AppTextStyles.title,
                   ),
@@ -387,7 +386,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   Consumer(builder: (context, ref, _) {
                     // roomIdが空の場合は playersProvider を watch しない
                     if (roomId.isEmpty) {
-                      return Text(
+                      return const Text(
                         'ルームIDが見つかりません',
                         style: AppTextStyles.errorText,
                       );
@@ -396,7 +395,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                     final players = ref.watch(playersProvider(roomId));
 
                     if (players.isEmpty) {
-                      return Text(
+                      return const Text(
                         '参加者がいません',
                         style: AppTextStyles.body,
                       );
@@ -432,8 +431,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               ),
             ),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(
+            const Padding(
+              padding: EdgeInsets.symmetric(
                   vertical: AppSpacing.medium, horizontal: AppSpacing.large),
               child: Text(
                 'ゲーム一覧',
@@ -508,8 +507,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          content: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
+          content: const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.large),
             child: Text(
               '部屋から退出しますか？',
               style: AppTextStyles.body,
@@ -520,7 +519,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                 onPressed: () {
                   Navigator.pop(context);
                 },
-                child: Text(
+                child: const Text(
                   'キャンセル',
                   style: TextStyle(color: AppTheme.secondaryTextColor),
                 )),
