@@ -1,4 +1,3 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../components/custom_widgets.dart';
@@ -6,11 +5,7 @@ import '../../components/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../utils/logger.dart';
 import '../../utils/genre_utils.dart';
-import 'game_title_page.dart';
-import '/models/user_state.dart';
 import '/providers/user_provider.dart';
-import '/providers/room_provider.dart';
-import '/providers/game_provider.dart'; // 追加
 
 class GameDetailPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> game;
@@ -81,10 +76,10 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
           onPressed: () {
             Navigator.pop(context);
           },
-          child: Row(
+          child: const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.arrow_back,
                 color: AppTheme.primaryColor,
                 size: AppIconSizes.small,
@@ -110,7 +105,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
               const SizedBox(height: AppSpacing.xxLarge),
               SizedBox(
                 width: double.infinity,
-                child: LoadingButton(
+                child: ElevatedLoadingButton(
                   text: 'このゲームで遊ぶ',
                   isLoading: _isLoading,
                   onPressed: _startGame,
@@ -120,7 +115,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
 
             // ゲーム詳細説明
             const SizedBox(height: AppSpacing.xxLarge),
-            Text(
+            const Text(
               'ルール',
               style: AppTextStyles.title,
             ),

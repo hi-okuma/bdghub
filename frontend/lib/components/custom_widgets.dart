@@ -119,51 +119,6 @@ class GameThumbnail extends StatelessWidget {
   }
 }
 
-// TODO UI適応後、削除
-// ローディングボタンウィジェット
-class LoadingButton extends StatelessWidget {
-  final String text;
-  final bool isLoading;
-  final VoidCallback? onPressed;
-  final bool isElevated;
-
-  const LoadingButton({
-    Key? key,
-    required this.text,
-    required this.isLoading,
-    this.onPressed,
-    this.isElevated = true,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    Widget button = isElevated
-        ? ElevatedButton(
-            onPressed: isLoading ? null : onPressed,
-            child: _buildChild(),
-          )
-        : TextButton(
-            onPressed: isLoading ? null : onPressed,
-            child: _buildChild(),
-          );
-
-    return button;
-  }
-
-  Widget _buildChild() {
-    return isLoading
-        ? const SizedBox(
-            width: AppIconSizes.small,
-            height: AppIconSizes.small,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          )
-        : Text(text);
-  }
-}
-
 // Elevatedローディングボタンウィジェット
 class ElevatedLoadingButton extends StatelessWidget {
   final String text;
@@ -388,13 +343,13 @@ class MaintenanceScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.build_circle,
               size: AppIconSizes.xxLarge * 2,
               color: AppTheme.warningColor,
             ),
             const SizedBox(height: AppSpacing.xLarge),
-            Text(
+            const Text(
               'メンテナンス中です',
               style: AppTextStyles.h5,
             ),
@@ -494,7 +449,7 @@ class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
             // ),
             child: Row(
               children: [
-                Icon(Icons.close,
+                const Icon(Icons.close,
                     size: AppIconSizes.xSmall, color: AppTheme.primaryColor),
                 const SizedBox(width: AppSpacing.small), // アイコンとテキストの間隔
                 Text('終了する',

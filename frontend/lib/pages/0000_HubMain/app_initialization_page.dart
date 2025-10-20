@@ -219,10 +219,10 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: Center(
-        child: const CircularProgressIndicator(),
+        child: CircularProgressIndicator(),
       ),
     );
   }

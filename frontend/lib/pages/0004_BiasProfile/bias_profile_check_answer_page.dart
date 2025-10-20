@@ -1,7 +1,5 @@
 import 'package:bodogehub/utils/logger.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
@@ -219,7 +217,7 @@ class _BiasProfileCheckAnswerPageState
                               // 成功時のスナックバー表示
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
+                                  const SnackBar(
                                     content: Text('わかるde賞を提出しました'),
                                     backgroundColor: AppTheme.successColor,
                                     duration: AppAnimations.snackBarDuration,
@@ -306,15 +304,8 @@ class _BiasProfileCheckAnswerPageState
                               loadingBuilder:
                                   (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
+                                return const Center(
+                                  child: CircularProgressIndicator(),
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
@@ -328,16 +319,16 @@ class _BiasProfileCheckAnswerPageState
                                               _answerImageReloadTrigger++;
                                             });
                                           },
-                                          child: Row(
+                                          child: const Row(
                                             mainAxisSize: MainAxisSize.min,
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              const Icon(
+                                              Icon(
                                                 Icons.refresh,
                                                 color: AppTheme.primaryColor,
                                               ),
-                                              const Text(
+                                              Text(
                                                 '再読み込み',
                                                 style: TextStyle(
                                                     color:
@@ -384,15 +375,8 @@ class _BiasProfileCheckAnswerPageState
                               loadingBuilder:
                                   (context, child, loadingProgress) {
                                 if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes !=
-                                            null
-                                        ? loadingProgress
-                                                .cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
+                                return const Center(
+                                  child: CircularProgressIndicator(),
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
@@ -406,16 +390,16 @@ class _BiasProfileCheckAnswerPageState
                                               _selectedImageReloadTrigger++;
                                             });
                                           },
-                                          child: Row(
+                                          child: const Row(
                                             mainAxisSize: MainAxisSize.min,
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              const Icon(
+                                              Icon(
                                                 Icons.refresh,
                                                 color: AppTheme.primaryColor,
                                               ),
-                                              const Text(
+                                              Text(
                                                 '再読み込み',
                                                 style: TextStyle(
                                                     color:
@@ -459,8 +443,8 @@ class _BiasProfileCheckAnswerPageState
                             itemCount: sortedTopics.length,
                             itemBuilder: (context, index) {
                               return Card(
-                                margin:
-                                    EdgeInsets.only(bottom: AppSpacing.medium),
+                                margin: const EdgeInsets.only(
+                                    bottom: AppSpacing.medium),
                                 child: InkWell(
                                   onTap: () {
                                     final topicEntry = sortedTopics[index];
@@ -504,7 +488,7 @@ class _BiasProfileCheckAnswerPageState
                 child: Row(
                   children: [
                     Expanded(
-                      child: LoadingButton(
+                      child: ElevatedLoadingButton(
                         text: hasProceeded ? '他プレイヤー待ち' : '次に進む',
                         isLoading: isLoading,
                         onPressed: hasProceeded
@@ -524,7 +508,7 @@ class _BiasProfileCheckAnswerPageState
                                   // 成功時のスナックバー表示
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
+                                      const SnackBar(
                                         content: Text('準備完了！'),
                                         backgroundColor: AppTheme.successColor,
                                         duration: Duration(seconds: 2),

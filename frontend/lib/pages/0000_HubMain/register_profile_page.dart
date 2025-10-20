@@ -2,7 +2,6 @@ import 'package:bodogehub/utils/logger.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../utils/error_handler.dart';
 import '../0000_HubMain/select_game_page.dart';
 import '../../components/custom_widgets.dart';
 import '../../components/app_theme.dart';
@@ -182,7 +181,7 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
           // ニックネーム入力
           TextField(
             controller: _nicknameController,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               labelText: 'ニックネームを入力',
               hintText: '例：ボドゲハブ',
             ),

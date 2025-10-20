@@ -37,8 +37,8 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
   Set<GameGenre> _selectedGenre = {GameGenre.all};
 
   final List<CustomTab> tabs = <CustomTab>[
-    CustomTab(label: '全て'),
-    CustomTab(label: '定番'),
+    const CustomTab(label: '全て'),
+    const CustomTab(label: '定番'),
     // CustomTab(label: 'カード'),
     // CustomTab(label: '協力'),
   ];
@@ -244,7 +244,7 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.large),
-                Text(
+                const Text(
                   'ゲーム一覧',
                   style: AppTextStyles.title,
                 ),
@@ -363,9 +363,9 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(AppSpacing.large),
-          child: const SingleChildScrollView(
+        return const Dialog(
+          insetPadding: EdgeInsets.all(AppSpacing.large),
+          child: SingleChildScrollView(
             child: RegisterProfilePage(isJoiningRoom: false),
           ),
         );
