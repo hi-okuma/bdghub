@@ -99,9 +99,18 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
       final roomData = roomDoc.data() as Map<String, dynamic>;
       final roomStatus = roomData['status'] as String?;
 
-      if (roomStatus != 'inProgress') {
-        _navigateToSelectGame();
-        return;
+      switch (roomStatus) {
+        case 'closed':
+          _showErrorAndNavigateToTop('部屋はすでに終了しています');
+          return;
+        case 'full':
+          _showErrorAndNavigateToTop('部屋の参加人数上限に達しています');
+          return;
+        case 'inProgress':
+          break;
+        default:
+          _navigateToSelectGame();
+          return;
       }
 
       // currentGameから詳細状態取得
