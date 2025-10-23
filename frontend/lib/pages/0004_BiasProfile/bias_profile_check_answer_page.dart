@@ -119,6 +119,10 @@ class _BiasProfileCheckAnswerPageState
     final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
     final answerImageIndex = gameData?['answerImageIndex'] as int? ?? 0;
 
+    final bestHintPlayerUid = gameData?['bestHintPlayer'] as String?;
+    final isSubmittedBestPlayer =
+        bestHintPlayerUid != null && bestHintPlayerUid.isNotEmpty;
+
     final isRight = answerImageIndex == parentSelectedIndex;
 
     String _getNicknameByUid(String uid) {
@@ -135,57 +139,12 @@ class _BiasProfileCheckAnswerPageState
         ? '${currentImages[parentSelectedIndex!]}&reload=$_selectedImageReloadTrigger'
         : currentImages[parentSelectedIndex!];
 
-    // 待機中の閉じられないダイアログ
-    void _showWaitingDialog(String topic, String? hint, String uid) {
-      showDialog(
-        context: context,
-        barrierDismissible: false, // 外側タップで閉じられない
-        builder: (BuildContext context) {
-          return PopScope(
-            canPop: false, // バックボタンでも閉じられない
-            child: AlertDialog(
-              title: Text(topic),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('$hint', style: AppTextStyles.body),
-                  const SizedBox(height: AppSpacing.large),
-                  Text(_getNicknameByUid(uid),
-                      style: AppTextStyles.body
-                          .copyWith(color: AppTheme.secondaryTextColor)),
-                  const SizedBox(height: AppSpacing.large),
-                  const Center(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: AppIconSizes.large,
-                          height: AppIconSizes.large,
-                          child: CircularProgressIndicator(
-                              strokeWidth: AppLayout.circleIndicatorStroke),
-                        ),
-                        SizedBox(height: AppSpacing.small),
-                        Text('他プレイヤー待ち...', style: AppTextStyles.body),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              // アクションボタンは表示しない
-            ),
-          );
-        },
-      );
-    }
-
     void _showTopicDialog(String topic, String? hint, String uid) {
       showDialog(
         context: context,
-        barrierDismissible: true, // 最初は閉じられる
+        barrierDismissible: true,
         builder: (BuildContext context) {
           bool dialogIsLoading = false;
-
           return StatefulBuilder(
             builder: (context, setDialogState) {
               return AlertDialog(
@@ -199,60 +158,72 @@ class _BiasProfileCheckAnswerPageState
                     Text(_getNicknameByUid(uid),
                         style: AppTextStyles.body
                             .copyWith(color: AppTheme.secondaryTextColor)),
+                    // ★ 初期状態も含めてチェック
+                    (dialogIsLoading || isSubmittedBestPlayer)
+                        ? const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                SizedBox(height: AppSpacing.xxxLarge),
+                                SizedBox(
+                                  width: AppIconSizes.large,
+                                  height: AppIconSizes.large,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth:
+                                          AppLayout.circleIndicatorStroke),
+                                ),
+                                SizedBox(height: AppSpacing.small),
+                                Text('他プレイヤー待ち...', style: AppTextStyles.body),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
                   ],
                 ),
                 actions: [
-                  dialogIsLoading
-                      ? const SizedBox.shrink()
-                      : TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('閉じる'),
-                        ),
-                  dialogIsLoading
-                      ? const SizedBox.shrink()
-                      : TextButton(
-                          onPressed: () async {
-                            setDialogState(() {
-                              dialogIsLoading = true;
-                            });
+                  // ★ 初期状態も含めてチェック
+                  if (!dialogIsLoading && !isSubmittedBestPlayer) ...[
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('閉じる'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        setDialogState(() {
+                          dialogIsLoading = true;
+                        });
 
-                            // API呼び出しのエラーハンドリング追加
-                            try {
-                              await ApiService.proceedToNext0004(
-                                context,
-                                roomId,
-                                currentUser.uid!,
-                                uid,
-                              );
+                        try {
+                          await ApiService.proceedToNext0004(
+                            context,
+                            roomId,
+                            currentUser.uid!,
+                            uid,
+                          );
 
-                              Logger.log(
-                                  '💡 わかるde賞を提出: ${_getNicknameByUid(uid)}の回答');
+                          Logger.log(
+                              '💡 わかるde賞を提出: ${_getNicknameByUid(uid)}の回答');
 
-                              // 成功時のスナックバー表示
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('わかるde賞を提出しました'),
-                                    backgroundColor: AppTheme.successColor,
-                                    duration: AppAnimations.snackBarDuration,
-                                  ),
-                                );
-                              }
-
-                              // 現在のダイアログを閉じる
-                              Navigator.of(context).pop();
-
-                              // 閉じられない新しいダイアログを表示
-                              _showWaitingDialog(topic, hint, uid);
-                            } catch (e) {
-                              Logger.log('❌ 送信に失敗: $e');
-                              // エラーダイアログはErrorHandlerで表示される
-                              setDialogState(() {
-                                dialogIsLoading = false;
-                              });
-                            }
-                          },
-                          child: const Text('わかるde賞に決定')),
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('わかるde賞を提出しました'),
+                                backgroundColor: AppTheme.successColor,
+                                duration: AppAnimations.snackBarDuration,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          Logger.log('❌ 送信に失敗: $e');
+                          setDialogState(() {
+                            dialogIsLoading = false;
+                          });
+                        }
+                      },
+                      child: const Text('わかるde賞に決定'),
+                    ),
+                  ],
                 ],
               );
             },
