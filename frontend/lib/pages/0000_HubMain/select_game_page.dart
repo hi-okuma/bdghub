@@ -340,35 +340,35 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 戻る処理、リロードに関する不具合アラート
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.medium, horizontal: AppSpacing.large),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppTheme.errorBackgroundColor,
-                  borderRadius: BorderRadius.circular(AppBorderRadius.small),
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.all(AppSpacing.medium),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Icon(
-                        Icons.error_outline_rounded,
-                        color: AppTheme.error1Color,
-                      ),
-                      SizedBox(
-                        width: AppSpacing.small,
-                      ),
-                      Expanded(child: Text('リロードや戻る操作をすると部屋を退出してしまう場合があります')),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            // 戻る処理、リロードに関する不具合アラート  10/31リリース前　コメントアウト
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(
+            //       vertical: AppSpacing.medium, horizontal: AppSpacing.large),
+            //   child: Container(
+            //     width: double.infinity,
+            //     decoration: BoxDecoration(
+            //       color: AppTheme.errorBackgroundColor,
+            //       borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            //     ),
+            //     child: const Padding(
+            //       padding: EdgeInsets.all(AppSpacing.medium),
+            //       child: Row(
+            //         crossAxisAlignment: CrossAxisAlignment.start,
+            //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //         children: [
+            //           Icon(
+            //             Icons.error_outline_rounded,
+            //             color: AppTheme.error1Color,
+            //           ),
+            //           SizedBox(
+            //             width: AppSpacing.small,
+            //           ),
+            //           Expanded(child: Text('リロードや戻る操作をすると部屋を退出してしまう場合があります')),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
 
             // 参加者エリア
             Container(
