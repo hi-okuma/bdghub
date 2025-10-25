@@ -1,5 +1,6 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
+const {assignNgWords} = require("./init");
 const {
   throwValidationError,
   throwGameStatusError,
@@ -64,32 +65,14 @@ async function declare0001Handler(request) {
 
         updateData.gameStatus = "waiting";
 
-        const ngWordsDoc = await transaction.get(
-            db.collection("games").doc("0001")
-                .collection("assets")
-                .doc("ngWords"),
-        );
+        const playerUids = Object.keys(playersWithUpdatedPoints);
+        const newGameData = await assignNgWords(playerUids, {
+          usedWords: currentGameData.usedWords || [],
+          players: playersWithUpdatedPoints,
+        });
 
-        if (!ngWordsDoc.exists) {
-          throwStructuredError("Internal", "NGワードリストが見つかりません");
-        }
-
-        const ngWordsList = ngWordsDoc.data().words;
-        const shuffledWords = shuffleArray(ngWordsList);
-
-        const finalPlayers = Object.fromEntries(
-            Object.keys(playersWithUpdatedPoints).map((uid, index) => [
-              uid,
-              {
-                isReady: false,
-                ngWord: [shuffledWords[index % shuffledWords.length]],
-                isAlive: true,
-                point: playersWithUpdatedPoints[uid].point || 0,
-              },
-            ]),
-        );
-
-        updateData.players = finalPlayers;
+        updateData.players = newGameData.players;
+        updateData.usedWords = newGameData.usedWords;
       }
 
       transaction.update(currentGameRef, updateData);
@@ -117,20 +100,6 @@ async function declare0001Handler(request) {
     });
     throwStructuredError("Internal", "サーバーエラーが発生しました。");
   }
-}
-
-/**
- * NGワードをシャッフルする
- * @param {Array<string>} array - 文字列が格納された配列
- * @return {Array<string>} ランダムに並び替えられた配列
- */
-function shuffleArray(array) {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
 }
 
 module.exports = {
