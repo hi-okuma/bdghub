@@ -1,107 +1,87 @@
-// const {logger} = require("firebase-functions");
-const {defineString} = require("firebase-functions/params");
-const {onRequest} = require("firebase-functions/v2/https");
-const {initializeApp} = require("firebase-admin/app");
-const {getFirestore, FieldValue} = require("firebase-admin/firestore");
-const crypto = require("crypto");
+const {onCall} = require("firebase-functions/v2/https");
+const {region} = require("./src/config/environment");
+const {checkMaintenance} = require("./src/middleware/maintenanceCheck");
+const {createRoomHandler} = require("./src/handlers/room/createRoom");
+const {joinRoomHandler} = require("./src/handlers/room/joinRoom");
+const {leaveRoomHandler} = require("./src/handlers/room/leaveRoom");
+const {startGameHandler} = require("./src/handlers/games/management/startGame");
+const {endGameHandler} = require("./src/handlers/games/management/endGame");
+const {setReadyHandler} = require("./src/handlers/games/management/setReady");
+const {declare0001Handler} = require("./src/handlers/games/0001/declare");
+const {reportResult0002Handler} = require("./src/handlers/games/0002/reportResult");
+const {reportResult0003Handler} = require("./src/handlers/games/0003/reportResult");
+const {submitHint0004Handler} = require("./src/handlers/games/0004/submitHint");
+const {determineAnswer0004Handler} = require("./src/handlers/games/0004/determineAnswer");
+const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToNext");
 
-initializeApp();
-const db = getFirestore();
+const {cleanupAnonymousUsers} = require("./src/handlers/maintenance/cleanupAnonymousUsers");
 
-const region = defineString("MY_FUNCTION_REGION", {default: "asia-northeast1"});
+const commonOptions = {
+  region: region,
+  enforceAppCheck: true,
+};
 
-exports.createRoom = onRequest({region: region}, async (req, res) => {
-  // CORSヘッダー設定とプリフライトリクエスト処理
-  res.set("Access-Control-Allow-Origin", "*");
-  if (req.method === "OPTIONS") {
-    res.set("Access-Control-Allow-Methods", "POST");
-    res.set("Access-Control-Allow-Headers", "Content-Type");
-    res.status(204).send("");
-    return;
-  }
-
-  if (req.method !== "POST") {
-    res.status(405).send({
-      success: false,
-      error: "method-not-allowed",
-      message: "不正なリクエストです。",
-    });
-    return;
-  }
-
-  const {nickname} = req.body;
-  if (!nickname) {
-    res.status(400).send({
-      success: false,
-      error: "invalid-argument",
-      message: "部屋作成にはニックネームが必要です。",
-    });
-    return;
-  }
-
-  // 部屋IDの作成＆重複チェック
-  let roomId = generateRoomId();
-  let isUnique = false;
-  let attempts = 0;
-  while (!isUnique && attempts < 10) {
-    const roomDoc = await db.collection("rooms").doc(roomId).get();
-    if (!roomDoc.exists) {
-      isUnique = true;
-    } else {
-      roomId = generateRoomId();
-      attempts++;
-    }
-  }
-  if (!isUnique) {
-    res.status(429).send({
-      success: false,
-      error: "resource-exhausted",
-      message: "部屋作成に失敗しました。",
-    });
-    return;
-  }
-
-  const playerId = generatePlayerId();
-
-  const roomData = {
-    status: "accepting",
-    players: [
-      {
-        player_id: playerId,
-        nickname: nickname,
-      },
-    ],
-    host_player: playerId,
-    current_game: null,
-    created_at: FieldValue.serverTimestamp(),
-    updated_at: FieldValue.serverTimestamp(),
-  };
-
-  await db.collection("rooms").doc(roomId).set(roomData);
-  res.status(200).send({
-    success: true,
-    room_id: roomId,
-    player_id: playerId,
-  });
+// 部屋関連の関数
+exports.createRoom = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await createRoomHandler(request);
 });
 
-/**
- * 8文字のランダムな英数字 (特定の紛らわしい文字を除く) のルームIDを生成する。
- * @return {string} 生成されたランダムなルームID。
- */
-function generateRoomId() {
-  const chars = "abcdefghijkmnpqrstuvwxyz23456789"; // 紛らわしい文字を除外
-  let result = "";
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+exports.joinRoom = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await joinRoomHandler(request);
+});
 
-/**
- * プレイヤーID(UUID)を生成する。
- * @return {string} プレイヤーID。
- */
-function generatePlayerId() {
-  return crypto.randomUUID();
-}
+exports.leaveRoom = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await leaveRoomHandler(request);
+});
+
+// ゲーム管理関連の関数
+exports.startGame = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await startGameHandler(request);
+});
+
+exports.endGame = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await endGameHandler(request);
+});
+
+exports.setReady = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await setReadyHandler(request);
+});
+
+// ゲーム固有の関数
+exports.declare0001 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await declare0001Handler(request);
+});
+
+exports.reportResult0002 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await reportResult0002Handler(request);
+});
+
+exports.reportResult0003 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await reportResult0003Handler(request);
+});
+
+exports.submitHint0004 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await submitHint0004Handler(request);
+});
+
+exports.determineAnswer0004 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await determineAnswer0004Handler(request);
+});
+
+exports.proceedToNext0004 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await proceedToNext0004Handler(request);
+});
+
+exports.cleanupAnonymousUsers = cleanupAnonymousUsers;

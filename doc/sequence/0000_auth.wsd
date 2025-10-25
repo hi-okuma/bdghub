@@ -1,0 +1,63 @@
+@startuml
+
+participant App
+participant FirebaseAuth
+participant APIgateway_Functions
+participant Firestore
+
+== アプリケーション起動時 / リロード時 ==
+App -> Firestore: メンテ状態確認（認証不要）
+App <-- Firestore: メンテナンス情報
+
+alt メンテナンス中の場合
+    App -> App: メンテナンス画面表示
+    note right: 以降の処理は行わない
+else 通常時
+    App -> FirebaseAuth: 認証状態確認
+    alt 認証済み
+        App <-- FirebaseAuth: 認証トークン(uid)
+    else 未認証
+        App <-- FirebaseAuth: null返却
+        App -> FirebaseAuth: signInAnonymously()コール
+        App <-- FirebaseAuth: 認証トークン(uid)
+    end
+    alt 参加用URLからアクセスしてきた場合
+        App -> App: URLからroomId取得
+        alt localStorageにroomIdが存在する場合
+            App -> App: localStorageからroomId取得
+            alt  URL/localStorageのroomIdが異なる場合
+                App -> APIgateway_Functions: 部屋退出
+                note right: 詳細は別シーケンス参照
+                App -> App: localStorageのroomId削除
+                App -> App: 部屋参加ダイアログ表示
+            else URL/localStorageのroomIdが同じ場合
+                App -> Firestore: 部屋情報取得リクエスト
+                alt 参加済み
+                    App <-- Firestore: 部屋情報
+                    App -> App: ゲーム画面復元
+                else 部屋が削除されている場合などの準正常系/異常系
+                    App <-- Firestore: エラー
+                    App -> App: localStorageクリア & \n部屋参加ダイアログ表示
+                end
+            end
+        else 存在しない場合
+            App -> App: 部屋参加ダイアログ表示
+        end
+    else 通常起動の場合
+        alt localStorageにroomIdが存在する場合
+            App -> App: localStorageからroomId取得
+            App -> Firestore: 部屋情報取得リクエスト
+            alt 参加済み
+                App <-- Firestore: 部屋情報
+                App -> App: ゲーム画面復元
+            else 部屋が削除されている場合などの準正常系/異常系
+                App <-- Firestore: エラー
+                App -> App: localStorageクリア & \nTOP画面表示
+            end
+        else room_idがない場合
+            App -> App: TOP画面表示
+        end
+    end
+end
+
+@enduml

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A boradgame platform project.">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3643048994187154"
+         crossorigin="anonymous"></script>
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="bodogehub">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>bodogehub</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    @font-face {
+      font-family: 'ZouFont';
+      src: url('assets/assets/fonts/002zouver.2-Regular.ttf') format('truetype');
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .app-title {
+      font-family: 'ZouFont', sans-serif;
+      font-size: 48px;
+      color: #E07000;
+      margin-top: 24px;
+    }
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .shiny-icon-container {
+      position: relative;
+      width: 227px;
+      height: 213px;
+      overflow: hidden;
+      border-radius: 18px;
+    }
+
+    .shiny-icon-container img {
+      width: 227px;
+      height: 213px;
+      display: block;
+    }
+
+    .shiny-icon-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      transform: skewX(-25deg);
+      animation: shine 2.5s infinite linear;
+    }
+
+    @keyframes shine {
+      0% {
+        left: -100%;
+      }
+      100% {
+        left: 200%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div id="loading-indicator" class="loading-container">
+  <div class="shiny-icon-container">
+    <img src="assets/assets/images/bdghub_icon_main.png"
+         alt="Loading..."
+         width="227"
+         height="213"/>
+  </div>
+  <div class="app-title">ボドゲハブ</div>
+</div>
+<script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

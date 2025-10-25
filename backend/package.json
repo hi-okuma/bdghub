@@ -1,0 +1,15 @@
+{
+  "name": "bdghub-backend",
+  "version": "1.0.0",
+  "description": "ボドゲハブ バックエンド",
+  "scripts": {
+    "deploy:functions:dev": "./deploy.sh dev functions",
+    "deploy:functions:stg": "./deploy.sh stg functions", 
+    "deploy:functions:prd": "./deploy.sh prd functions",
+    "deploy:data:stg": "./deploy.sh stg data",
+    "deploy:data:prd": "./deploy.sh prd data", 
+    "deploy:all:stg": "./deploy.sh stg all",
+    "deploy:all:prd": "./deploy.sh prd all"
+  },
+  "private": true
+}

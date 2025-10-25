@@ -1,0 +1,10 @@
+{
+  "projects": {
+    "default": "bdghub-dev",
+    "stg": "bdghub-stg",
+    "dev": "bdghub-dev",
+    "prd": "bdghub-prd"
+  },
+  "targets": {},
+  "etags": {}
+}

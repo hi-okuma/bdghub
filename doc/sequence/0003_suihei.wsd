@@ -1,0 +1,37 @@
+@startuml
+
+actor Questioner
+actor Answerer
+
+participant APIgateway_Functions
+participant Firestore
+
+== ゲーム中 ==
+Questioner -> Questioner: 正解ボタンor\nスキップボタン押下
+Questioner -> APIgateway_Functions: リクエスト
+
+alt ターンが１周していない
+APIgateway_Functions -> Firestore: 役割交代リクエスト
+Firestore -> Firestore: currentQuestionerの切替
+Questioner <- Firestore: currentQuestionerの切替を検知（gameStatusが変わらないことも条件に含める）
+Answerer <- Firestore: currentQuestionerの切替を検知（gameStatusが変わらないことも条件に含める）
+Questioner -> Firestore: currentGameをリクエスト
+Answerer -> Firestore: currentGameをリクエスト
+Questioner <-- Firestore: 返却
+Answerer <-- Firestore: 返却
+Questioner -> Questioner: 再描画
+Answerer -> Answerer: 再描画
+else ターンが１周した
+APIgateway_Functions -> Firestore: 終了＆次ゲーム準備リクエスト
+Firestore -> Firestore: gameStatus更新 (playing → waiting)\n次ゲームに向けた初期化
+Questioner <- Firestore: gameStatusの更新(playing→waiting)を検知
+Answerer <- Firestore: gameStatusの更新(playing→waiting)を検知
+Questioner -> Firestore: currentGameをリクエスト
+Answerer -> Firestore: currentGameをリクエスト
+Questioner <-- Firestore: 返却
+Answerer <-- Firestore: 返却
+Questioner -> Questioner: 結果発表画面表示
+Answerer -> Answerer: 結果発表画面表示
+end
+
+@enduml
