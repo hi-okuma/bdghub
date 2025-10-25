@@ -1,6 +1,6 @@
 const {logger} = require("firebase-functions");
-const {db} = require("../../../config/firebase");
-const {assignNgWords} = require("./init");
+const {db, FieldValue} = require("../../../config/firebase");
+const {assignNgWordsSync} = require("./init");
 const {
   throwValidationError,
   throwGameStatusError,
@@ -21,6 +21,18 @@ async function declare0001Handler(request) {
   }
 
   try {
+    // トランザクション外でNGワードリストを事前取得
+    const ngWordsDoc = await db.collection("games").doc("0001")
+        .collection("assets")
+        .doc("ngWords")
+        .get();
+
+    if (!ngWordsDoc.exists) {
+      throwNotFoundError("NGワードリスト", "ngWords");
+    }
+
+    const allWords = ngWordsDoc.data().words;
+
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
       const currentGameRef = roomRef.collection("currentGame").doc("0001");
@@ -46,6 +58,7 @@ async function declare0001Handler(request) {
 
       const updateData = {
         players: updatedPlayers,
+        version: FieldValue.increment(1),
       };
 
       if (alivePlayersCount === 1) {
@@ -59,14 +72,15 @@ async function declare0001Handler(request) {
         const playersWithUpdatedPoints = Object.fromEntries(
             Object.entries(updatedPlayers).map(([uid, player]) => [
               uid,
-              uid === winnerUid ? {...player, point: (player.point || 0) + 1} : {...player, point: player.point || 0},
+              uid === winnerUid ? {...player, point: (player.point || 0) + 1} : player,
             ]),
         );
 
         updateData.gameStatus = "waiting";
 
         const playerUids = Object.keys(playersWithUpdatedPoints);
-        const newGameData = await assignNgWords(playerUids, {
+        // allWordsを渡して内部でのFirestore読み取りを回避
+        const newGameData = assignNgWordsSync(playerUids, allWords, {
           usedWords: currentGameData.usedWords || [],
           players: playersWithUpdatedPoints,
         });

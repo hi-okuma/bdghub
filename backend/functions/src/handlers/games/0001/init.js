@@ -1,4 +1,8 @@
 const {db} = require("../../../config/firebase");
+const {
+  throwNotFoundError,
+  throwStructuredError,
+} = require("../../../utils/errorHandler");
 
 /**
  * NGワードゲームのcurrentGameデータを生成する
@@ -7,35 +11,38 @@ const {db} = require("../../../config/firebase");
  */
 async function createCurrentGame(players) {
   const playerUids = Object.keys(players);
-  const gameData = await assignNgWords(playerUids);
 
-  return {
-    gameStatus: "waiting",
-    players: gameData.players,
-    usedWords: gameData.usedWords,
-  };
-}
-
-/**
- * プレイヤーにNGワードを割り当てる
- * @param {Array<string>} playerUids - プレイヤーのuidの配列
- * @param {Object} existingGameData - 既存のゲームデータ（継続時）
- * @return {Promise<Object>} NGワード割り当て結果
- */
-async function assignNgWords(playerUids, existingGameData = null) {
+  // NGワードリストを取得
   const ngWordsDoc = await db.collection("games").doc("0001")
       .collection("assets")
       .doc("ngWords")
       .get();
 
   if (!ngWordsDoc.exists) {
-    throw new Error("NGワードリストが見つかりません");
+    throwNotFoundError("NGワードリスト", "ngWords");
   }
 
   const allWords = ngWordsDoc.data().words;
+  const gameData = assignNgWordsSync(playerUids, allWords);
 
+  return {
+    gameStatus: "waiting",
+    players: gameData.players,
+    usedWords: gameData.usedWords,
+    version: 0,
+  };
+}
+
+/**
+ * プレイヤーにNGワードを割り当てる（同期版）
+ * @param {Array<string>} playerUids - プレイヤーのuidの配列
+ * @param {Array<string>} allWords - 全NGワードのリスト
+ * @param {Object} existingGameData - 既存のゲームデータ（継続時）
+ * @return {Object} NGワード割り当て結果
+ */
+function assignNgWordsSync(playerUids, allWords, existingGameData = null) {
   if (allWords.length < playerUids.length) {
-    throw new Error("NGワードが不足しています");
+    throwStructuredError("InsufficientResources", "NGワードが不足しています");
   }
 
   let usedWords = existingGameData?.usedWords || [];
@@ -84,5 +91,5 @@ function shuffleArray(array) {
 
 module.exports = {
   createCurrentGame,
-  assignNgWords,
+  assignNgWordsSync,
 };
