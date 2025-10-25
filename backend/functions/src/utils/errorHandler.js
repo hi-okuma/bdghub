@@ -3,46 +3,51 @@ const {logger} = require("firebase-functions");
 
 /**
  * エラーコードマッピング
+ * ドキュメント仕様のエラーコードをFirebase Functions標準エラーコードにマッピング
  */
 const ERROR_CODE_MAPPING = {
-  // 400系エラー
+  // 400系エラー（クライアント起因）
   "InvalidArgument": "invalid-argument",
-  "DuplicateNickname": "already-exists",
-  "InvalidGameStatus": "failed-precondition",
-  "InvalidRoomStatus": "failed-precondition",
   "InvalidBestHintPlayer": "invalid-argument",
   "BestHintPlayerRequired": "invalid-argument",
+
+  // 400系エラー（権限）
   "ParentCannotsubmitHint": "permission-denied",
   "OnlyParentCandetermineAnswer": "permission-denied",
-  "PlayerDidNotSubmitHint": "not-found",
-
-  // 403系エラー
   "Unpublished": "permission-denied",
   "NotReleased": "permission-denied",
 
-  // 404系エラー
+  // 404系エラー（リソース未発見）
   "NotFound": "not-found",
   "RoomNotFound": "not-found",
   "GameNotFound": "not-found",
   "PlayerNotFound": "not-found",
+  "PlayerDidNotSubmitHint": "not-found",
 
-  // 409系エラー
-  "RoomFull": "resource-exhausted",
-  "InProgress": "unavailable",
+  // 409系エラー（競合・状態エラー）
+  "DuplicateNickname": "already-exists",
   "AlreadyInProgress": "already-exists",
 
-  // 429系エラー
+  // 前提条件エラー（状態不整合）
+  "InvalidGameStatus": "failed-precondition",
+  "InvalidRoomStatus": "failed-precondition",
+  "InsufficientPlayers": "failed-precondition",
+  "TooManyPlayers": "failed-precondition",
+
+  // リソース枯渇
+  "RoomFull": "resource-exhausted",
   "ResourceExhausted": "resource-exhausted",
 
-  // 500系エラー
+  // 500系エラー（サーバー起因）
   "Internal": "internal",
   "InitializerNotFound": "internal",
 
-  // 503系エラー
+  // 503系エラー（サービス利用不可）
   "Maintenance": "unavailable",
   "Unavailable": "unavailable",
   "Closed": "unavailable",
   "RoomClosed": "unavailable",
+  "InProgress": "unavailable",
 };
 
 /**
@@ -50,31 +55,46 @@ const ERROR_CODE_MAPPING = {
  * クライアント側での参考用（実際のHTTPステータスはFirebaseが管理）
  */
 const HTTP_STATUS_MAPPING = {
+  // ビジネスロジックエラー（仕様書では200として扱われる）
+  "AlreadyInProgress": 200,
+  "RoomClosed": 200,
+  "InvalidRoomStatus": 200,
+  "InsufficientPlayers": 200,
+  "TooManyPlayers": 200,
+  "RoomFull": 200,
+  "InProgress": 200,
+  "Closed": 200,
+  "DuplicateNickname": 200,
+  "InvalidGameStatus": 200,
+
+  // クライアントエラー（400番台）
   "InvalidArgument": 400,
-  "DuplicateNickname": 400,
-  "InvalidGameStatus": 400,
-  "InvalidRoomStatus": 400,
   "InvalidBestHintPlayer": 400,
   "BestHintPlayerRequired": 400,
   "ParentCannotsubmitHint": 400,
   "OnlyParentCandetermineAnswer": 400,
   "PlayerDidNotSubmitHint": 400,
+
+  // 権限エラー（403）
   "Unpublished": 403,
   "NotReleased": 403,
+
+  // リソース未発見（404）
   "NotFound": 404,
   "RoomNotFound": 404,
   "GameNotFound": 404,
   "PlayerNotFound": 404,
-  "RoomFull": 409,
-  "InProgress": 409,
-  "AlreadyInProgress": 409,
+
+  // リソース枯渇（429）
   "ResourceExhausted": 429,
+
+  // サーバーエラー（500）
   "Internal": 500,
   "InitializerNotFound": 500,
+
+  // サービス利用不可（503）
   "Maintenance": 503,
   "Unavailable": 503,
-  "Closed": 503,
-  "RoomClosed": 503,
 };
 
 /**

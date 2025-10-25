@@ -20,32 +20,30 @@ async function determineAnswer0004Handler(request) {
   }
 
   try {
-    await db.runTransaction(async (transaction) => {
-      const roomRef = db.collection("rooms").doc(roomId);
-      const currentGameRef = roomRef.collection("currentGame").doc("0004");
-      const currentGameDoc = await transaction.get(currentGameRef);
+    const roomRef = db.collection("rooms").doc(roomId);
+    const currentGameRef = roomRef.collection("currentGame").doc("0004");
+    const currentGameDoc = await currentGameRef.get();
 
-      if (!currentGameDoc.exists) {
-        throwNotFoundError("ゲーム", "0004");
-      }
+    if (!currentGameDoc.exists) {
+      throwNotFoundError("ゲーム", "0004");
+    }
 
-      const currentGameData = currentGameDoc.data();
+    const currentGameData = currentGameDoc.data();
 
-      if (currentGameData.gameStatus !== "parentTurn") {
-        throwGameStatusError("parentTurn", currentGameData.gameStatus);
-      }
+    if (currentGameData.gameStatus !== "parentTurn") {
+      throwGameStatusError("parentTurn", currentGameData.gameStatus);
+    }
 
-      if (uid !== currentGameData.currentParent) {
-        throwStructuredError(
-            "OnlyParentCandetermineAnswer",
-            "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-        );
-      }
+    if (uid !== currentGameData.currentParent) {
+      throwStructuredError(
+          "OnlyParentCandetermineAnswer",
+          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
+      );
+    }
 
-      transaction.update(currentGameRef, {
-        parentSelectedIndex: imageIndex,
-        gameStatus: "result",
-      });
+    await currentGameRef.update({
+      parentSelectedIndex: imageIndex,
+      gameStatus: "result",
     });
 
     logger.info(`画像選択成功: roomId=${roomId}, uid=${uid}, imageIndex=${imageIndex}`, {
