@@ -28,47 +28,45 @@ async function submitHint0004Handler(request) {
       fieldName: "ヒント",
     });
 
-    await db.runTransaction(async (transaction) => {
-      const roomRef = db.collection("rooms").doc(roomId);
-      const currentGameRef = roomRef.collection("currentGame").doc("0004");
-      const currentGameDoc = await transaction.get(currentGameRef);
+    const roomRef = db.collection("rooms").doc(roomId);
+    const currentGameRef = roomRef.collection("currentGame").doc("0004");
+    const currentGameDoc = await currentGameRef.get();
 
-      if (!currentGameDoc.exists) {
-        throwNotFoundError("ゲーム", "0004");
-      }
+    if (!currentGameDoc.exists) {
+      throwNotFoundError("ゲーム", "0004");
+    }
 
-      const currentGameData = currentGameDoc.data();
+    const currentGameData = currentGameDoc.data();
 
-      if (currentGameData.gameStatus !== "childTurn") {
-        throwGameStatusError("childTurn", currentGameData.gameStatus);
-      }
+    if (currentGameData.gameStatus !== "childTurn") {
+      throwGameStatusError("childTurn", currentGameData.gameStatus);
+    }
 
-      if (uid === currentGameData.currentParent) {
-        throwStructuredError(
-            "ParentCannotsubmitHint",
-            "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
-        );
-      }
-
-      const updatedHints = {...currentGameData.hints, [uid]: sanitizedHint};
-
-      const childPlayers = Object.entries(currentGameData.players).filter(
-          ([uid, player]) => uid !== currentGameData.currentParent,
+    if (uid === currentGameData.currentParent) {
+      throwStructuredError(
+          "ParentCannotsubmitHint",
+          "不正なリクエストです。ホストプレイヤーより一度ゲームを終了してください。",
       );
-      const allChildrenSubmitted = childPlayers.every(
-          ([uid, player]) => updatedHints[uid],
-      );
+    }
 
-      const updateData = {
-        hints: updatedHints,
-      };
-
-      if (allChildrenSubmitted) {
-        updateData.gameStatus = "parentTurn";
-      }
-
-      transaction.update(currentGameRef, updateData);
+    await currentGameRef.update({
+      [`hints.${uid}`]: sanitizedHint,
     });
+
+    const updatedGameDoc = await currentGameRef.get();
+    const updatedHints = updatedGameDoc.data().hints;
+    const childPlayers = Object.entries(currentGameData.players).filter(
+        ([playerUid, player]) => playerUid !== currentGameData.currentParent,
+    );
+    const allChildrenSubmitted = childPlayers.every(
+        ([playerUid, player]) => updatedHints[playerUid],
+    );
+
+    if (allChildrenSubmitted) {
+      await currentGameRef.update({
+        gameStatus: "parentTurn",
+      });
+    }
 
     logger.info(`ヒント設定成功: roomId=${roomId}, uid=${uid}`, {
       roomId,
