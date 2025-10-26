@@ -3,6 +3,7 @@ const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {db} = require("../../config/firebase");
 const {region} = require("../../config/environment");
 
+// 設定を外部化
 const CONFIG = {
   RETENTION_HOURS: 24, // 保持時間（時間）
   BATCH_SIZE: 100, // Firestoreクエリのバッチサイズ（ページネーション用）
@@ -17,7 +18,7 @@ const CONFIG = {
  * 2. updatedAt が24時間以上更新されていない部屋
  */
 exports.cleanupInactiveRooms = onSchedule({
-  schedule: "0 4 * * *", // 毎日午前4時(JST)に実行
+  schedule: "55 11 * * *", // 毎日午前4時(JST)に実行
   timeZone: "Asia/Tokyo",
   region: region,
   memory: "256MiB",
@@ -59,12 +60,14 @@ async function processInactiveRoomCleanup(cutoffDate) {
   const deletionErrors = [];
 
   try {
+    // 1. status が "closed" の部屋を削除
     const closedResult = await deleteClosedRooms();
     deletedCount += closedResult.deletedCount;
     processedCount += closedResult.processedCount;
     errorCount += closedResult.errorCount;
     deletionErrors.push(...closedResult.deletionErrors);
 
+    // 2. updatedAt が24時間以上更新されていない部屋を削除
     const inactiveResult = await deleteInactiveRooms(cutoffDate);
     deletedCount += inactiveResult.deletedCount;
     processedCount += inactiveResult.processedCount;
@@ -102,6 +105,7 @@ async function deleteClosedRooms() {
     let hasMore = true;
     let lastDoc = null;
 
+    // ページネーションで全件処理
     while (hasMore) {
       let query = roomsRef
           .where("status", "==", "closed")
@@ -121,6 +125,7 @@ async function deleteClosedRooms() {
       processedCount += snapshot.size;
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
 
+      // バッチ削除処理
       let batch = db.batch();
       let batchCount = 0;
 
@@ -128,6 +133,7 @@ async function deleteClosedRooms() {
         batch.delete(doc.ref);
         batchCount++;
 
+        // Firestoreのバッチ書き込み上限は500件
         if (batchCount >= CONFIG.FIRESTORE_BATCH_LIMIT) {
           await batch.commit();
           deletedCount += batchCount;
@@ -137,12 +143,14 @@ async function deleteClosedRooms() {
         }
       }
 
+      // 残りのバッチをコミット
       if (batchCount > 0) {
         await batch.commit();
         deletedCount += batchCount;
         logger.info(`closed部屋を${batchCount}件削除しました`);
       }
 
+      // 次のページがあるかチェック
       if (snapshot.size < CONFIG.BATCH_SIZE) {
         hasMore = false;
       }
@@ -152,6 +160,8 @@ async function deleteClosedRooms() {
   } catch (error) {
     logger.error("closed部屋の削除エラー", {
       error: error.message,
+      errorCode: error.code,
+      errorStack: error.stack,
       deletedCount,
       processedCount,
     });
@@ -183,10 +193,11 @@ async function deleteInactiveRooms(cutoffDate) {
     let hasMore = true;
     let lastDoc = null;
 
+    // ページネーションで全件処理
     while (hasMore) {
+      // Firestoreの制限: 複合インデックスを避けるため、statusフィルタはアプリ側で実施
       let query = roomsRef
           .where("updatedAt", "<", cutoffDate)
-          .where("status", "!=", "closed")
           .limit(CONFIG.BATCH_SIZE);
 
       if (lastDoc) {
@@ -203,13 +214,22 @@ async function deleteInactiveRooms(cutoffDate) {
       processedCount += snapshot.size;
       lastDoc = snapshot.docs[snapshot.docs.length - 1];
 
+      // バッチ削除処理（closedステータスはスキップ）
       let batch = db.batch();
       let batchCount = 0;
 
       for (const doc of snapshot.docs) {
+        const roomData = doc.data();
+
+        // closedステータスは既に削除済みなのでスキップ
+        if (roomData.status === "closed") {
+          continue;
+        }
+
         batch.delete(doc.ref);
         batchCount++;
 
+        // Firestoreのバッチ書き込み上限は500件
         if (batchCount >= CONFIG.FIRESTORE_BATCH_LIMIT) {
           await batch.commit();
           deletedCount += batchCount;
@@ -219,12 +239,14 @@ async function deleteInactiveRooms(cutoffDate) {
         }
       }
 
+      // 残りのバッチをコミット
       if (batchCount > 0) {
         await batch.commit();
         deletedCount += batchCount;
         logger.info(`非アクティブ部屋を${batchCount}件削除しました`);
       }
 
+      // 次のページがあるかチェック
       if (snapshot.size < CONFIG.BATCH_SIZE) {
         hasMore = false;
       }
@@ -236,6 +258,8 @@ async function deleteInactiveRooms(cutoffDate) {
   } catch (error) {
     logger.error("非アクティブ部屋の削除エラー", {
       error: error.message,
+      errorCode: error.code,
+      errorStack: error.stack,
       deletedCount,
       processedCount,
     });
@@ -258,6 +282,7 @@ async function deleteInactiveRooms(cutoffDate) {
 async function checkAndAlert(result) {
   const {deletedCount, errorCount, processedCount} = result;
 
+  // 異常に多くの部屋が削除された場合に警告（バグの可能性）
   if (deletedCount >= CONFIG.ALERT_THRESHOLD) {
     logger.warn(`削除数が異常に多いです（バグの可能性を確認してください）`, {
       deletedCount,
@@ -266,9 +291,10 @@ async function checkAndAlert(result) {
     });
   }
 
+  // エラー率が高い場合に警告
   if (errorCount > 0 && deletedCount > 0) {
     const errorRate = errorCount / (deletedCount + errorCount);
-    if (errorRate > 0.1) {
+    if (errorRate > 0.1) { // 10%以上のエラー率
       logger.warn(`削除エラー率が高いです`, {
         errorCount,
         deletedCount,
@@ -278,6 +304,7 @@ async function checkAndAlert(result) {
     }
   }
 
+  // 処理件数が多い場合は情報ログ（異常ではないが記録のため）
   if (deletedCount > 0) {
     logger.info(`クリーンアップ統計`, {
       processedCount,
