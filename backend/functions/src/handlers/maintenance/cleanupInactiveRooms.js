@@ -18,7 +18,7 @@ const CONFIG = {
  * 2. updatedAt が24時間以上更新されていない部屋
  */
 exports.cleanupInactiveRooms = onSchedule({
-  schedule: "55 11 * * *", // 毎日午前4時(JST)に実行
+  schedule: "0 4 * * *", // 毎日午前4時(JST)に実行
   timeZone: "Asia/Tokyo",
   region: region,
   memory: "256MiB",
