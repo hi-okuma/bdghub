@@ -15,6 +15,7 @@ const {determineAnswer0004Handler} = require("./src/handlers/games/0004/determin
 const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToNext");
 
 const {cleanupAnonymousUsers} = require("./src/handlers/maintenance/cleanupAnonymousUsers");
+const {cleanupInactiveRooms} = require("./src/handlers/maintenance/cleanupInactiveRooms");
 
 const commonOptions = {
   region: region,
@@ -85,3 +86,4 @@ exports.proceedToNext0004 = onCall(commonOptions, async (request) => {
 });
 
 exports.cleanupAnonymousUsers = cleanupAnonymousUsers;
+exports.cleanupInactiveRooms = cleanupInactiveRooms;
