@@ -1,11 +1,14 @@
+import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -36,10 +39,50 @@ class GameResultPage extends ConsumerStatefulWidget {
 }
 
 class _GameResultPageState extends ConsumerState<GameResultPage>
-    with GameExitHandler {
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/{$gameId}}/game_result_page');
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/{$gameId}}/game_result_page');
+  }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override

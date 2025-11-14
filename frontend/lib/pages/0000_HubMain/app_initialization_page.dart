@@ -1,5 +1,3 @@
-// frontend/lib/pages/app_initialization_page.dart
-
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +7,12 @@ import '/components/app_theme.dart';
 import '/providers/user_provider.dart';
 import '/providers/game_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/providers/analytics_provider.dart';
 import '/services/auth_service.dart';
 import '/services/navigation_service.dart';
 import '/Pages/0000_HubMain/select_game_page.dart';
 import '/Pages/0000_HubMain/top_page.dart';
+import 'package:bodogehub/services/analytics_service.dart';
 
 class AppInitializationPage extends ConsumerStatefulWidget {
   final String? urlRoomId;
@@ -54,13 +54,13 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
           // 復元された部屋とURLの部屋が違う場合、URLを優先して参加フローへ
           // (あるいは、進行中のセッションがあると警告を出すなどの実装も可能)
           await ref.read(userProvider.notifier).leaveRoom(); // 古いセッション情報をクリア
-          _navigateToJoinRoom(widget.urlRoomId!);
+          _navigateToJoinRoom(widget.urlRoomId!, false);
         }
       } else {
         // 復帰に失敗した場合
         if (widget.urlRoomId != null && widget.urlRoomId!.isNotEmpty) {
           // URLにroomIdがあれば、参加フローへ
-          _navigateToJoinRoom(widget.urlRoomId!);
+          _navigateToJoinRoom(widget.urlRoomId!, true);
         } else {
           // 何も情報がなければTopPageへ
           _navigateToTop();
@@ -183,8 +183,14 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     }
   }
 
-  void _navigateToJoinRoom(String roomId) {
+  void _navigateToJoinRoom(String roomId, bool isFromRoomURL) {
     if (!mounted) return;
+
+    if (isFromRoomURL) {
+      ref.read(analyticsServiceProvider).logPageView(
+          pageTitle: '/register_profile_page',
+          additionalParams: {'trigger_source': 'create_room_button'});
+    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => TopPage(roomId: roomId)),
     );

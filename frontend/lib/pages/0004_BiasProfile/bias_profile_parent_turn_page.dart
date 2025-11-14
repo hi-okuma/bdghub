@@ -1,11 +1,14 @@
+import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -18,7 +21,9 @@ class BiasProfileParentTurnPage extends ConsumerStatefulWidget {
 }
 
 class _BiasProfileParentTurnPageState
-    extends ConsumerState<BiasProfileParentTurnPage> with GameExitHandler {
+    extends ConsumerState<BiasProfileParentTurnPage>
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   String? _errorMessage;
   int _selectedImageIndex = 0;
   int _imageReloadTrigger = 0;
@@ -28,13 +33,42 @@ class _BiasProfileParentTurnPageState
   @override
   void initState() {
     super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
     _scrollController = ScrollController();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
   void dispose() {
+    _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: '/0004/bias_profile_parent_turn_page',
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: '/0004/bias_profile_parent_turn_page',
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -137,6 +171,9 @@ class _BiasProfileParentTurnPageState
     }
 
     void _showTopicDialog(String topic, String? hint, String uid) {
+      ref.read(analyticsServiceProvider).logPageView(
+          pageTitle: '/0004/bias_profile_topic_dialog',
+          additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -348,33 +385,32 @@ class _BiasProfileParentTurnPageState
                             itemCount: sortedTopics.length,
                             itemBuilder: (context, index) {
                               return Card(
-                                margin: const EdgeInsets.only(
-                                    bottom: AppSpacing.large),
-                                child: InkWell(
-                                  onTap: () {
-                                    final topicEntry = sortedTopics[index];
-                                    final topicKey = topicEntry.key;
-                                    final topic = topicEntry.value;
-                                    final hint = hints[topicKey] as String?;
-                                    _showTopicDialog(topic, hint, topicKey);
-                                  },
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsets.all(AppSpacing.large),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          sortedTopics[index].value,
-                                          style: AppTextStyles.subtitle2,
-                                        ),
-                                        const Icon(Icons.chevron_right),
-                                      ],
+                                  margin: const EdgeInsets.only(
+                                      bottom: AppSpacing.large),
+                                  child: InkWell(
+                                    onTap: () {
+                                      final topicEntry = sortedTopics[index];
+                                      final topicKey = topicEntry.key;
+                                      final topic = topicEntry.value;
+                                      final hint = hints[topicKey] as String?;
+                                      _showTopicDialog(topic, hint, topicKey);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(
+                                          AppSpacing.large),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            sortedTopics[index].value,
+                                            style: AppTextStyles.subtitle2,
+                                          ),
+                                          const Icon(Icons.chevron_right),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              );
+                                  ));
                             }),
                       ),
                     ),

@@ -1,11 +1,13 @@
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -18,7 +20,9 @@ class BiasProfileCheckAnswerPage extends ConsumerStatefulWidget {
 }
 
 class _BiasProfileCheckAnswerPageState
-    extends ConsumerState<BiasProfileCheckAnswerPage> with GameExitHandler {
+    extends ConsumerState<BiasProfileCheckAnswerPage>
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   int? parentSelectedIndex;
   bool isLoading = false;
   bool hasProceeded = false;
@@ -31,12 +35,41 @@ class _BiasProfileCheckAnswerPageState
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
   }
 
   @override
   void dispose() {
+    _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: '/0004/bias_profile_check_answer_page',
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: '/0004/bias_profile_check_answer_page',
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）

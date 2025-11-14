@@ -2,6 +2,7 @@ import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
@@ -16,6 +17,7 @@ import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/providers/analytics_provider.dart';
 import '/services/api_service.dart';
 
 class SelectGamePage extends ConsumerStatefulWidget {
@@ -26,7 +28,8 @@ class SelectGamePage extends ConsumerStatefulWidget {
 }
 
 class _SelectGamePageState extends ConsumerState<SelectGamePage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   late TabController _tabController;
 
   List<Map<String, dynamic>> _gameList = [];
@@ -45,6 +48,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   @override
   void initState() {
     super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
     _tabController = TabController(length: _tabs.length, vsync: this);
 
     _tabController.addListener(() {
@@ -74,6 +78,40 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startGameStateMonitoringConditionally();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    // ★ 注意：dispose内ではrefを使用できません ★
+    // ゲーム状態監視の停止は UserNotifier.leaveRoom() で行われます
+    _routeObserver.unsubscribe(this);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/select_game_page');
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/select_game_page');
   }
 
   Future<void> _fetchGames() async {
@@ -132,15 +170,6 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     }).catchError((error) {
       Logger.log('❌ Room status確認エラー: $error');
     });
-  }
-
-  @override
-  void dispose() {
-    // ★ 注意：dispose内ではrefを使用できません ★
-    // ゲーム状態監視の停止は UserNotifier.leaveRoom() で行われます
-
-    _tabController.dispose();
-    super.dispose();
   }
 
   void _copyRoomUrl() {

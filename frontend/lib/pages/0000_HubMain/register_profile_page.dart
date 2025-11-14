@@ -1,6 +1,7 @@
 import 'package:bodogehub/utils/logger.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../0000_HubMain/select_game_page.dart';
 import '../../components/custom_widgets.dart';
@@ -152,13 +153,6 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
         _errorMessage = validation.errorMessage;
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _nicknameController.dispose();
-    _roomIdController.dispose();
-    super.dispose();
   }
 
   @override

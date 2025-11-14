@@ -1,10 +1,13 @@
+import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/validation_utils.dart';
@@ -19,13 +22,16 @@ class BiasProfileChildTurnPage extends ConsumerStatefulWidget {
 }
 
 class _BiasProfileChildTurnPageState
-    extends ConsumerState<BiasProfileChildTurnPage> with GameExitHandler {
+    extends ConsumerState<BiasProfileChildTurnPage>
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   Future<void>? _precacheFuture;
   int _imageReloadTrigger = 0;
 
   @override
   void initState() {
     super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
 
     // 画像データを取得（この時点ではcontextが使えないのでreadを使用）
     final currentGame = ref.read(currentGameProvider);
@@ -48,6 +54,39 @@ class _BiasProfileChildTurnPageState
         });
       });
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: '/0004/bias_profile_child_turn_page',
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: '/0004/bias_profile_child_turn_page',
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
