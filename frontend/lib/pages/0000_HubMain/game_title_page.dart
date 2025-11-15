@@ -27,6 +27,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
   final PageController _pageController = PageController();
+  final pageTitle = '/game_title_page';
 
   @override
   void initState() {
@@ -57,7 +58,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     final gameId = ref.read(currentGameProvider).gameId;
     ref
         .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/{$gameId}/game_title_page');
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   @override
@@ -66,7 +67,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     final gameId = ref.read(currentGameProvider).gameId;
     ref
         .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/{$gameId}/game_title_page');
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   @override
@@ -284,6 +285,12 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                           onPressed: _isPreparationCompleted || _isUpdatingReady
                               ? null // ★準備完了済みまたは通信中は押せない
                               : () async {
+                                  final currentGame =
+                                      ref.read(currentGameProvider);
+                                  final gameId = currentGame.gameId;
+                                  ref
+                                      .read(analyticsServiceProvider)
+                                      .logClick(button: '${gameId}_game_ready');
                                   setState(() {
                                     _isUpdatingReady = true; // ★通信開始
                                   });

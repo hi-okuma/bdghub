@@ -27,6 +27,7 @@ class _BiasProfileChildTurnPageState
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   Future<void>? _precacheFuture;
   int _imageReloadTrigger = 0;
+  final pageTitle = '/0004/bias_profile_child_turn_page';
 
   @override
   void initState() {
@@ -76,7 +77,7 @@ class _BiasProfileChildTurnPageState
     super.didPush();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/0004/bias_profile_child_turn_page',
+        pageTitle: pageTitle,
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
@@ -85,7 +86,7 @@ class _BiasProfileChildTurnPageState
     super.didPopNext();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/0004/bias_profile_child_turn_page',
+        pageTitle: pageTitle,
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
@@ -187,9 +188,16 @@ class _BiasProfileChildTurnPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-            gameTitle: gameTitle,
-            isHost: isHost,
-            onExitPressed: showExitGameDialog),
+          gameTitle: gameTitle,
+          isHost: isHost,
+          onExitPressed: () {
+            ref.read(analyticsServiceProvider).logClick(
+              button: 'game_quit',
+              additionalParams: {'page_title': pageTitle},
+            );
+            showExitGameDialog();
+          },
+        ),
         backgroundColor: AppTheme.backgroundColor,
         body: FutureBuilder(
           future: _precacheFuture,
@@ -375,6 +383,11 @@ class _BiasProfileChildTurnPageState
                                               _errorMessage = null;
                                               _isSubmitting = true; // 追加
                                             });
+
+                                            ref
+                                                .read(analyticsServiceProvider)
+                                                .logClick(
+                                                    button: '0004_hint_submit');
 
                                             // API呼び出しのエラーハンドリング追加
                                             try {

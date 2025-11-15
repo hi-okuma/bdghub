@@ -45,6 +45,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
   bool _hasReported = false;
   bool _isWaitingForOthers = false;
   bool _isSubmittingReport = false; // 追加
+  final pageTitle = '/0001/ngword_playing_page';
 
   @override
   void initState() {
@@ -70,17 +71,13 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
   @override
   void didPush() {
     super.didPush();
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/0001/ngword_playing_page');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/0001/ngword_playing_page');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -228,7 +225,13 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
         appBar: GameAppBar(
           gameTitle: gameTitle,
           isHost: isHost,
-          onExitPressed: showExitGameDialog,
+          onExitPressed: () {
+            ref.read(analyticsServiceProvider).logClick(
+              button: 'game_quit',
+              additionalParams: {'page_title': pageTitle},
+            );
+            showExitGameDialog();
+          },
         ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
@@ -288,7 +291,14 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
                     child: ElevatedLoadingButton(
                       text: _hasReported ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
                       isLoading: _isSubmittingReport,
-                      onPressed: _hasReported ? null : _onReportPressed,
+                      onPressed: _hasReported
+                          ? null
+                          : () {
+                              ref
+                                  .read(analyticsServiceProvider)
+                                  .logClick(button: '0001_declare');
+                              _onReportPressed();
+                            },
                     ),
                   ),
                 ],

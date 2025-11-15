@@ -44,6 +44,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
+  final pageTitle = '/game_result_page';
 
   @override
   void initState() {
@@ -72,7 +73,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
     final gameId = ref.read(currentGameProvider).gameId;
     ref
         .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/{$gameId}}/game_result_page');
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   @override
@@ -81,7 +82,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
     final gameId = ref.read(currentGameProvider).gameId;
     ref
         .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/{$gameId}}/game_result_page');
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -300,6 +301,14 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
                                 setState(() {
                                   _isUpdatingReady = true; // ★通信開始
                                 });
+
+                                final currentGame =
+                                    ref.read(currentGameProvider);
+                                final gameId =
+                                    currentGame.gameId; // ★ gameIdを取得
+                                ref
+                                    .read(analyticsServiceProvider)
+                                    .logClick(button: '${gameId}_game_replay');
 
                                 try {
                                   await _updateReadyStatus(); // ★API呼び出し

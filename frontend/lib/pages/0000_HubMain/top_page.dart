@@ -47,6 +47,8 @@ class _TopPageState extends ConsumerState<TopPage>
     // CustomTab(label: '協力'),
   ];
 
+  final pageTitle = '/top_page';
+
   @override
   void initState() {
     super.initState();
@@ -64,15 +66,28 @@ class _TopPageState extends ConsumerState<TopPage>
         setState(() {
           switch (_tabController.index) {
             case 0:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': 'すべて'});
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': '定番'});
               _selectedGenre = {GameGenre.popular};
               break;
             // case 2:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': 'カード'});
             //   _selectedGenre = {GameGenre.card};
             //   break;
             // case 3:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': '協力'});
+            //   _selectedGenre = {GameGenre.popular};
             //   _selectedGenre = {GameGenre.cooperation};
             //   break;
           }
@@ -103,14 +118,14 @@ class _TopPageState extends ConsumerState<TopPage>
   @override
   void didPopNext() {
     super.didPopNext();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: '/top_page');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   /// このページが新しく表示された時
   @override
   void didPush() {
     super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: '/top_page');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   Future<void> _fetchGames() async {
@@ -134,10 +149,24 @@ class _TopPageState extends ConsumerState<TopPage>
     _fetchGlobalConfig();
   }
 
+  void _showCreateRoomDialog() {
+    ref.read(analyticsServiceProvider).logClick(button: 'room_create');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Dialog(
+          insetPadding: EdgeInsets.all(AppSpacing.large),
+          child: SingleChildScrollView(
+            child: RegisterProfilePage(isJoiningRoom: false),
+          ),
+        );
+      },
+    );
+  }
+
   void _showJoinRoomDialog(String roomId) {
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/register_profile_page',
-        additionalParams: {'trigger_source': 'join_room_button'});
+    ref.read(analyticsServiceProvider).logClick(button: 'room_join');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -386,24 +415,6 @@ class _TopPageState extends ConsumerState<TopPage>
         ),
       ),
       body: bodyContent,
-    );
-  }
-
-  void _showCreateRoomDialog() {
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/register_profile_page',
-        additionalParams: {'trigger_source': 'create_room_button'});
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Dialog(
-          insetPadding: EdgeInsets.all(AppSpacing.large),
-          child: SingleChildScrollView(
-            child: RegisterProfilePage(isJoiningRoom: false),
-          ),
-        );
-      },
     );
   }
 }

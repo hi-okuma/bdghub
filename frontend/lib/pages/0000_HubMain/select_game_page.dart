@@ -45,6 +45,8 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
 
   bool _isFromGameExit = false; // ★追加: ゲーム終了からの遷移かどうか
 
+  final pageTitle = '/select_game_page';
+
   @override
   void initState() {
     super.initState();
@@ -56,15 +58,27 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         setState(() {
           switch (_tabController.index) {
             case 0:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': 'すべて'});
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': '定番'});
               _selectedGenre = {GameGenre.popular};
               break;
             // case 2:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': 'カード'});
             //   _selectedGenre = {GameGenre.card};
             //   break;
             // case 3:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': '協力'});
             //   _selectedGenre = {GameGenre.cooperation};
             //   break;
           }
@@ -101,17 +115,13 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   @override
   void didPush() {
     super.didPush();
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/select_game_page');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/select_game_page');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   Future<void> _fetchGames() async {
@@ -314,7 +324,10 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   horizontal: AppSpacing.small, vertical: 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: _showExitDialog,
+            onPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'room_leave');
+              _showExitDialog();
+            },
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -341,7 +354,10 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                     horizontal: AppSpacing.large, vertical: AppSpacing.medium),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              onPressed: _copyRoomUrl,
+              onPressed: () {
+                ref.read(analyticsServiceProvider).logClick(button: 'url_copy');
+                _copyRoomUrl();
+              },
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -30,6 +30,8 @@ class _BiasProfileParentTurnPageState
 
   late final ScrollController _scrollController;
 
+  final pageTitle = '/0004/bias_profile_parent_turn_page';
+
   @override
   void initState() {
     super.initState();
@@ -58,7 +60,7 @@ class _BiasProfileParentTurnPageState
     super.didPush();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/0004/bias_profile_parent_turn_page',
+        pageTitle: pageTitle,
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
@@ -67,7 +69,7 @@ class _BiasProfileParentTurnPageState
     super.didPopNext();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/0004/bias_profile_parent_turn_page',
+        pageTitle: pageTitle,
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
@@ -171,9 +173,6 @@ class _BiasProfileParentTurnPageState
     }
 
     void _showTopicDialog(String topic, String? hint, String uid) {
-      ref.read(analyticsServiceProvider).logPageView(
-          pageTitle: '/0004/bias_profile_topic_dialog',
-          additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -208,9 +207,16 @@ class _BiasProfileParentTurnPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-            gameTitle: gameTitle,
-            isHost: isHost,
-            onExitPressed: showExitGameDialog),
+          gameTitle: gameTitle,
+          isHost: isHost,
+          onExitPressed: () {
+            ref.read(analyticsServiceProvider).logClick(
+              button: 'game_quit',
+              additionalParams: {'page_title': pageTitle},
+            );
+            showExitGameDialog();
+          },
+        ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -393,6 +399,14 @@ class _BiasProfileParentTurnPageState
                                       final topicKey = topicEntry.key;
                                       final topic = topicEntry.value;
                                       final hint = hints[topicKey] as String?;
+                                      ref
+                                          .read(analyticsServiceProvider)
+                                          .logPageView(
+                                              pageTitle:
+                                                  '/0004/bias_profile_topic_dialog',
+                                              additionalParams: isHost
+                                                  ? {'role': 'parent'}
+                                                  : {'role': 'child'});
                                       _showTopicDialog(topic, hint, topicKey);
                                     },
                                     child: Padding(
@@ -426,6 +440,10 @@ class _BiasProfileParentTurnPageState
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
+                              ref
+                                  .read(analyticsServiceProvider)
+                                  .logClick(button: '0004_determine_answer');
+
                               // API呼び出しのエラーハンドリング追加
                               try {
                                 await ApiService.determineAnswer0004(

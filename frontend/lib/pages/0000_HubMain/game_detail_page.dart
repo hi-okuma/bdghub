@@ -32,6 +32,7 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage>
     with RouteAware {
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool _isLoading = false;
+  final pageTitle = '/game_detail_page';
 
   @override
   void initState() {
@@ -58,16 +59,14 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage>
   void didPush() {
     super.didPush();
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/game_detail_page',
-        additionalParams: {'gameId': '${widget.gameId}'});
+        pageTitle: pageTitle, additionalParams: {'gameId': '${widget.gameId}'});
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/game_detail_page',
-        additionalParams: {'gameId': '${widget.gameId}'});
+        pageTitle: pageTitle, additionalParams: {'gameId': '${widget.gameId}'});
   }
 
   Future<void> _startGame() async {
@@ -150,7 +149,13 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage>
                 child: ElevatedLoadingButton(
                   text: 'このゲームで遊ぶ',
                   isLoading: _isLoading,
-                  onPressed: _startGame,
+                  onPressed: () {
+                    ref.read(analyticsServiceProvider).logClick(
+                      button: 'game_start',
+                      additionalParams: {'gameId': '${widget.gameId}'},
+                    );
+                    _startGame();
+                  },
                 ),
               ),
             ],

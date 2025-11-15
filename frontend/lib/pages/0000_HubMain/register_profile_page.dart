@@ -1,3 +1,4 @@
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -26,18 +27,61 @@ class RegisterProfilePage extends ConsumerStatefulWidget {
       _RegisterProfilePageState();
 }
 
-class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
+class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage>
+    with SingleTickerProviderStateMixin, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   final TextEditingController _nicknameController = TextEditingController();
   final TextEditingController _roomIdController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  final pageTitle = '/register_profile_page';
 
   @override
   void initState() {
     super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
     if (widget.initialRoomId != null && widget.initialRoomId!.isNotEmpty) {
       _roomIdController.text = widget.initialRoomId!;
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// 他のページから戻ってきた時
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ref.read(analyticsServiceProvider).logPageView(
+          pageTitle: pageTitle,
+          additionalParams: widget.isJoiningRoom
+              ? {'trigger_source': 'join_room_button'}
+              : {'trigger_source': 'create_room_button'},
+        );
+  }
+
+  /// このページが新しく表示された時
+  @override
+  void didPush() {
+    super.didPush();
+    ref.read(analyticsServiceProvider).logPageView(
+          pageTitle: pageTitle,
+          additionalParams: widget.isJoiningRoom
+              ? {'trigger_source': 'join_room_button'}
+              : {'trigger_source': 'create_room_button'},
+        );
   }
 
   Future<void> _createRoom() async {
@@ -67,6 +111,8 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
       _errorMessage = null;
     });
 
+    ref.read(analyticsServiceProvider).logClick(button: 'nickname_submit');
+
     try {
       // 匿名認証でUIDを取得
       final uid = await AuthService.ensureAuthenticated();
@@ -92,6 +138,10 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage> {
       final String roomId = widget.isJoiningRoom
           ? _roomIdController.text
           : responseData['roomId'];
+
+      ref
+          .read(analyticsServiceProvider)
+          .logUserProperty(property: 'roomID', value: roomId);
 
       // Riverpodにユーザー情報を保存
       if (widget.isJoiningRoom) {

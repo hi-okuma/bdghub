@@ -31,6 +31,8 @@ class _BiasProfileCheckAnswerPageState
 
   late final ScrollController _scrollController;
 
+  final pageTitle = '/0004/bias_profile_check_answer_page';
+
   @override
   void initState() {
     super.initState();
@@ -59,7 +61,7 @@ class _BiasProfileCheckAnswerPageState
     super.didPush();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/0004/bias_profile_check_answer_page',
+        pageTitle: pageTitle,
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
@@ -68,7 +70,7 @@ class _BiasProfileCheckAnswerPageState
     super.didPopNext();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: '/0004/bias_profile_check_answer_page',
+        pageTitle: pageTitle,
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
@@ -227,6 +229,10 @@ class _BiasProfileCheckAnswerPageState
                           dialogIsLoading = true;
                         });
 
+                        ref
+                            .read(analyticsServiceProvider)
+                            .logClick(button: '0004_best_hint_select');
+
                         try {
                           await ApiService.proceedToNext0004(
                             context,
@@ -269,9 +275,16 @@ class _BiasProfileCheckAnswerPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-            gameTitle: gameTitle,
-            isHost: isHost,
-            onExitPressed: showExitGameDialog),
+          gameTitle: gameTitle,
+          isHost: isHost,
+          onExitPressed: () {
+            ref.read(analyticsServiceProvider).logClick(
+              button: 'game_quit',
+              additionalParams: {'page_title': pageTitle},
+            );
+            showExitGameDialog();
+          },
+        ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [
@@ -521,6 +534,10 @@ class _BiasProfileCheckAnswerPageState
                                 setState(() {
                                   isLoading = true;
                                 });
+
+                                ref
+                                    .read(analyticsServiceProvider)
+                                    .logClick(button: '0004_proceed_next');
 
                                 // API呼び出しのエラーハンドリング追加
                                 try {
