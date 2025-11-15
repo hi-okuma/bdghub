@@ -1,10 +1,8 @@
-import 'package:bodogehub/Pages/0000_HubMain/game_title_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:bodogehub/Pages/0000_HubMain/top_page.dart';
 import 'package:bodogehub/pages/0000_HubMain/app_initialization_page.dart';
 import 'package:bodogehub/components/app_theme.dart';
 // Flutter WebでのみUriを取得するためにプラットフォーム固有のインポート
@@ -12,10 +10,9 @@ import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/services/navigation_service.dart';
-import 'package:bodogehub/services/auth_service.dart';
 import 'test_UIscreen.dart';
 import 'package:bodogehub/config/environment_config.dart';
-
+import 'package:bodogehub/services/analytics_service.dart';
 import 'utils/logger.dart';
 
 Future<void> main() async {
@@ -56,7 +53,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       child: testSpecificPage
-          ? testBiasProfileCheckAnswerPage()
+          ? const testBiasProfileCheckAnswerPage()
           : MyApp(roomId: roomId),
     ),
   );
@@ -80,6 +77,8 @@ String? _getRoomIdFromUrl() {
   return null;
 }
 
+final AnalyticsService analyticsService = AnalyticsService();
+
 class MyApp extends StatelessWidget {
   final String? roomId;
 
@@ -92,6 +91,9 @@ class MyApp extends StatelessWidget {
       title: 'ボードゲームハブ',
       theme: AppTheme.lightTheme,
       navigatorKey: NavigationService.navigatorKey,
+      navigatorObservers: [
+        analyticsService.routeObserver,
+      ],
       // ★変更：初期化画面から開始
       home: AppInitializationPage(urlRoomId: roomId),
     );

@@ -1,5 +1,5 @@
 import 'package:bodogehub/utils/logger.dart';
-
+import 'package:flutter/widgets.dart';
 import '../0000_HubMain/register_profile_page.dart';
 import '../../components/game_list_widget.dart';
 import '../../components/custom_widgets.dart';
@@ -10,17 +10,21 @@ import 'package:bodogehub/Pages/0000_HubMain/game_detail_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/analytics_provider.dart';
 
-class TopPage extends StatefulWidget {
+class TopPage extends ConsumerStatefulWidget {
   final String? roomId;
 
   const TopPage({super.key, this.roomId});
 
   @override
-  State<TopPage> createState() => _TopPageState();
+  ConsumerState<TopPage> createState() => _TopPageState();
 }
 
-class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
+class _TopPageState extends ConsumerState<TopPage>
+    with SingleTickerProviderStateMixin, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   Uri termsOfServiceUrl = Uri.parse(dotenv.env['TERMS_OF_SERVICE_URL'] ?? '');
   Uri privacyPolicyUrl = Uri.parse(dotenv.env['PRIVACY_POLICY_URL'] ?? '');
   Uri formUrl = Uri.parse(dotenv.env['FORM_URL'] ?? '');
@@ -43,10 +47,12 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     // CustomTab(label: '協力'),
   ];
 
+  final pageTitle = '/top_page';
+
   @override
   void initState() {
     super.initState();
-
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.roomId != null && widget.roomId!.isNotEmpty) {
         _showJoinRoomDialog(widget.roomId!);
@@ -60,15 +66,28 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         setState(() {
           switch (_tabController.index) {
             case 0:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': 'すべて'});
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': '定番'});
               _selectedGenre = {GameGenre.popular};
               break;
             // case 2:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': 'カード'});
             //   _selectedGenre = {GameGenre.card};
             //   break;
             // case 3:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': '協力'});
+            //   _selectedGenre = {GameGenre.popular};
             //   _selectedGenre = {GameGenre.cooperation};
             //   break;
           }
@@ -77,6 +96,36 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     });
 
     _fetchGames();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  /// 他のページから戻ってきた時
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+  }
+
+  /// このページが新しく表示された時
+  @override
+  void didPush() {
+    super.didPush();
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   Future<void> _fetchGames() async {
@@ -100,7 +149,24 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
     _fetchGlobalConfig();
   }
 
+  void _showCreateRoomDialog() {
+    ref.read(analyticsServiceProvider).logClick(button: 'room_create');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Dialog(
+          insetPadding: EdgeInsets.all(AppSpacing.large),
+          child: SingleChildScrollView(
+            child: RegisterProfilePage(isJoiningRoom: false),
+          ),
+        );
+      },
+    );
+  }
+
   void _showJoinRoomDialog(String roomId) {
+    ref.read(analyticsServiceProvider).logClick(button: 'room_join');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -164,12 +230,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         Logger.log('Firestoreエラー: $error');
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   List<Map<String, dynamic>> get _filteredGames {
@@ -355,21 +415,6 @@ class _TopPageState extends State<TopPage> with SingleTickerProviderStateMixin {
         ),
       ),
       body: bodyContent,
-    );
-  }
-
-  void _showCreateRoomDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Dialog(
-          insetPadding: EdgeInsets.all(AppSpacing.large),
-          child: SingleChildScrollView(
-            child: RegisterProfilePage(isJoiningRoom: false),
-          ),
-        );
-      },
     );
   }
 }

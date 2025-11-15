@@ -116,6 +116,24 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "firebase_analytics",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_analytics-11.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_analytics_platform_interface",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_analytics_platform_interface-4.4.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
+      "name": "firebase_analytics_web",
+      "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_analytics_web-0.5.10+16",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "firebase_app_check",
       "rootUri": "file:///Users/daichikitada/.pub-cache/hosted/pub.dev/firebase_app_check-0.3.2+10",
       "packageUri": "lib/",

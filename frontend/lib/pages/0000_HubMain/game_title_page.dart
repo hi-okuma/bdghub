@@ -1,6 +1,7 @@
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
 import '/components/custom_widgets.dart';
@@ -8,6 +9,7 @@ import '/models/game_enums.dart';
 import '/providers/user_provider.dart';
 import '/providers/game_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/providers/analytics_provider.dart';
 import '/services/api_service.dart';
 
 class GameTitlePage extends ConsumerStatefulWidget {
@@ -18,17 +20,54 @@ class GameTitlePage extends ConsumerStatefulWidget {
 }
 
 class _GameTitlePageState extends ConsumerState<GameTitlePage>
-    with GameExitHandler {
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   int _currentImageIndex = 0;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
   final PageController _pageController = PageController();
+  final pageTitle = '/game_title_page';
 
   @override
   void initState() {
     super.initState();
     _loadGameData();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   @override
@@ -67,12 +106,6 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     setState(() {
       _isLoading = false;
     });
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   @override
@@ -252,6 +285,12 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                           onPressed: _isPreparationCompleted || _isUpdatingReady
                               ? null // ★準備完了済みまたは通信中は押せない
                               : () async {
+                                  final currentGame =
+                                      ref.read(currentGameProvider);
+                                  final gameId = currentGame.gameId;
+                                  ref
+                                      .read(analyticsServiceProvider)
+                                      .logClick(button: '${gameId}_game_ready');
                                   setState(() {
                                     _isUpdatingReady = true; // ★通信開始
                                   });

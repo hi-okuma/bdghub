@@ -1,4 +1,6 @@
+import 'package:bodogehub/services/analytics_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../components/custom_widgets.dart';
 import '../../components/app_theme.dart';
@@ -6,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../utils/logger.dart';
 import '../../utils/genre_utils.dart';
 import '/providers/user_provider.dart';
+import '/providers/analytics_provider.dart';
 
 class GameDetailPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> game;
@@ -25,8 +28,46 @@ class GameDetailPage extends ConsumerStatefulWidget {
   ConsumerState<GameDetailPage> createState() => _GameDetailPageState();
 }
 
-class _GameDetailPageState extends ConsumerState<GameDetailPage> {
+class _GameDetailPageState extends ConsumerState<GameDetailPage>
+    with RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool _isLoading = false;
+  final pageTitle = '/game_detail_page';
+
+  @override
+  void initState() {
+    super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle, additionalParams: {'gameId': '${widget.gameId}'});
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle, additionalParams: {'gameId': '${widget.gameId}'});
+  }
 
   Future<void> _startGame() async {
     setState(() {
@@ -108,7 +149,13 @@ class _GameDetailPageState extends ConsumerState<GameDetailPage> {
                 child: ElevatedLoadingButton(
                   text: 'このゲームで遊ぶ',
                   isLoading: _isLoading,
-                  onPressed: _startGame,
+                  onPressed: () {
+                    ref.read(analyticsServiceProvider).logClick(
+                      button: 'game_start',
+                      additionalParams: {'gameId': '${widget.gameId}'},
+                    );
+                    _startGame();
+                  },
                 ),
               ),
             ],
