@@ -138,6 +138,18 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
     final isHost = ref.watch(isHostProvider);
+
+    // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
+    // 無理に描画せず、ローディングや空のコンテナを返してエラーを防ぐ
+    if (currentGame.gameData == null || currentGame.gameData!.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(), // または SizedBox() でもOK
+        ),
+      );
+    }
+
     final gameData = currentGame.gameData;
     final gameTitle = gameData?['title'] as String;
 
