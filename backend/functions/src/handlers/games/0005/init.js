@@ -14,8 +14,7 @@ async function createCurrentGame(players) {
     answerImageIndex: gameData.answerImageIndex,
     topicsAndHints: gameData.topicsAndHints,
     selectedIndex: null,
-    usedImages: gameData.usedImages,
-    usedTopics: gameData.usedTopics,
+    usedCharacters: gameData.usedCharacters,
     point: 0,
   };
 }
@@ -36,63 +35,73 @@ async function initializeGameData(existingGameData = null) {
   }
 
   const assets = assetsDoc.data();
-  const allImages = assets.images || [];
-  const allTopicsAndHints = assets.topicsAndHints || {};
+  const allCharacters = assets.characters || [];
 
-  const allTopics = Object.keys(allTopicsAndHints);
-
-  if (allImages.length < 5) {
-    throw new Error("画像が不足しています");
+  if (allCharacters.length < 5) {
+    throw new Error("キャラクターが不足しています（最低5人必要）");
   }
+
+  // 使用済みキャラクターを管理
+  let usedCharacters = existingGameData?.usedCharacters || [];
+  const unusedCharacters = allCharacters.filter(
+      (char) => !usedCharacters.includes(char.imageUrl),
+  );
+
+  // 正解のキャラクターを選択
+  let answerCharacter;
+  if (unusedCharacters.length > 0) {
+    answerCharacter = unusedCharacters[Math.floor(Math.random() * unusedCharacters.length)];
+  } else {
+    // 全キャラクター使用済みの場合はリセットして選び直し
+    answerCharacter = allCharacters[Math.floor(Math.random() * allCharacters.length)];
+    usedCharacters = [];
+  }
+
+  // 正解キャラクターのprofilesから3つのトピックをランダムに選択
+  const profiles = answerCharacter.profiles || {};
+  const allTopics = Object.keys(profiles);
 
   if (allTopics.length < 3) {
-    throw new Error("トピックが不足しています");
+    throw new Error(`キャラクター ${answerCharacter.imageUrl} のトピックが不足しています（最低3つ必要）`);
   }
 
-  let usedImages = existingGameData?.usedImages || [];
-  const unusedImages = allImages.filter((img) => !usedImages.includes(img));
-  let currentImages;
+  const selectedTopics = shuffleArray(allTopics).slice(0, 3);
 
-  if (unusedImages.length >= 5) {
-    const shuffled = shuffleArray(unusedImages);
-    currentImages = shuffled.slice(0, 5);
-    usedImages = [...usedImages, ...currentImages];
-  } else {
-    const shuffled = shuffleArray(allImages);
-    currentImages = shuffled.slice(0, 5);
-    usedImages = [...currentImages];
-  }
-
-  const answerImageIndex = Math.floor(Math.random() * 5);
-
-  let usedTopics = existingGameData?.usedTopics || [];
-  const unusedTopics = allTopics.filter((topic) => !usedTopics.includes(topic));
-  let selectedTopics;
-
-  if (unusedTopics.length >= 3) {
-    selectedTopics = shuffleArray(unusedTopics).slice(0, 3);
-    usedTopics = [...usedTopics, ...selectedTopics];
-  } else {
-    selectedTopics = shuffleArray(allTopics).slice(0, 3);
-    usedTopics = [...selectedTopics];
-  }
-
+  // 各トピックから1つのヒントをランダムに選択
   const topicsAndHints = {};
   selectedTopics.forEach((topic) => {
-    const hints = allTopicsAndHints[topic];
+    const hints = profiles[topic];
     if (hints && hints.length > 0) {
       const randomHintIndex = Math.floor(Math.random() * hints.length);
       topicsAndHints[topic] = hints[randomHintIndex];
     }
   });
 
+  // 5枚の画像を用意（正解1枚 + 他4枚）
+  const otherCharacters = allCharacters.filter((char) => char.imageUrl !== answerCharacter.imageUrl);
+  if (otherCharacters.length < 4) {
+    throw new Error("選択肢用のキャラクターが不足しています（正解以外に最低4人必要）");
+  }
+
+  const shuffledOthers = shuffleArray(otherCharacters);
+  const selectedOthers = shuffledOthers.slice(0, 4);
+
+  // 5枚の画像をシャッフル
+  const allImages = [answerCharacter.imageUrl, ...selectedOthers.map((char) => char.imageUrl)];
+  const shuffledImages = shuffleArray(allImages);
+
+  // 正解画像のインデックスを取得
+  const answerImageIndex = shuffledImages.indexOf(answerCharacter.imageUrl);
+
+  // 使用済みキャラクターに追加
+  usedCharacters = [...usedCharacters, answerCharacter.imageUrl];
+
   return {
     currentQuestionNumber: 1,
-    currentImages: currentImages,
+    currentImages: shuffledImages,
     answerImageIndex: answerImageIndex,
     topicsAndHints: topicsAndHints,
-    usedImages: usedImages,
-    usedTopics: usedTopics,
+    usedCharacters: usedCharacters,
   };
 }
 

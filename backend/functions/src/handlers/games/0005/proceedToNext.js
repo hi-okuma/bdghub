@@ -48,8 +48,7 @@ async function proceedToNext0005Handler(request) {
           answerImageIndex: nextQuestionData.answerImageIndex,
           topicsAndHints: nextQuestionData.topicsAndHints,
           selectedIndex: null,
-          usedImages: nextQuestionData.usedImages,
-          usedTopics: nextQuestionData.usedTopics,
+          usedCharacters: nextQuestionData.usedCharacters,
           point: newPoint,
         });
       } else {
@@ -64,8 +63,7 @@ async function proceedToNext0005Handler(request) {
           answerImageIndex: nextGameData.answerImageIndex,
           topicsAndHints: nextGameData.topicsAndHints,
           selectedIndex: null,
-          usedImages: nextGameData.usedImages,
-          usedTopics: nextGameData.usedTopics,
+          usedCharacters: nextGameData.usedCharacters,
           point: newPoint,
         });
       }
@@ -111,57 +109,72 @@ async function prepareNextQuestion(currentGameData) {
   }
 
   const assets = assetsDoc.data();
-  const allImages = assets.images || [];
-  const allTopicsAndHints = assets.topicsAndHints || {};
-  const allTopics = Object.keys(allTopicsAndHints);
+  const allCharacters = assets.characters || [];
 
-  if (allImages.length < 5 || allTopics.length < 3) {
-    throw new Error("アセットが不足しています");
+  if (allCharacters.length < 5) {
+    throw new Error("キャラクターが不足しています（最低5人必要）");
   }
 
-  let usedImages = currentGameData.usedImages || [];
-  const unusedImages = allImages.filter((img) => !usedImages.includes(img));
-  let currentImages;
+  // 使用済みキャラクターを管理
+  let usedCharacters = currentGameData.usedCharacters || [];
+  const unusedCharacters = allCharacters.filter(
+      (char) => !usedCharacters.includes(char.imageUrl),
+  );
 
-  if (unusedImages.length >= 5) {
-    const shuffled = shuffleArray(unusedImages);
-    currentImages = shuffled.slice(0, 5);
-    usedImages = [...usedImages, ...currentImages];
+  // 正解のキャラクターを選択
+  let answerCharacter;
+  if (unusedCharacters.length > 0) {
+    answerCharacter = unusedCharacters[Math.floor(Math.random() * unusedCharacters.length)];
   } else {
-    const shuffled = shuffleArray(allImages);
-    currentImages = shuffled.slice(0, 5);
-    usedImages = [...currentImages];
+    // 全キャラクター使用済みの場合はリセットして選び直し
+    answerCharacter = allCharacters[Math.floor(Math.random() * allCharacters.length)];
+    usedCharacters = [];
   }
 
-  const answerImageIndex = Math.floor(Math.random() * 5);
+  // 正解キャラクターのprofilesから3つのトピックをランダムに選択
+  const profiles = answerCharacter.profiles || {};
+  const allTopics = Object.keys(profiles);
 
-  let usedTopics = currentGameData.usedTopics || [];
-  const unusedTopics = allTopics.filter((topic) => !usedTopics.includes(topic));
-  let selectedTopics;
-
-  if (unusedTopics.length >= 3) {
-    selectedTopics = shuffleArray(unusedTopics).slice(0, 3);
-    usedTopics = [...usedTopics, ...selectedTopics];
-  } else {
-    selectedTopics = shuffleArray(allTopics).slice(0, 3);
-    usedTopics = [...selectedTopics];
+  if (allTopics.length < 3) {
+    throw new Error(`キャラクター ${answerCharacter.imageUrl} のトピックが不足しています（最低3つ必要）`);
   }
 
+  const selectedTopics = shuffleArray(allTopics).slice(0, 3);
+
+  // 各トピックから1つのヒントをランダムに選択
   const topicsAndHints = {};
   selectedTopics.forEach((topic) => {
-    const hints = allTopicsAndHints[topic];
+    const hints = profiles[topic];
     if (hints && hints.length > 0) {
       const randomHintIndex = Math.floor(Math.random() * hints.length);
       topicsAndHints[topic] = hints[randomHintIndex];
     }
   });
 
+  // 5枚の画像を用意（正解1枚 + 他4枚）
+  const otherCharacters = allCharacters.filter((char) => char.imageUrl !== answerCharacter.imageUrl);
+  if (otherCharacters.length < 4) {
+    throw new Error("選択肢用のキャラクターが不足しています（正解以外に最低4人必要）");
+  }
+
+  const shuffledOthers = shuffleArray(otherCharacters);
+  const selectedOthers = shuffledOthers.slice(0, 4);
+
+  // 5枚の画像をシャッフル
+  const allImages = [answerCharacter.imageUrl, ...selectedOthers.map((char) => char.imageUrl)];
+  const shuffledImages = shuffleArray(allImages);
+
+  // 正解画像のインデックスを取得
+  const answerImageIndex = shuffledImages.indexOf(answerCharacter.imageUrl);
+
+  // 使用済みキャラクターに追加
+  usedCharacters = [...usedCharacters, answerCharacter.imageUrl];
+
   return {
-    currentImages: currentImages,
+    currentImages: shuffledImages,
     answerImageIndex: answerImageIndex,
     topicsAndHints: topicsAndHints,
-    usedImages: usedImages,
-    usedTopics: usedTopics,
+    usedCharacters: usedCharacters,
   };
 }
 
