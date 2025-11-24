@@ -35,10 +35,12 @@ async function proceedToNext0005Handler(request) {
       const currentQuestionNumber = currentGameData.currentQuestionNumber || 1;
       const currentPoint = currentGameData.point || 0;
 
-      const newPoint = isCorrect ? currentPoint + 1 : currentPoint;
-
       if (currentQuestionNumber < 5) {
         const nextQuestionData = await prepareNextQuestion(currentGameData);
+
+        // 1問目でpointが0以外の場合は、前回のゲーム結果が残っているのでリセット
+        const resetPoint = (currentQuestionNumber === 1 && currentPoint > 0) ? 0 : currentPoint;
+        const newPoint = isCorrect ? resetPoint + 1 : resetPoint;
 
         transaction.update(currentGameRef, {
           currentQuestionNumber: currentQuestionNumber + 1,
@@ -53,6 +55,9 @@ async function proceedToNext0005Handler(request) {
       } else {
         const nextGameData = await initializeGameData(currentGameData);
 
+        // 5問目終了時は結果発表画面で表示するためpointを保持
+        const newPoint = isCorrect ? currentPoint + 1 : currentPoint;
+
         transaction.update(currentGameRef, {
           currentQuestionNumber: nextGameData.currentQuestionNumber,
           currentImages: nextGameData.currentImages,
@@ -61,7 +66,7 @@ async function proceedToNext0005Handler(request) {
           selectedIndex: null,
           usedImages: nextGameData.usedImages,
           usedTopics: nextGameData.usedTopics,
-          point: 0,
+          point: newPoint,
         });
       }
     });
