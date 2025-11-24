@@ -61,7 +61,7 @@ async function proceedToNext0005Handler(request) {
           selectedIndex: null,
           usedImages: nextGameData.usedImages,
           usedTopics: nextGameData.usedTopics,
-          point: newPoint,
+          point: 0,
         });
       }
     });
