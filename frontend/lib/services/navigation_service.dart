@@ -1,4 +1,5 @@
 import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
+import 'package:bodogehub/Pages/0002_NoForeignWord/no_foregin_word_playing_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
@@ -122,6 +123,13 @@ class NavigationService {
           ),
         );
         break;
+      case '0002': // カタカナ語禁止
+        _navigator!.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const NoForeignWordPlayingPage(),
+          ),
+        );
+        break;
       default:
         navigateToGameTitle();
     }
@@ -134,13 +142,6 @@ class NavigationService {
 
     // ゲームIDに基づいて適切な画面に遷移
     switch (gameId) {
-      case '0002': // カタカナ語禁止
-        _navigator!.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('カタカナ語禁止', '出題者'),
-          ),
-        );
-        break;
       case '0003': // 水平思考
         _navigator!.pushReplacement(
           MaterialPageRoute(
