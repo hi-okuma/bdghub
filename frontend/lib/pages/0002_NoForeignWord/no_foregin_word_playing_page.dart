@@ -24,9 +24,6 @@ class _NoForeignWordPlayingPageState
     with GameExitHandler, RouteAware {
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool isLoading = false;
-  // bool _hasReported = false;
-  // bool _isWaitingForOthers = false;
-  // bool _isSubmittingReport = false; // 追加
   final pageTitle = '/0002/no_foreign_word_playing_page';
   String? isSelectedPlayer;
 
@@ -115,6 +112,70 @@ class _NoForeignWordPlayingPageState
     return false;
   }
 
+  // 正解ボタンが押された時の処理
+  Future<void> _handleCorrect(String roomId) async {
+    // プレイヤーが選択されていない場合はスナックバーで警告
+    if (isSelectedPlayer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('正解したプレイヤーを選択してください'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // result: true, answerUid: 選択されたUID
+      await ApiService.reportResult0002(
+        context,
+        roomId,
+        true,
+        isSelectedPlayer!,
+      );
+      // 成功時の処理（必要であればログ出力など。画面遷移はStreamで検知される想定）
+      Logger.log('正解を送信しました');
+    } catch (e) {
+      Logger.log('正解送信エラー: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  // スキップボタンが押された時の処理
+  Future<void> _handleSkip(String roomId) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // result: false, answerUid: 空文字（APIの仕様上必須のため）
+      await ApiService.reportResult0002(
+        context,
+        roomId,
+        false,
+        '',
+      );
+      Logger.log('スキップを送信しました');
+    } catch (e) {
+      Logger.log('スキップ送信エラー: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // プロバイダーからデータを取得
@@ -166,7 +227,7 @@ class _NoForeignWordPlayingPageState
                 final nickname = playerData['nickname'] as String? ?? '名無し';
                 playerDropdownItems.add(
                   DropdownMenuItem(
-                    value: uid, // 値としてUIDを使用
+                    value: nickname,
                     child: Text(nickname),
                   ),
                 );
@@ -294,12 +355,20 @@ class _NoForeignWordPlayingPageState
                           children: [
                             Expanded(
                               child: ElevatedLoadingButton(
-                                  text: '正解！', isLoading: isLoading),
+                                text: '正解！',
+                                isLoading: isLoading,
+                                onPressed: isSelectedPlayer != null
+                                    ? () => _handleCorrect(roomId)
+                                    : null,
+                              ),
                             ),
                             SizedBox(width: AppSpacing.large),
                             Expanded(
                               child: OutlinedLoadingButton(
-                                  text: 'スキップ', isLoading: isLoading),
+                                text: 'スキップ',
+                                isLoading: isLoading,
+                                onPressed: () => _handleSkip(roomId),
+                              ),
                             )
                           ]),
                     )
@@ -323,66 +392,5 @@ class _NoForeignWordPlayingPageState
         ),
       ),
     );
-  }
-
-  void _onReportPressed() {
-    setState(() {
-      // _hasReported = true;
-      // _isWaitingForOthers = true;
-      // _isSubmittingReport = true; // 追加
-    });
-
-    // API経由で申告情報を送信
-    final currentUser = ref.read(userProvider);
-    final roomId = currentUser.roomId;
-
-    if (roomId != null && currentUser.uid != null) {
-      _submitReport(roomId, currentUser.uid!);
-    }
-  }
-
-  // API経由で申告情報を送信する処理
-  Future<void> _submitReport(String roomId, String uid) async {
-    setState(() {
-      // _isSubmittingReport = true;
-    });
-    try {
-      await ApiService.declare0001(context, roomId, uid);
-
-      Logger.log('✅ 申告情報を送信しました: $uid');
-
-      setState(() {
-        // _hasReported = true;
-        // _isWaitingForOthers = true;
-      });
-
-      // 成功時のスナックバー表示
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('申告を受け付けました'),
-            backgroundColor: AppTheme.successColor,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      Logger.log('❌ 申告情報の送信に失敗: $e');
-      // エラーダイアログはErrorHandlerで表示されるので、ここではUIの状態をリセットするだけ
-      _resetReportState();
-    } finally {
-      setState(() {
-        // _isSubmittingReport = false;
-      });
-    }
-  }
-
-  // 申告ボタンの状態をリセット
-  void _resetReportState() {
-    setState(() {
-      // _hasReported = false;
-      // _isWaitingForOthers = false;
-      // _isSubmittingReport = false; // 追加
-    });
   }
 }
