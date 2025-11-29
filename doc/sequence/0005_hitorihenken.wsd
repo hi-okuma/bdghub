@@ -1,0 +1,43 @@
+@startuml
+
+actor Player
+
+participant APIgateway_Functions
+participant Firestore
+
+== 〜タイトル画面表示 ==
+APIgateway_Functions -> Firestore: 開始リクエスト
+Firestore -> Firestore: roomStatus変更&\ncurrentGame生成
+Player <- Firestore: roomStatusがinProgressになったことを検知
+Player -> Firestore: currentGameをリクエスト
+Player <-- Firestore: 返却
+Player -> Player: タイトル画面表示
+
+== 人物選択 ==
+Player -> Player: 「準備完了」押下&\nゲーム画面遷移
+Player -> Player: 人物を選択し決定ボタン押下&\n正誤確認画面遷移
+note right: 選択した画像Indexはサーバーには送信しない
+
+== 次ターン準備 ==
+Player -> Player: 「次に進む」押下
+Player -> APIgateway_Functions: 次ターン準備リクエスト
+note right: このタイミングで正誤結果のみをサーバーに送る
+alt 1~4問目終了時
+    APIgateway_Functions -> Firestore: 次ターン準備リクエスト
+    Firestore -> Firestore: point更新&\n次ターンに向けた初期化
+    Player <-- APIgateway_Functions: 成功レスポンス
+    Player -> Player: ゲーム画面遷移
+else 5問目終了時
+    APIgateway_Functions -> Firestore: 終了&次ゲーム準備リクエスト
+    Firestore -> Firestore: point更新&\n次ゲームに向けた初期化
+    Player <-- APIgateway_Functions: 成功レスポンス
+    Player -> Player: 結果発表画面遷移
+end
+
+== 次ゲーム準備 ==
+Player -> Player: 「もう一度遊ぶ」押下
+Player -> Firestore: currentGameをリクエスト
+Player <-- Firestore: 返却
+Player ->Player: ゲーム画面遷移
+
+@enduml
