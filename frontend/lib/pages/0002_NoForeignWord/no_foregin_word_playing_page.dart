@@ -23,7 +23,8 @@ class _NoForeignWordPlayingPageState
     extends ConsumerState<NoForeignWordPlayingPage>
     with GameExitHandler, RouteAware {
   late final RouteObserver<ModalRoute<void>> _routeObserver;
-  bool isLoading = false;
+  bool isCorrectButtonLoading = false;
+  bool isSkipButtonLoading = false;
   final pageTitle = '/0002/no_foreign_word_playing_page';
   String? isSelectedPlayer;
 
@@ -70,48 +71,6 @@ class _NoForeignWordPlayingPageState
     }
   }
 
-  // 型安全なString値取得関数
-  String? _extractStringValue(dynamic value) {
-    if (value == null) return null;
-    if (value is String) return value;
-    if (value is List && value.isNotEmpty) {
-      return value.first?.toString();
-    }
-    return value.toString();
-  }
-
-  // 型安全なint値取得関数
-  int? _extractIntValue(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    if (value is String) return int.tryParse(value);
-    if (value is List && value.isNotEmpty) {
-      final firstValue = value.first;
-      if (firstValue is int) return firstValue;
-      if (firstValue is double) return firstValue.toInt();
-      if (firstValue is String) return int.tryParse(firstValue);
-    }
-    return null;
-  }
-
-  // 型安全なbool値取得関数
-  bool? _extractBoolValue(dynamic value) {
-    if (value == null) return null;
-    if (value is bool) return value;
-    if (value is String) {
-      return value.toLowerCase() == 'true';
-    }
-    if (value is int) return value != 0;
-    if (value is List && value.isNotEmpty) {
-      final firstValue = value.first;
-      if (firstValue is bool) return firstValue;
-      if (firstValue is String) return firstValue.toLowerCase() == 'true';
-      if (firstValue is int) return firstValue != 0;
-    }
-    return false;
-  }
-
   // 正解ボタンが押された時の処理
   Future<void> _handleCorrect(String roomId) async {
     // プレイヤーが選択されていない場合はスナックバーで警告
@@ -126,7 +85,7 @@ class _NoForeignWordPlayingPageState
     }
 
     setState(() {
-      isLoading = true;
+      isCorrectButtonLoading = true;
     });
 
     try {
@@ -144,7 +103,7 @@ class _NoForeignWordPlayingPageState
     } finally {
       if (mounted) {
         setState(() {
-          isLoading = false;
+          isCorrectButtonLoading = false;
         });
       }
     }
@@ -153,7 +112,7 @@ class _NoForeignWordPlayingPageState
   // スキップボタンが押された時の処理
   Future<void> _handleSkip(String roomId) async {
     setState(() {
-      isLoading = true;
+      isSkipButtonLoading = true;
     });
 
     try {
@@ -170,7 +129,7 @@ class _NoForeignWordPlayingPageState
     } finally {
       if (mounted) {
         setState(() {
-          isLoading = false;
+          isSkipButtonLoading = false;
         });
       }
     }
@@ -209,6 +168,9 @@ class _NoForeignWordPlayingPageState
     final String currentTopic =
         gameData?['currentTopic'] as String? ?? 'お題待機中...';
 
+    // 出題者名を表示するための変数を初期化
+    String presenterNickname = '読み込み中...';
+
     // ドロップダウンリストに表示するプレイヤーリストを取得
     List<DropdownMenuItem<String>> playerDropdownItems = [];
 
@@ -221,6 +183,14 @@ class _NoForeignWordPlayingPageState
           final players = data['players'] as Map<String, dynamic>?;
 
           if (players != null) {
+            // 現在の出題者のニックネームを取得するロジック
+            if (currentPresenterUid != null &&
+                players.containsKey(currentPresenterUid)) {
+              final presenterData =
+                  players[currentPresenterUid] as Map<String, dynamic>;
+              presenterNickname = presenterData['nickname'] as String? ?? '名無し';
+            }
+
             players.forEach((uid, playerData) {
               // 自分（出題者）以外をリストに追加
               if (uid != currentUser.uid) {
@@ -356,7 +326,7 @@ class _NoForeignWordPlayingPageState
                             Expanded(
                               child: ElevatedLoadingButton(
                                 text: '正解！',
-                                isLoading: isLoading,
+                                isLoading: isCorrectButtonLoading,
                                 onPressed: isSelectedPlayer != null
                                     ? () => _handleCorrect(roomId)
                                     : null,
@@ -366,7 +336,7 @@ class _NoForeignWordPlayingPageState
                             Expanded(
                               child: OutlinedLoadingButton(
                                 text: 'スキップ',
-                                isLoading: isLoading,
+                                isLoading: isSkipButtonLoading,
                                 onPressed: () => _handleSkip(roomId),
                               ),
                             )
@@ -386,7 +356,38 @@ class _NoForeignWordPlayingPageState
                       '出題者の説明を聞いてお題を当ててください。\n説明にカタカナ語が含まれていれば指摘しましょう。',
                       style: AppTextStyles.body,
                       textAlign: TextAlign.center,
-                    )
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.large,
+                          vertical: AppSpacing.medium),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.large),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text('今回の出題者',
+                                        style: AppTextStyles.subtitle.copyWith(
+                                            color:
+                                                AppTheme.secondaryTextColor)),
+                                    const SizedBox(height: AppSpacing.small),
+                                    Text(presenterNickname,
+                                        style: AppTextStyles.subtitle.copyWith(
+                                            color:
+                                                AppTheme.secondaryTextColor)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
         ),
