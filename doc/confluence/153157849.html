@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ボドゲハブ : 0005.API仕様</title>
+        <link rel="stylesheet" href="styles/site.css" type="text/css" />
+        <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+
+    <body class="theme-default aui-theme-default">
+        <div id="page">
+            <div id="main" class="aui-page-panel">
+                <div id="main-header">
+                    <div id="breadcrumb-section">
+                        <ol id="breadcrumbs">
+                            <li class="first">
+                                <span><a href="index.html">ボドゲハブ</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59408651.html">ボドゲハブ Home</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="59506689.html">1.開発</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="153157634.html">0005.１人用偏見プロフィール</a></span>
+                            </li>
+                                                    <li>
+                                <span><a href="153157784.html">0005.設計</a></span>
+                            </li>
+                                                </ol>
+                    </div>
+                    <h1 id="title-heading" class="pagetitle">
+                                                <span id="title-text">
+                            ボドゲハブ : 0005.API仕様
+                        </span>
+                    </h1>
+                </div>
+
+                <div id="content" class="view">
+                    <div class="page-metadata">
+                            
+        
+    
+        
+    
+        
+        
+            Created by <span class='author'> 大熊浩也</span>, last modified on 11月 24, 2025
+                        </div>
+                    <div id="main-content" class="wiki-content group">
+                    <h2 id="id-0005.API仕様-正誤確認完了（/proceedToNext0005）">正誤確認完了（/proceedToNext0005）</h2><p>HTTPメソッド：POST</p><p>リクエスト</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
+  &quot;roomId&quot;: &lt;指定した部屋のroomId&gt;,
+  &quot;isCorrect&quot;: &lt;問題に正解したかどうか(正解ならtrue,不正解ならfalse)&gt;,
+}</pre>
+</div></div><p>レスポンス（成功時）</p><div class="code panel pdl" style="border-width: 1px;"><div class="codeContent panelContent pdl">
+<pre class="syntaxhighlighter-pre" data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;&quot;,
+}</pre>
+</div></div><div class="table-wrap"><table data-table-width="1800" data-layout="center" data-local-id="4d02542d-59ce-41ab-b677-0aedfe726ee7" class="confluenceTable"><colgroup><col style="width: 282.0px;"/><col style="width: 437.0px;"/><col style="width: 235.0px;"/><col style="width: 484.0px;"/><col style="width: 360.0px;"/></colgroup><tbody><tr><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>エラーコード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>メッセージ</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p><strong>HTTP</strong>コード</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>発生条件</p></th><th data-highlight-colour="#f0f1f2" class="confluenceTh"><p>クライアント挙動</p></th></tr><tr><td class="confluenceTd"><p><code>InvalidArgument</code></p></td><td class="confluenceTd"><p>不正なリクエストです。</p></td><td class="confluenceTd"><p>400</p></td><td class="confluenceTd"><p>roomIdやisCorrectが未指定</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>GameNotFound</code></p></td><td class="confluenceTd"><p>ゲームが開始できませんでした。ホストプレイヤーより一度ゲームを終了してください。</p></td><td class="confluenceTd"><p>404</p></td><td class="confluenceTd"><p>currentGameが存在しない</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>Internal</code>※</p></td><td class="confluenceTd"><p>サーバーエラーが発生しました。</p></td><td class="confluenceTd"><p>500</p></td><td class="confluenceTd"><p>サーバー側での予期しないエラー</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr><tr><td class="confluenceTd"><p><code>Maintenance</code></p></td><td class="confluenceTd"><p>現在メンテナンス中です。しばらくお待ちください。</p></td><td class="confluenceTd"><p>503</p></td><td class="confluenceTd"><p>メンテナンス中</p></td><td class="confluenceTd"><p>スナックバーでメッセージを表示</p></td></tr></tbody></table></div>
+                    </div>
+
+                    
+                                                      
+                </div>             </div> 
+            <div id="footer" role="contentinfo">
+                <section class="footer-body">
+                    <p>Document generated by Confluence on 11月 24, 2025 21:47</p>
+                    <div id="footer-logo"><a href="http://www.atlassian.com/">Atlassian</a></div>
+                </section>
+            </div>
+        </div>     </body>
+</html>

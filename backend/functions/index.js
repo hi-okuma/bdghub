@@ -13,6 +13,7 @@ const {reportResult0003Handler} = require("./src/handlers/games/0003/reportResul
 const {submitHint0004Handler} = require("./src/handlers/games/0004/submitHint");
 const {determineAnswer0004Handler} = require("./src/handlers/games/0004/determineAnswer");
 const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToNext");
+const {proceedToNext0005Handler} = require("./src/handlers/games/0005/proceedToNext");
 
 const {cleanupAnonymousUsers} = require("./src/handlers/maintenance/cleanupAnonymousUsers");
 const {cleanupInactiveRooms} = require("./src/handlers/maintenance/cleanupInactiveRooms");
@@ -83,6 +84,11 @@ exports.determineAnswer0004 = onCall(commonOptions, async (request) => {
 exports.proceedToNext0004 = onCall(commonOptions, async (request) => {
   await checkMaintenance(request);
   return await proceedToNext0004Handler(request);
+});
+
+exports.proceedToNext0005 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await proceedToNext0005Handler(request);
 });
 
 exports.cleanupAnonymousUsers = cleanupAnonymousUsers;
