@@ -285,16 +285,20 @@ class _NoForeignWordPlayingPageState
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '"カタカナ語を使わずに"お題を説明してください。',
-                            style: AppTextStyles.body,
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(height: AppSpacing.medium),
-                          Text(
+                            '"カタカナ語を使わずに"お題を説明してください。'
+                            '\n'
+                            '\n'
+                            '\n'
                             'お題を当てられたらそのプレイヤーを選んで「正解！」を押してください。正解者がいない場合や説明にカタカナ語を使ってしまった場合は「スキップ」を押してください。',
                             style: AppTextStyles.body,
                             textAlign: TextAlign.center,
                           ),
+                          // SizedBox(height: AppSpacing.medium),
+                          // Text(
+                          //   'お題を当てられたらそのプレイヤーを選んで「正解！」を押してください。正解者がいない場合や説明にカタカナ語を使ってしまった場合は「スキップ」を押してください。',
+                          //   style: AppTextStyles.body,
+                          //   textAlign: TextAlign.center,
+                          // ),
                         ],
                       ),
                     ),
