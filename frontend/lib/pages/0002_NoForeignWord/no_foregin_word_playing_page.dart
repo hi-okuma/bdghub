@@ -293,12 +293,6 @@ class _NoForeignWordPlayingPageState
                             style: AppTextStyles.body,
                             textAlign: TextAlign.center,
                           ),
-                          // SizedBox(height: AppSpacing.medium),
-                          // Text(
-                          //   'お題を当てられたらそのプレイヤーを選んで「正解！」を押してください。正解者がいない場合や説明にカタカナ語を使ってしまった場合は「スキップ」を押してください。',
-                          //   style: AppTextStyles.body,
-                          //   textAlign: TextAlign.center,
-                          // ),
                         ],
                       ),
                     ),
