@@ -6,17 +6,29 @@ const {db} = require("../../../config/firebase");
  * @return {Promise<Object>} currentGameデータ
  */
 async function createCurrentGame(players) {
-  const gameData = await initializeGameData();
+  const {logger} = require("firebase-functions");
 
-  return {
-    currentQuestionNumber: gameData.currentQuestionNumber,
-    currentImages: gameData.currentImages,
-    answerImageIndex: gameData.answerImageIndex,
-    topicsAndHints: gameData.topicsAndHints,
-    selectedIndex: null,
-    usedCharacters: gameData.usedCharacters,
-    point: 0,
-  };
+  try {
+    logger.info("0005 createCurrentGame開始", {players});
+    const gameData = await initializeGameData();
+    logger.info("0005 initializeGameData完了", {gameData});
+
+    return {
+      currentQuestionNumber: gameData.currentQuestionNumber,
+      currentImages: gameData.currentImages,
+      answerImageIndex: gameData.answerImageIndex,
+      topicsAndHints: gameData.topicsAndHints,
+      selectedIndex: null,
+      usedCharacters: gameData.usedCharacters,
+      point: 0,
+    };
+  } catch (error) {
+    logger.error("0005 createCurrentGameエラー", {
+      error: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
 }
 
 /**
