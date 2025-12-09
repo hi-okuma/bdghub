@@ -127,6 +127,19 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     final nickname = userState.nickname ?? '';
     final roomId = userState.roomId ?? '';
 
+    // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
+    // 無理に描画せず、ローディングや空のコンテナを返してエラーを防ぐ
+    if (currentGame.gameId == null ||
+        currentGame.gameData == null ||
+        currentGame.gameData!.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(), // または SizedBox() でもOK
+        ),
+      );
+    }
+
     // ★ ゲーム状態監視の継続 ★
     if (roomId.isNotEmpty) {
       final gameStateAsync = ref.watch(roomGameStateProvider(roomId));
@@ -154,15 +167,24 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     String gameDescription(String gameId) {
       switch (gameId) {
         case '0001':
-          return 'いつものおしゃべりが、スリリングなゲームに！\nプレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
+          return 'いつものおしゃべりが、スリリングなゲームに！\n'
+              'プレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
         case '0002':
-          return currentGame.overview!;
+          return 'カタカナ語のお題を、カタカナ語を使わずに説明して、\n'
+              'みんなに当ててもらうゲーム';
         case '0003':
-          return currentGame.overview!;
+          return currentGame.overview ?? '';
         case '0004':
-          return 'AIが作り出した実在しない人物の見かけから、\nプレイヤーが想像して書いたプロフィールを見て、\nお題の人物を推理する新感覚ゲーム';
+          return 'AIが作り出した実在しない人物の見かけから、\n'
+              'プレイヤーが想像して書いたプロフィールを見て、\n'
+              'お題の人物を推理する新感覚ゲーム';
+        case '0005':
+          return 'AIが作り出した実在しない人物の見かけから、\n'
+              '偏見まがいのヒントを参考に\n'
+              'お題の人物を推理する新感覚ゲーム';
         default:
-          return 'いつものおしゃべりが、スリリングなゲームに！\nプレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
+          return 'いつものおしゃべりが、スリリングなゲームに！\n'
+              'プレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
       }
     }
 
@@ -297,10 +319,6 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
 
                                   try {
                                     await _updateReadyStatus(); // ★API呼び出し
-                                    setState(() {
-                                      _isPreparationCompleted =
-                                          true; // ★成功時のみtrue
-                                    });
                                   } catch (e) {
                                     // エラー時は_isPreparationCompletedはfalseのまま
                                   } finally {
@@ -345,6 +363,9 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       await ApiService.setReady(context, roomId, uid, gameId);
 
       Logger.log('準備完了状態の更新成功');
+      setState(() {
+        _isPreparationCompleted = true; // ★成功時のみtrue
+      });
 
       // 成功時のフィードバック（オプション）
       if (mounted) {
@@ -357,12 +378,12 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       // gameStatus が 'waiting' → 'playing' に自動更新され、
       // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
-      Logger.log('準備完了状態の更新エラー: $e');
-
       // ★ エラー時の状態復旧
       setState(() {
         _isPreparationCompleted = false;
       });
+
+      Logger.log('準備完了状態の更新エラー: $e');
 
       // エラーダイアログはErrorHandlerで表示されるため、ここではスナックバーは不要
     }
