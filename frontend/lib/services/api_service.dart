@@ -226,4 +226,21 @@ class ApiService {
       handleError: handleError,
     );
   }
+
+  static Future<dynamic> proceedToNext0005(
+    BuildContext context,
+    String roomId,
+    String isCorrect, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'proceedToNext0005',
+      context,
+      {
+        'roomId': roomId,
+        'isCorrect': isCorrect,
+      },
+      handleError: handleError,
+    );
+  }
 }

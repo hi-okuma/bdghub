@@ -1,3 +1,4 @@
+import 'package:bodogehub/services/navigation_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
@@ -302,32 +303,39 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedLoadingButton(
-                          text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
-                          isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
-                          onPressed: _isPreparationCompleted || _isUpdatingReady
-                              ? null // ★準備完了済みまたは通信中は押せない
-                              : () async {
-                                  final currentGame =
-                                      ref.read(currentGameProvider);
-                                  final gameId = currentGame.gameId;
-                                  ref
-                                      .read(analyticsServiceProvider)
-                                      .logClick(button: '${gameId}_game_ready');
-                                  setState(() {
-                                    _isUpdatingReady = true; // ★通信開始
-                                  });
-
-                                  try {
-                                    await _updateReadyStatus(); // ★API呼び出し
-                                  } catch (e) {
-                                    // エラー時は_isPreparationCompletedはfalseのまま
-                                  } finally {
+                            text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
+                            isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
+                            onPressed: _isPreparationCompleted ||
+                                    _isUpdatingReady
+                                ? null // ★準備完了済みまたは通信中は押せない
+                                : () async {
+                                    final currentGame =
+                                        ref.read(currentGameProvider);
+                                    final gameId = currentGame.gameId;
+                                    ref.read(analyticsServiceProvider).logClick(
+                                        button: '${gameId}_game_ready');
                                     setState(() {
-                                      _isUpdatingReady = false; // ★通信終了
+                                      _isUpdatingReady = true; // ★通信開始
                                     });
-                                  }
-                                },
-                        ),
+
+                                    switch (gameId) {
+                                      case '0005':
+                                        ref
+                                            .read(navigationServiceProvider)
+                                            .navigateToSoloBiasProfileSelectPicturePage();
+                                        break;
+                                      default:
+                                        try {
+                                          await _updateReadyStatus(); // ★API呼び出し
+                                        } catch (e) {
+                                          // エラー時は_isPreparationCompletedはfalseのまま
+                                        } finally {
+                                          setState(() {
+                                            _isUpdatingReady = false; // ★通信終了
+                                          });
+                                        }
+                                    }
+                                  }),
                       ),
                     ],
                   ),

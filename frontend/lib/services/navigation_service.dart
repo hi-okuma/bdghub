@@ -3,6 +3,8 @@ import 'package:bodogehub/Pages/0002_NoForeignWord/no_foregin_word_playing_page.
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
+import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_check_answer_page.dart';
+import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_select_picture_page.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -200,6 +202,27 @@ class NavigationService {
     _navigator!.pushReplacement(
       MaterialPageRoute(
         builder: (context) => const BiasProfileCheckAnswerPage(),
+      ),
+    );
+  }
+
+  void navigateToSoloBiasProfileSelectPicturePage() {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SoloBiasProfileSelectPicturePage(),
+      ),
+    );
+  }
+
+  void navigateToSoloBiasProfileCheckAnswerPage(int selectedImageIndex) {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => SoloBiasProfileCheckAnswerPage(
+            selectedImageIndex: selectedImageIndex),
       ),
     );
   }
