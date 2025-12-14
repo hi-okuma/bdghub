@@ -140,6 +140,44 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
       if (!mounted) return;
 
+      // ★追加: GameIDによる分岐
+      if (gameId == '0005') {
+        Logger.log('🔍 SoloBiasProfileの復帰処理を実行');
+
+        final userState = ref.read(userProvider);
+
+        // 1. まず gamePhase が ended (結果画面) かどうかを確認
+        if (userState.gamePhase == GamePhase.ended) {
+          Logger.log('🎮 復帰: GamePhase.ended -> 結果画面へ');
+          // 結果画面への遷移（ResultPageへ）
+          // ※結果画面に必要なデータがあれば引数で渡すか、ResultPage内で再取得する
+          ref
+              .read(navigationServiceProvider)
+              .navigateToSoloBiasProfileResultPage();
+
+          // 状態監視を開始して終了
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(roomGameStateProvider(roomId));
+          });
+          return;
+        }
+
+        // 2. endedでなければ、localGameData (選択状態) を確認
+        // UserProviderからローカルデータを取得
+        final localData = ref.read(userProvider).localGameData;
+
+        // 専用の復帰メソッドを呼び出し
+        ref
+            .read(navigationServiceProvider)
+            .navigateToSoloBiasProfileRestore(localData);
+
+        // 状態監視を開始して終了
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(roomGameStateProvider(roomId));
+        });
+        return;
+      }
+
       // 保存されたgamePhaseを使用して正確な画面に遷移
       final navigationService = ref.read(navigationServiceProvider);
 

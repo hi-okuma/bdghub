@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
+import 'package:bodogehub/models/game_enums.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/analytics_provider.dart';
@@ -115,6 +116,24 @@ class _SoloBiasProfileResultPageState
 
     final int point = gameData?['point'];
 
+    // 「もう一度遊ぶ」ボタンの処理例
+    void _onReplayGame() async {
+      final userNotifier = ref.read(userProvider.notifier);
+
+      // 1. ローカルの一時データをクリア（画像の選択状態などを消す）
+      await userNotifier.clearLocalGameData();
+
+      // 2. フェーズを started (または initial) に戻す
+      // これを忘れると、リロードした瞬間にまた結果画面に飛んでしまいます
+      userNotifier.updateGamePhase(GamePhase.started);
+
+      // 3. 写真選択画面へ遷移
+      if (!mounted) return;
+      ref
+          .read(navigationServiceProvider)
+          .navigateToSoloBiasProfileSelectPicturePage();
+    }
+
     return PopScope(
         canPop: false,
         child: Scaffold(
@@ -184,11 +203,7 @@ class _SoloBiasProfileResultPageState
                                   .read(analyticsServiceProvider)
                                   .logClick(button: '${gameId}_game_replay');
 
-                              if (!context.mounted) return;
-
-                              ref
-                                  .read(navigationServiceProvider)
-                                  .navigateToSoloBiasProfileSelectPicturePage();
+                              _onReplayGame();
                             },
                             child: const Text('もう一度遊ぶ'),
                           ),

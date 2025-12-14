@@ -10,6 +10,7 @@ import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
+import 'package:bodogehub/models/game_enums.dart';
 
 class SoloBiasProfileCheckAnswerPage extends ConsumerStatefulWidget {
   final int selectedImageIndex;
@@ -363,7 +364,19 @@ class _BiasProfileCheckAnswerPageState
                                     context, roomId, isCorrect);
                                 Logger.log('プレイヤー${currentUser.uid} 準備完了');
 
+                                await ref
+                                    .read(userProvider.notifier)
+                                    .clearLocalGameData(); //　ローカルゲームデータを削除
+
                                 if (currentQuestionNumber == 5) {
+                                  // ★ GamePhaseを ended に更新（これでリロードしても結果画面に戻るようになる）
+                                  // ローカルストレージにも自動保存されます
+                                  ref
+                                      .read(userProvider.notifier)
+                                      .updateGamePhase(GamePhase.ended);
+
+                                  if (!mounted) return;
+
                                   ref
                                       .read(navigationServiceProvider)
                                       .navigateToSoloBiasProfileResultPage();
