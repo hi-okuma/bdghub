@@ -128,6 +128,9 @@ class _SoloBiasProfileSelectPicturePageState
     // 画像情報を取得
     final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
 
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+
     void _showTopicDialog(String topic, String hint) {
       showDialog(
         context: context,
@@ -173,15 +176,38 @@ class _SoloBiasProfileSelectPicturePageState
         body: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            const Center(
+            Center(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(
-                    '偏見ヒントをもとに\n'
-                    '5枚の画像の中から正解の人物を当てよう',
-                    style: AppTextStyles.body,
-                    textAlign: TextAlign.center,
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.medium),
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.medium),
+                            child: Text(
+                              '$currentQuestionNumber / 5 問目',
+                              style: AppTextStyles.subtitle2
+                                  .copyWith(color: AppTheme.secondaryTextColor),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.large),
+                            child: Text(
+                              '偏見ヒントをもとに\n'
+                              '5枚の画像の中から正解の人物を当てよう',
+                              style: AppTextStyles.body,
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        ]),
                   )
                 ],
               ),

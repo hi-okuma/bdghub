@@ -230,7 +230,7 @@ class ApiService {
   static Future<dynamic> proceedToNext0005(
     BuildContext context,
     String roomId,
-    String isCorrect, {
+    bool isCorrect, {
     bool handleError = true,
   }) async {
     return _callFunction(
