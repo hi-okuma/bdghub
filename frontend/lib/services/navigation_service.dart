@@ -4,6 +4,7 @@ import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.da
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_check_answer_page.dart';
+import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_result_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_select_picture_page.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
@@ -223,6 +224,16 @@ class NavigationService {
       MaterialPageRoute(
         builder: (context) => SoloBiasProfileCheckAnswerPage(
             selectedImageIndex: selectedImageIndex),
+      ),
+    );
+  }
+
+  void navigateToSoloBiasProfileResultPage() {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SoloBiasProfileResultPage(),
       ),
     );
   }

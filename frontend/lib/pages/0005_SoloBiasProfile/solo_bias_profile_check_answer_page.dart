@@ -28,7 +28,6 @@ class _BiasProfileCheckAnswerPageState
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   int? parentSelectedIndex;
   bool isLoading = false;
-  // bool hasProceeded = false;
   int _answerImageReloadTrigger = 0;
   int _selectedImageReloadTrigger = 0;
 
@@ -123,7 +122,6 @@ class _BiasProfileCheckAnswerPageState
     // 画像情報を取得
     final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
     final answerImageIndex = gameData?['answerImageIndex'] as int? ?? 0;
-
     final isCorrect = answerImageIndex == widget.selectedImageIndex;
 
     // 表示する画像のURLを動的に決定する
@@ -156,18 +154,38 @@ class _BiasProfileCheckAnswerPageState
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [
-            // 上部のコンテンツ
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
-              child: isCorrect
-                  ? const Text(
-                      '正解！',
-                      style: AppTextStyles.h5,
-                    )
-                  : const Text(
-                      '不正解...',
-                      style: AppTextStyles.h5,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.medium),
+                    child: Text(
+                      '$currentQuestionNumber / 5 問目',
+                      style: AppTextStyles.subtitle2
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                      textAlign: TextAlign.center,
                     ),
+                  ),
+                  // 上部のコンテンツ
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.large),
+                    child: isCorrect
+                        ? const Text(
+                            '正解！',
+                            style: AppTextStyles.h5,
+                          )
+                        : const Text(
+                            '不正解...',
+                            style: AppTextStyles.h5,
+                          ),
+                  ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
@@ -319,9 +337,7 @@ class _BiasProfileCheckAnswerPageState
                 ],
               ),
             ),
-
             const Spacer(),
-
             Padding(
               padding: const EdgeInsets.all(AppSpacing.large),
               child: Row(
@@ -343,23 +359,14 @@ class _BiasProfileCheckAnswerPageState
 
                               // API呼び出しのエラーハンドリング追加
                               try {
-                                await ApiService.proceedToNext0005(context,
-                                    roomId, isCorrect ? 'true' : 'false');
+                                await ApiService.proceedToNext0005(
+                                    context, roomId, isCorrect);
                                 Logger.log('プレイヤー${currentUser.uid} 準備完了');
 
-                                // 成功時のスナックバー表示
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('準備完了！'),
-                                      backgroundColor: AppTheme.successColor,
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-
                                 if (currentQuestionNumber == 5) {
-                                  return;
+                                  ref
+                                      .read(navigationServiceProvider)
+                                      .navigateToSoloBiasProfileResultPage();
                                 } else {
                                   ref
                                       .read(navigationServiceProvider)
