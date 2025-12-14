@@ -2,6 +2,7 @@ import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 import '../models/user_state.dart'; // ★UserStateはmodelsからインポート
 import '../models/game_enums.dart';
 import '../providers/room_provider.dart';
@@ -15,8 +16,36 @@ class UserNotifier extends StateNotifier<UserState> {
   static const String _userUidKey = 'user_uid';
   static const String _isHostKey = 'is_host';
   static const String _gamePhaseKey = 'game_phase';
+  static const String _localGameDataKey = 'local_game_data'; // ★追加
 
   UserNotifier(this._ref) : super(const UserState());
+
+  // ★追加: ローカルデータを更新・保存するメソッド
+  Future<void> updateLocalGameData(Map<String, dynamic> data) async {
+    state = state.copyWith(localGameData: data);
+
+    // 現在の部屋情報がある場合のみストレージに保存
+    if (state.roomId != null && state.nickname != null && state.uid != null) {
+      await _saveToStorage(
+        roomId: state.roomId!,
+        nickname: state.nickname!,
+        uid: state.uid!,
+        isHost: state.isHost,
+        gamePhase: state.gamePhase,
+        localGameData: data, // 保存対象に追加
+      );
+    }
+    Logger.log('💾 ローカルゲームデータを更新: $data');
+  }
+
+  // ★追加: ローカルデータのみをクリアするメソッド（特定ゲーム終了時などに使用）
+  Future<void> clearLocalGameData() async {
+    state = state.copyWith(localGameData: null);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_localGameDataKey);
+    Logger.log('🗑️ ローカルゲームデータのみクリア');
+  }
 
   // localStorage操作メソッド
   Future<void> _saveToStorage({
@@ -25,6 +54,7 @@ class UserNotifier extends StateNotifier<UserState> {
     required String uid,
     required bool isHost,
     GamePhase? gamePhase, // 追加
+    Map<String, dynamic>? localGameData, // ★追加
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -37,6 +67,13 @@ class UserNotifier extends StateNotifier<UserState> {
       if (gamePhase != null) {
         await prefs.setString(_gamePhaseKey, gamePhase.name);
         Logger.log('💾 gamePhase保存: $gamePhase');
+      }
+
+      // ★追加: localGameDataの保存処理
+      if (localGameData != null) {
+        await prefs.setString(_localGameDataKey, jsonEncode(localGameData));
+      } else {
+        await prefs.remove(_localGameDataKey);
       }
 
       Logger.log('💾 ローカルストレージに保存: roomId=$roomId, nickname=$nickname');
@@ -66,13 +103,25 @@ class UserNotifier extends StateNotifier<UserState> {
         }
       }
 
+      // ★追加: localGameDataの読み込み処理
+      final localDataStr = prefs.getString(_localGameDataKey);
+      Map<String, dynamic>? localGameData;
+      if (localDataStr != null) {
+        try {
+          localGameData = jsonDecode(localDataStr) as Map<String, dynamic>;
+        } catch (e) {
+          Logger.log('⚠️ JSONデコードエラー: $e');
+        }
+      }
+
       if (roomId != null && nickname != null && uid != null) {
         return {
           'roomId': roomId,
           'nickname': nickname,
           'uid': uid,
           'isHost': isHost,
-          'gamePhase': gamePhase, // 追加
+          'gamePhase': gamePhase,
+          'localGameData': localGameData, // ★追加
         };
       }
     } catch (e) {
@@ -88,7 +137,8 @@ class UserNotifier extends StateNotifier<UserState> {
       await prefs.remove(_userNicknameKey);
       await prefs.remove(_userUidKey);
       await prefs.remove(_isHostKey);
-      await prefs.remove(_gamePhaseKey); // 追加
+      await prefs.remove(_gamePhaseKey);
+      await prefs.remove(_localGameDataKey); // ★追加: 退出時に必ず消えるようにする
       Logger.log('🗑️ ローカルストレージをクリア');
     } catch (e) {
       Logger.log('⚠️ ローカルストレージクリアエラー: $e');
@@ -219,6 +269,7 @@ class UserNotifier extends StateNotifier<UserState> {
         joinTime: DateTime.now(),
         isRestoring: true,
         gamePhase: data['gamePhase'] ?? GamePhase.initial, // 追加
+        localGameData: data['localGameData'],
       );
 
       Logger.log(

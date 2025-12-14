@@ -158,6 +158,19 @@ class _SoloBiasProfileSelectPicturePageState
       );
     }
 
+    void _onPictureSelected(int index) async {
+      // 1. ローカルデータに選択状態を保存
+      await ref.read(userProvider.notifier).updateLocalGameData({
+        'selectedIndex': index,
+      });
+
+      // 2. 次の画面へ遷移
+      if (!mounted) return;
+      ref
+          .read(navigationServiceProvider)
+          .navigateToSoloBiasProfileCheckAnswerPage(_selectedImageIndex);
+    }
+
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -389,13 +402,7 @@ class _SoloBiasProfileSelectPicturePageState
                         ref
                             .read(analyticsServiceProvider)
                             .logClick(button: '0005_determine_answer');
-
-                        if (!context.mounted) return;
-
-                        ref
-                            .read(navigationServiceProvider)
-                            .navigateToSoloBiasProfileCheckAnswerPage(
-                                _selectedImageIndex);
+                        _onPictureSelected(_selectedImageIndex);
                       },
                       child: const Text('この人物に決定する'),
                     ),

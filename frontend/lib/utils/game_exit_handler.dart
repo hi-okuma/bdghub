@@ -116,6 +116,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                 final roomId = currentUser.roomId;
 
                 if (roomId != null) {
+                  await ref.read(userProvider.notifier).clearLocalGameData();
                   await exitGame(roomId);
                 }
               },
