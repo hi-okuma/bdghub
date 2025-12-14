@@ -158,7 +158,7 @@ class _BiasProfileCheckAnswerPageState
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
