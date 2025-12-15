@@ -156,37 +156,25 @@ class _BiasProfileCheckAnswerPageState
         body: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.medium),
-                    child: Text(
-                      '$currentQuestionNumber / 5 問目',
-                      style: AppTextStyles.subtitle2
-                          .copyWith(color: AppTheme.secondaryTextColor),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  // 上部のコンテンツ
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.large),
-                    child: isCorrect
-                        ? const Text(
-                            '正解！',
-                            style: AppTextStyles.h5,
-                          )
-                        : const Text(
-                            '不正解...',
-                            style: AppTextStyles.h5,
-                          ),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
+              child: Text(
+                '$currentQuestionNumber / 5 問目',
+                style: AppTextStyles.subtitle2,
+                textAlign: TextAlign.center,
               ),
+            ),
+            // 上部のコンテンツ
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
+              child: isCorrect
+                  ? const Text(
+                      '正解！',
+                      style: AppTextStyles.h5,
+                    )
+                  : const Text(
+                      '不正解...',
+                      style: AppTextStyles.h5,
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.large),
@@ -270,7 +258,7 @@ class _BiasProfileCheckAnswerPageState
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        '親が選んだ人物',
+                        'あなたが選んだ人物',
                         style: AppTextStyles.body
                             .copyWith(color: AppTheme.secondaryTextColor),
                       ),

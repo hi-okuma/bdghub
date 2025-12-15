@@ -123,7 +123,7 @@ class _SoloBiasProfileResultPageState
       // 1. ローカルの一時データをクリア（画像の選択状態などを消す）
       await userNotifier.clearLocalGameData();
 
-      // 2. フェーズを started (または initial) に戻す
+      // 2. フェーズを started に戻す
       // これを忘れると、リロードした瞬間にまた結果画面に飛んでしまいます
       userNotifier.updateGamePhase(GamePhase.started);
 
