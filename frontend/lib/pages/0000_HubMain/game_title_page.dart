@@ -320,6 +320,11 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
 
                                     switch (gameId) {
                                       case '0005':
+                                        //　GamePhaseをstartedに変更
+                                        ref
+                                            .read(userProvider.notifier)
+                                            .updateGamePhase(GamePhase.started);
+                                        // 画像選択画面へ遷移
                                         ref
                                             .read(navigationServiceProvider)
                                             .navigateToSoloBiasProfileSelectPicturePage();

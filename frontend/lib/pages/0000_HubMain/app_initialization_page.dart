@@ -1,3 +1,4 @@
+import 'package:bodogehub/models/user_state.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -146,7 +147,7 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
         final userState = ref.read(userProvider);
 
-        // 1. まず gamePhase が ended (結果画面) かどうかを確認
+        // 1. gamePhase が ended (結果画面) かどうかを確認
         if (userState.gamePhase == GamePhase.ended) {
           Logger.log('🎮 復帰: GamePhase.ended -> 結果画面へ');
           // 結果画面への遷移（ResultPageへ）
@@ -162,14 +163,28 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
           return;
         }
 
-        // 2. endedでなければ、localGameData (選択状態) を確認
-        // UserProviderからローカルデータを取得
-        final localData = ref.read(userProvider).localGameData;
+        // 2. gamePhase が started (ゲーム開始済み) かどうかを確認
+        if (userState.gamePhase == GamePhase.started) {
+          Logger.log('🎮 復帰: GamePhase.started -> ゲーム中の画面へ');
+          // started であれば、localGameData (選択状態) を確認
+          // UserProviderからローカルデータを取得
+          final localData = ref.read(userProvider).localGameData;
 
-        // 専用の復帰メソッドを呼び出し
-        ref
-            .read(navigationServiceProvider)
-            .navigateToSoloBiasProfileRestore(localData);
+          // 専用の復帰メソッドを呼び出し
+          ref
+              .read(navigationServiceProvider)
+              .navigateToSoloBiasProfileRestore(localData);
+
+          // 状態監視を開始して終了
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(roomGameStateProvider(roomId));
+          });
+          return;
+        }
+
+        Logger.log('🎮 復帰: ゲームタイトル画面へ');
+
+        ref.read(navigationServiceProvider).navigateToGameTitle();
 
         // 状態監視を開始して終了
         WidgetsBinding.instance.addPostFrameCallback((_) {

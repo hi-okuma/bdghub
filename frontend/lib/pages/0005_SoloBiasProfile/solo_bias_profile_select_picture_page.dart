@@ -1,5 +1,6 @@
 import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
+import 'package:bodogehub/utils/image_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,15 +27,37 @@ class _SoloBiasProfileSelectPicturePageState
   String? _errorMessage;
   int _selectedImageIndex = 0;
   int _imageReloadTrigger = 0;
-
   late final ScrollController _scrollController;
-
+  Future<void>? _precacheFuture;
   final pageTitle = '/0005/solo_bias_profile_select_picture_page';
 
   @override
   void initState() {
     super.initState();
     _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+
+    // 画像データを取得（この時点ではcontextが使えないのでreadを使用）
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
+
+    // フレーム描画後にプリキャッシュを開始
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ウィジェットがまだマウントされているか確認
+      if (!mounted) return;
+
+      setState(() {
+        // プリキャッシュ処理を開始し、Futureを保持
+        _precacheFuture =
+            precacheImages(context, currentImages).catchError((error) {
+          // プリキャッシュ全体が失敗した場合のフォールバック
+          Logger.log('⚠️ プリキャッシュ処理でエラー: $error');
+          // 画像はImage.networkのloadingBuilderで個別にハンドリングされるため
+          // ここでは特別な処理は不要
+        });
+      });
+    });
+
     _scrollController = ScrollController();
   }
 
@@ -195,32 +218,21 @@ class _SoloBiasProfileSelectPicturePageState
                 children: [
                   Padding(
                     padding:
-                        const EdgeInsets.symmetric(vertical: AppSpacing.medium),
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.medium),
-                            child: Text(
-                              '$currentQuestionNumber / 5 問目',
-                              style: AppTextStyles.subtitle2
-                                  .copyWith(color: AppTheme.secondaryTextColor),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.large),
-                            child: Text(
-                              '偏見ヒントをもとに\n'
-                              '5枚の画像の中から正解の人物を当てよう',
-                              style: AppTextStyles.body,
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        ]),
+                        const EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
+                    child: Text(
+                      '$currentQuestionNumber / 5 問目',
+                      style: AppTextStyles.subtitle2,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
+                    child: Text(
+                      '偏見ヒントをもとに\n'
+                      '5枚の画像の中から正解の人物を当てよう',
+                      style: AppTextStyles.body,
+                      textAlign: TextAlign.center,
+                    ),
                   )
                 ],
               ),

@@ -445,7 +445,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         // これにより、復帰後にFirestoreが更新されても重複遷移を防ぐ
         _setNavigationFlagsForCurrentStatus(gameStatus);
         Logger.log('🔍 復帰時のナビゲーションフラグ設定完了: $gameStatus');
-        
+
         // ★追加: 復帰処理が完了したことをUserProviderに通知
         // これにより、固定時間ではなくイベント駆動で復帰モードを解除できる
         _completeRestoration();
@@ -636,6 +636,18 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       case GameStatus.waiting:
         Logger.log(
             '🎮 Waiting status detected - current phase: $_currentGamePhase');
+
+        // ★追加: GameIDを取得
+        final activeGameId = ref.read(currentGameProvider).gameId;
+
+        // ★追加: GameID '0005' の場合の特例処理
+        // '0005' はクライアント側で独自にPhase管理（結果画面への遷移など）を行っているため、
+        // サーバー側のwaiting検知による「汎用結果画面への自動遷移」と「endedへの更新」をスキップする。
+        if (activeGameId == '0005') {
+          Logger.log('🎮 Game 0005: waiting検知による自動ended遷移をスキップします');
+          // ここで break することで、下部の処理（endedへの更新など）を実行せずに抜ける
+          break;
+        }
 
         if (_currentGamePhase == GamePhase.started) {
           Logger.log('🎮 Game ended - navigating to result page');
