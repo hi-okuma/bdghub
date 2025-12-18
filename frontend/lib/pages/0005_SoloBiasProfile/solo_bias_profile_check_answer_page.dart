@@ -36,11 +36,30 @@ class _BiasProfileCheckAnswerPageState
 
   final pageTitle = '/0005/solo_bias_profile_check_answer_page';
 
+  // ★ 追加: このページで表示するデータを固定するための変数
+  late final Map<String, dynamic> _fixedGameData;
+  late final String _gameTitle;
+  late final int _answerImageIndex;
+  late final List<dynamic> _currentImages;
+  late final int _currentQuestionNumber;
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+
+    // ★ 修正: initState内でデータを一度だけ読み込み（read）、固定します。
+    // これにより、API呼び出し後にProviderが更新されても、このページは古い（正しい）結果を表示し続けます。
+    final currentGame = ref.read(currentGameProvider);
+    _fixedGameData = Map.from(currentGame.gameData ?? {});
+
+    // 安全にデータを取り出しておく
+    _gameTitle = _fixedGameData['title'] as String? ?? '';
+    _currentImages = _fixedGameData['currentImages'] as List<dynamic>? ?? [];
+    _answerImageIndex = _fixedGameData['answerImageIndex'] as int? ?? 0;
+    _currentQuestionNumber =
+        _fixedGameData['currentQuestionNumber'] as int? ?? 0;
   }
 
   @override
@@ -85,16 +104,16 @@ class _BiasProfileCheckAnswerPageState
   Widget build(BuildContext context) {
     // プロバイダーからデータを取得
     final currentUser = ref.watch(userProvider);
-    final currentGame = ref.watch(currentGameProvider);
     final isHost = ref.watch(isHostProvider);
 
     // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
     // 無理に描画せず、ローディングや空のコンテナを返してエラーを防ぐ
-    if (currentGame.gameData == null || currentGame.gameData!.isEmpty) {
+    // ★ データチェックも初期化時のデータを使用
+    if (_fixedGameData.isEmpty) {
       return const Scaffold(
         backgroundColor: AppTheme.backgroundColor,
         body: Center(
-          child: CircularProgressIndicator(), // または SizedBox() でもOK
+          child: CircularProgressIndicator(),
         ),
       );
     }
@@ -116,33 +135,23 @@ class _BiasProfileCheckAnswerPageState
       );
     }
 
-    // 必要な情報を直接取得
-    final gameData = currentGame.gameData;
-    final gameTitle = gameData?['title'] as String;
-
-    // 画像情報を取得
-    final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
-    final answerImageIndex = gameData?['answerImageIndex'] as int? ?? 0;
-    final isCorrect = answerImageIndex == widget.selectedImageIndex;
+    // ★ 修正: ローカル変数を使用
+    final isCorrect = _answerImageIndex == widget.selectedImageIndex;
 
     // 表示する画像のURLを動的に決定する
-    // _imageReloadTrigger が 0 のときは元のURL、1以上のときはパラメータを付与
     final answerImageUrlToShow = _answerImageReloadTrigger > 0
-        ? '${currentImages[answerImageIndex]}&reload=$_answerImageReloadTrigger'
-        : currentImages[answerImageIndex];
+        ? '${_currentImages[_answerImageIndex]}&reload=$_answerImageReloadTrigger'
+        : _currentImages[_answerImageIndex];
 
     final selectedImageUrlToShow = _selectedImageReloadTrigger > 0
-        ? '${currentImages[widget.selectedImageIndex]}&reload=$_selectedImageReloadTrigger'
-        : currentImages[widget.selectedImageIndex];
-
-    final currentQuestionNumber =
-        gameData?['currentQuestionNumber'] as int? ?? 0;
+        ? '${_currentImages[widget.selectedImageIndex]}&reload=$_selectedImageReloadTrigger'
+        : _currentImages[widget.selectedImageIndex];
 
     return PopScope(
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
+          gameTitle: _gameTitle,
           isHost: isHost,
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
@@ -158,7 +167,7 @@ class _BiasProfileCheckAnswerPageState
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
               child: Text(
-                '$currentQuestionNumber / 5 問目',
+                '$_currentQuestionNumber / 5 問目',
                 style: AppTextStyles.subtitle2,
                 textAlign: TextAlign.center,
               ),
@@ -356,15 +365,13 @@ class _BiasProfileCheckAnswerPageState
                                     .read(userProvider.notifier)
                                     .clearLocalGameData(); //　ローカルゲームデータを削除
 
-                                if (currentQuestionNumber == 5) {
+                                if (_currentQuestionNumber == 5) {
                                   // ★ GamePhaseを ended に更新（これでリロードしても結果画面に戻るようになる）
                                   // ローカルストレージにも自動保存されます
                                   ref
                                       .read(userProvider.notifier)
                                       .updateGamePhase(GamePhase.ended);
-
                                   if (!mounted) return;
-
                                   ref
                                       .read(navigationServiceProvider)
                                       .navigateToSoloBiasProfileResultPage();
