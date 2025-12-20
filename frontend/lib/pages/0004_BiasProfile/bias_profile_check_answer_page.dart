@@ -102,6 +102,7 @@ class _BiasProfileCheckAnswerPageState
       );
     }
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -292,7 +293,7 @@ class _BiasProfileCheckAnswerPageState
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
               button: 'game_quit',
-              additionalParams: {'page_title': pageTitle},
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
             );
             showExitGameDialog();
           },

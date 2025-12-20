@@ -153,6 +153,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
     final gameData = currentGame.gameData;
     final gameTitle = gameData?['title'] as String;
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -240,7 +241,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
               button: 'game_quit',
-              additionalParams: {'page_title': pageTitle},
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
             );
             showExitGameDialog();
           },

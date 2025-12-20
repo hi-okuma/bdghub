@@ -1,4 +1,3 @@
-import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -104,6 +103,7 @@ class _BiasProfileParentTurnPageState
       );
     }
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -224,7 +224,7 @@ class _BiasProfileParentTurnPageState
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
               button: 'game_quit',
-              additionalParams: {'page_title': pageTitle},
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
             );
             showExitGameDialog();
           },

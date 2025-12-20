@@ -1,4 +1,3 @@
-import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:bodogehub/utils/image_utils.dart';
 import 'package:flutter/material.dart';
@@ -80,13 +79,25 @@ class _SoloBiasProfileSelectPicturePageState
   @override
   void didPush() {
     super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -120,6 +131,7 @@ class _SoloBiasProfileSelectPicturePageState
       );
     }
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -203,7 +215,7 @@ class _SoloBiasProfileSelectPicturePageState
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
               button: 'game_quit',
-              additionalParams: {'page_title': pageTitle},
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
             );
             showExitGameDialog();
           },
