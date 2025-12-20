@@ -1,4 +1,3 @@
-import 'package:bodogehub/services/analytics_service.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -26,7 +25,7 @@ class _SoloBiasProfileResultPageState
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   String? _errorMessage;
 
-  final pageTitle = '/0005/solo_bias_profile_result_picture_page';
+  final pageTitle = '/game_result_page';
 
   @override
   void initState() {
@@ -52,13 +51,19 @@ class _SoloBiasProfileResultPageState
   @override
   void didPush() {
     super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -79,7 +84,6 @@ class _SoloBiasProfileResultPageState
     // プロバイダーからデータを取得
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
-    final gameId = currentGame.gameId;
     final isHost = ref.watch(isHostProvider);
 
     // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
@@ -93,6 +97,7 @@ class _SoloBiasProfileResultPageState
       );
     }
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -143,7 +148,7 @@ class _SoloBiasProfileResultPageState
             onExitPressed: () {
               ref.read(analyticsServiceProvider).logClick(
                 button: 'game_quit',
-                additionalParams: {'page_title': pageTitle},
+                additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
               );
               showExitGameDialog();
             },

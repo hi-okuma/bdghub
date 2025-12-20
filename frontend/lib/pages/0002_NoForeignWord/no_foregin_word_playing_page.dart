@@ -88,6 +88,8 @@ class _NoForeignWordPlayingPageState
       isCorrectButtonLoading = true;
     });
 
+    ref.read(analyticsServiceProvider).logClick(button: '0002_correct');
+
     try {
       // result: true, answerUid: 選択されたUID
       await ApiService.reportResult0002(
@@ -114,6 +116,8 @@ class _NoForeignWordPlayingPageState
     setState(() {
       isSkipButtonLoading = true;
     });
+
+    ref.read(analyticsServiceProvider).logClick(button: '0002_skip');
 
     try {
       // result: false, answerUid: 空文字（APIの仕様上必須のため）
@@ -156,6 +160,7 @@ class _NoForeignWordPlayingPageState
     final gameData = currentGame.gameData;
     final gameTitle = gameData?['title'] as String;
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 現在の出題者情報を取得
@@ -232,7 +237,7 @@ class _NoForeignWordPlayingPageState
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
               button: 'game_quit',
-              additionalParams: {'page_title': pageTitle},
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
             );
             showExitGameDialog();
           },

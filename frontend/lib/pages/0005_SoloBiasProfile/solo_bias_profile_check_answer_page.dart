@@ -81,13 +81,25 @@ class _BiasProfileCheckAnswerPageState
   @override
   void didPush() {
     super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -118,6 +130,7 @@ class _BiasProfileCheckAnswerPageState
       );
     }
 
+    final gameId = ref.read(currentGameProvider).gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -156,7 +169,7 @@ class _BiasProfileCheckAnswerPageState
           onExitPressed: () {
             ref.read(analyticsServiceProvider).logClick(
               button: 'game_quit',
-              additionalParams: {'page_title': pageTitle},
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
             );
             showExitGameDialog();
           },

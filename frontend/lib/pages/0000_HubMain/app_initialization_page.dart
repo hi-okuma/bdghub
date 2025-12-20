@@ -242,7 +242,7 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     if (isFromRoomURL) {
       ref.read(analyticsServiceProvider).logPageView(
           pageTitle: '/register_profile_page',
-          additionalParams: {'trigger_source': 'create_room_button'});
+          additionalParams: {'trigger_source': 'direct_room_url'});
     }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => TopPage(roomId: roomId)),
