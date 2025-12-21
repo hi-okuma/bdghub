@@ -130,14 +130,30 @@ async function deleteClosedRooms() {
       let batchCount = 0;
 
       for (const doc of snapshot.docs) {
+        // currentGameサブコレクションを取得して削除
+        const currentGameSnapshot = await doc.ref.collection("currentGame").get();
+        for (const gameDoc of currentGameSnapshot.docs) {
+          batch.delete(gameDoc.ref);
+          batchCount++;
+
+          // Firestoreのバッチ書き込み上限は500件
+          if (batchCount >= CONFIG.FIRESTORE_BATCH_LIMIT) {
+            await batch.commit();
+            logger.info(`サブコレクション削除: ${batchCount}件`);
+            batch = db.batch();
+            batchCount = 0;
+          }
+        }
+
+        // 部屋ドキュメント自体を削除
         batch.delete(doc.ref);
         batchCount++;
+        deletedCount++;
 
         // Firestoreのバッチ書き込み上限は500件
         if (batchCount >= CONFIG.FIRESTORE_BATCH_LIMIT) {
           await batch.commit();
-          deletedCount += batchCount;
-          logger.info(`closed部屋を${batchCount}件削除しました`);
+          logger.info(`closed部屋を削除しました`);
           batch = db.batch();
           batchCount = 0;
         }
@@ -146,8 +162,7 @@ async function deleteClosedRooms() {
       // 残りのバッチをコミット
       if (batchCount > 0) {
         await batch.commit();
-        deletedCount += batchCount;
-        logger.info(`closed部屋を${batchCount}件削除しました`);
+        logger.info(`closed部屋とサブコレクションを削除しました`);
       }
 
       // 次のページがあるかチェック
@@ -226,14 +241,30 @@ async function deleteInactiveRooms(cutoffDate) {
           continue;
         }
 
+        // currentGameサブコレクションを取得して削除
+        const currentGameSnapshot = await doc.ref.collection("currentGame").get();
+        for (const gameDoc of currentGameSnapshot.docs) {
+          batch.delete(gameDoc.ref);
+          batchCount++;
+
+          // Firestoreのバッチ書き込み上限は500件
+          if (batchCount >= CONFIG.FIRESTORE_BATCH_LIMIT) {
+            await batch.commit();
+            logger.info(`サブコレクション削除: ${batchCount}件`);
+            batch = db.batch();
+            batchCount = 0;
+          }
+        }
+
+        // 部屋ドキュメント自体を削除
         batch.delete(doc.ref);
         batchCount++;
+        deletedCount++;
 
         // Firestoreのバッチ書き込み上限は500件
         if (batchCount >= CONFIG.FIRESTORE_BATCH_LIMIT) {
           await batch.commit();
-          deletedCount += batchCount;
-          logger.info(`非アクティブ部屋を${batchCount}件削除しました`);
+          logger.info(`非アクティブ部屋を削除しました`);
           batch = db.batch();
           batchCount = 0;
         }
@@ -242,8 +273,7 @@ async function deleteInactiveRooms(cutoffDate) {
       // 残りのバッチをコミット
       if (batchCount > 0) {
         await batch.commit();
-        deletedCount += batchCount;
-        logger.info(`非アクティブ部屋を${batchCount}件削除しました`);
+        logger.info(`非アクティブ部屋とサブコレクションを削除しました`);
       }
 
       // 次のページがあるかチェック
