@@ -1,6 +1,8 @@
+import 'package:bodogehub/services/navigation_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '/components/app_theme.dart';
 import '/components/custom_widgets.dart';
@@ -8,6 +10,7 @@ import '/models/game_enums.dart';
 import '/providers/user_provider.dart';
 import '/providers/game_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/providers/analytics_provider.dart';
 import '/services/api_service.dart';
 
 class GameTitlePage extends ConsumerStatefulWidget {
@@ -18,17 +21,54 @@ class GameTitlePage extends ConsumerStatefulWidget {
 }
 
 class _GameTitlePageState extends ConsumerState<GameTitlePage>
-    with GameExitHandler {
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   int _currentImageIndex = 0;
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
   final PageController _pageController = PageController();
+  final pageTitle = '/game_title_page';
 
   @override
   void initState() {
     super.initState();
     _loadGameData();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final gameId = ref.read(currentGameProvider).gameId;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
   @override
@@ -70,12 +110,6 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
   }
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const PopScope(
@@ -93,6 +127,19 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     final isHost = userState.isHost;
     final nickname = userState.nickname ?? '';
     final roomId = userState.roomId ?? '';
+
+    // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
+    // 無理に描画せず、ローディングや空のコンテナを返してエラーを防ぐ
+    if (currentGame.gameId == null ||
+        currentGame.gameData == null ||
+        currentGame.gameData!.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(), // または SizedBox() でもOK
+        ),
+      );
+    }
 
     // ★ ゲーム状態監視の継続 ★
     if (roomId.isNotEmpty) {
@@ -121,15 +168,24 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
     String gameDescription(String gameId) {
       switch (gameId) {
         case '0001':
-          return 'いつものおしゃべりが、スリリングなゲームに！\nプレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
+          return 'いつものおしゃべりが、スリリングなゲームに！\n'
+              'プレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
         case '0002':
-          return currentGame.overview!;
+          return 'カタカナ語のお題を、カタカナ語を使わずに説明して、\n'
+              'みんなに当ててもらうゲーム';
         case '0003':
-          return currentGame.overview!;
+          return currentGame.overview ?? '';
         case '0004':
-          return 'AIが作り出した実在しない人物の見かけから、\nプレイヤーが想像して書いたプロフィールを見て、\nお題の人物を推理する新感覚ゲーム';
+          return 'AIが作り出した実在しない人物の見かけから、\n'
+              'プレイヤーが想像して書いたプロフィールを見て、\n'
+              'お題の人物を推理する新感覚ゲーム';
+        case '0005':
+          return 'AIが作り出した実在しない人物の見かけから、\n'
+              '偏見まがいのヒントを参考に\n'
+              'お題の人物を推理する新感覚ゲーム';
         default:
-          return 'いつものおしゃべりが、スリリングなゲームに！\nプレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
+          return 'いつものおしゃべりが、スリリングなゲームに！\n'
+              'プレイヤーそれぞれに割り当てられたNGワードを言わないようにお互いをけん制しながら、最後まで生き残ろう！';
       }
     }
 
@@ -247,30 +303,44 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedLoadingButton(
-                          text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
-                          isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
-                          onPressed: _isPreparationCompleted || _isUpdatingReady
-                              ? null // ★準備完了済みまたは通信中は押せない
-                              : () async {
-                                  setState(() {
-                                    _isUpdatingReady = true; // ★通信開始
-                                  });
+                            text: _isPreparationCompleted ? '他プレイヤー待ち' : '準備完了',
+                            isLoading: _isUpdatingReady, // ★API呼び出し中はスピナー表示
+                            onPressed: _isPreparationCompleted ||
+                                    _isUpdatingReady
+                                ? null // ★準備完了済みまたは通信中は押せない
+                                : () async {
+                                    final currentGame =
+                                        ref.read(currentGameProvider);
+                                    final gameId = currentGame.gameId;
+                                    ref.read(analyticsServiceProvider).logClick(
+                                        button: '${gameId}_game_ready');
+                                    setState(() {
+                                      _isUpdatingReady = true; // ★通信開始
+                                    });
 
-                                  try {
-                                    await _updateReadyStatus(); // ★API呼び出し
-                                    setState(() {
-                                      _isPreparationCompleted =
-                                          true; // ★成功時のみtrue
-                                    });
-                                  } catch (e) {
-                                    // エラー時は_isPreparationCompletedはfalseのまま
-                                  } finally {
-                                    setState(() {
-                                      _isUpdatingReady = false; // ★通信終了
-                                    });
-                                  }
-                                },
-                        ),
+                                    switch (gameId) {
+                                      case '0005':
+                                        //　GamePhaseをstartedに変更
+                                        ref
+                                            .read(userProvider.notifier)
+                                            .updateGamePhase(GamePhase.started);
+                                        // 画像選択画面へ遷移
+                                        ref
+                                            .read(navigationServiceProvider)
+                                            .navigateToSoloBiasProfileSelectPicturePage();
+                                        break;
+                                      default:
+                                        try {
+                                          await _updateReadyStatus(); // ★API呼び出し
+                                        } catch (e) {
+                                          // エラー時は_isPreparationCompletedはfalseのまま
+                                        } finally {
+                                          setState(() {
+                                            _isUpdatingReady = false; // ★通信終了
+                                          });
+                                        }
+                                    }
+                                  }),
                       ),
                     ],
                   ),
@@ -306,6 +376,9 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       await ApiService.setReady(context, roomId, uid, gameId);
 
       Logger.log('準備完了状態の更新成功');
+      setState(() {
+        _isPreparationCompleted = true; // ★成功時のみtrue
+      });
 
       // 成功時のフィードバック（オプション）
       if (mounted) {
@@ -318,12 +391,12 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
       // gameStatus が 'waiting' → 'playing' に自動更新され、
       // RoomGameStateNotifierが検知して自動ナビゲーション実行
     } catch (e) {
-      Logger.log('準備完了状態の更新エラー: $e');
-
       // ★ エラー時の状態復旧
       setState(() {
         _isPreparationCompleted = false;
       });
+
+      Logger.log('準備完了状態の更新エラー: $e');
 
       // エラーダイアログはErrorHandlerで表示されるため、ここではスナックバーは不要
     }

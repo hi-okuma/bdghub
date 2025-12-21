@@ -48,6 +48,7 @@ dependencies:
   url_launcher: ^6.3.2
   markdown: ^7.3.0
   flutter_html: ^3.0.0
+  firebase_analytics: ^11.6.0
 
 dev_dependencies:
   flutter_test:

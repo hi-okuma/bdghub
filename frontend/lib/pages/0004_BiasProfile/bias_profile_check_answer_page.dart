@@ -1,11 +1,13 @@
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -18,7 +20,9 @@ class BiasProfileCheckAnswerPage extends ConsumerStatefulWidget {
 }
 
 class _BiasProfileCheckAnswerPageState
-    extends ConsumerState<BiasProfileCheckAnswerPage> with GameExitHandler {
+    extends ConsumerState<BiasProfileCheckAnswerPage>
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   int? parentSelectedIndex;
   bool isLoading = false;
   bool hasProceeded = false;
@@ -27,16 +31,47 @@ class _BiasProfileCheckAnswerPageState
 
   late final ScrollController _scrollController;
 
+  final pageTitle = '/0004/bias_profile_check_answer_page';
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
   }
 
   @override
   void dispose() {
+    _routeObserver.unsubscribe(this);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle,
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    final isHost = ref.watch(isHostProvider);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle,
+        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -55,6 +90,19 @@ class _BiasProfileCheckAnswerPageState
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
     final isHost = ref.watch(isHostProvider);
+
+    // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
+    // 無理に描画せず、ローディングや空のコンテナを返してエラーを防ぐ
+    if (currentGame.gameData == null || currentGame.gameData!.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(), // または SizedBox() でもOK
+        ),
+      );
+    }
+
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -194,6 +242,10 @@ class _BiasProfileCheckAnswerPageState
                           dialogIsLoading = true;
                         });
 
+                        ref
+                            .read(analyticsServiceProvider)
+                            .logClick(button: '0004_best_hint_select');
+
                         try {
                           await ApiService.proceedToNext0004(
                             context,
@@ -236,9 +288,16 @@ class _BiasProfileCheckAnswerPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-            gameTitle: gameTitle,
-            isHost: isHost,
-            onExitPressed: showExitGameDialog),
+          gameTitle: gameTitle,
+          isHost: isHost,
+          onExitPressed: () {
+            ref.read(analyticsServiceProvider).logClick(
+              button: 'game_quit',
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
+            );
+            showExitGameDialog();
+          },
+        ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [
@@ -488,6 +547,10 @@ class _BiasProfileCheckAnswerPageState
                                 setState(() {
                                   isLoading = true;
                                 });
+
+                                ref
+                                    .read(analyticsServiceProvider)
+                                    .logClick(button: '0004_proceed_next');
 
                                 // API呼び出しのエラーハンドリング追加
                                 try {

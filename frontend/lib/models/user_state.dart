@@ -43,7 +43,8 @@ class UserState {
   final bool isConnected;
   final DateTime? joinTime;
   final bool isRestoring;
-  final GamePhase? gamePhase; // 追加
+  final GamePhase? gamePhase;
+  final Map<String, dynamic>? localGameData; // ★追加: ゲーム固有の一時データ
 
   const UserState({
     this.nickname,
@@ -53,7 +54,8 @@ class UserState {
     this.isConnected = false,
     this.joinTime,
     this.isRestoring = false,
-    this.gamePhase, // 追加
+    this.gamePhase,
+    this.localGameData, // ★追加
   });
 
   UserState copyWith({
@@ -64,7 +66,8 @@ class UserState {
     bool? isConnected,
     DateTime? joinTime,
     bool? isRestoring,
-    GamePhase? gamePhase, // 追加
+    GamePhase? gamePhase,
+    Map<String, dynamic>? localGameData, // ★追加
   }) {
     return UserState(
       nickname: nickname ?? this.nickname,
@@ -74,14 +77,15 @@ class UserState {
       isConnected: isConnected ?? this.isConnected,
       joinTime: joinTime ?? this.joinTime,
       isRestoring: isRestoring ?? this.isRestoring,
-      gamePhase: gamePhase ?? this.gamePhase, // 追加
+      gamePhase: gamePhase ?? this.gamePhase,
+      localGameData: localGameData ?? this.localGameData, // ★追加
     );
   }
 
   // デバッグ用
   @override
   String toString() {
-    return 'UserState(nickname: $nickname, roomId: $roomId, uid: $uid, isHost: $isHost, isConnected: $isConnected, isRestoring: $isRestoring, gamePhase: $gamePhase)'; // ★修正
+    return 'UserState(nickname: $nickname, roomId: $roomId, uid: $uid, isHost: $isHost, isConnected: $isConnected, isRestoring: $isRestoring, gamePhase: $gamePhase, localGameData: $localGameData)'; // ★修正
   }
 
   // 空の状態かチェック

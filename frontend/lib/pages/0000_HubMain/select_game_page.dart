@@ -2,6 +2,7 @@ import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
@@ -16,6 +17,7 @@ import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/providers/analytics_provider.dart';
 import '/services/api_service.dart';
 
 class SelectGamePage extends ConsumerStatefulWidget {
@@ -26,7 +28,8 @@ class SelectGamePage extends ConsumerStatefulWidget {
 }
 
 class _SelectGamePageState extends ConsumerState<SelectGamePage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   late TabController _tabController;
 
   List<Map<String, dynamic>> _gameList = [];
@@ -42,9 +45,12 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
 
   bool _isFromGameExit = false; // ★追加: ゲーム終了からの遷移かどうか
 
+  final pageTitle = '/select_game_page';
+
   @override
   void initState() {
     super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
     _tabController = TabController(length: _tabs.length, vsync: this);
 
     _tabController.addListener(() {
@@ -52,15 +58,27 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
         setState(() {
           switch (_tabController.index) {
             case 0:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': 'すべて'});
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
+              ref.read(analyticsServiceProvider).logClick(
+                  button: 'category_filter',
+                  additionalParams: {'category': '定番'});
               _selectedGenre = {GameGenre.popular};
               break;
             // case 2:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': 'カード'});
             //   _selectedGenre = {GameGenre.card};
             //   break;
             // case 3:
+            //   ref.read(analyticsServiceProvider).logClick(
+            //       button: 'category_filter',
+            //       additionalParams: {'category': '協力'});
             //   _selectedGenre = {GameGenre.cooperation};
             //   break;
           }
@@ -74,6 +92,36 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startGameStateMonitoringConditionally();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    // ★ 注意：dispose内ではrefを使用できません ★
+    // ゲーム状態監視の停止は UserNotifier.leaveRoom() で行われます
+    _routeObserver.unsubscribe(this);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   Future<void> _fetchGames() async {
@@ -132,15 +180,6 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
     }).catchError((error) {
       Logger.log('❌ Room status確認エラー: $error');
     });
-  }
-
-  @override
-  void dispose() {
-    // ★ 注意：dispose内ではrefを使用できません ★
-    // ゲーム状態監視の停止は UserNotifier.leaveRoom() で行われます
-
-    _tabController.dispose();
-    super.dispose();
   }
 
   void _copyRoomUrl() {
@@ -285,7 +324,10 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                   horizontal: AppSpacing.small, vertical: 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            onPressed: _showExitDialog,
+            onPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'room_leave');
+              _showExitDialog();
+            },
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -312,7 +354,10 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
                     horizontal: AppSpacing.large, vertical: AppSpacing.medium),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              onPressed: _copyRoomUrl,
+              onPressed: () {
+                ref.read(analyticsServiceProvider).logClick(button: 'url_copy');
+                _copyRoomUrl();
+              },
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

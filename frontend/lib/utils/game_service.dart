@@ -65,7 +65,9 @@ Future<List<Map<String, dynamic>>> fetchGamesFromFirestore() async {
           'category': genreNames.isNotEmpty
               ? genreNames[0]
               : 'すべて', // SelectGamePage用の互換性維持
-          'players': '${data['minPlayers'] ?? ''}-${data['maxPlayers'] ?? ''}人',
+          'players': data['minPlayers'] == data['maxPlayers']
+              ? '${data['minPlayers'] ?? ''}人'
+              : '${data['minPlayers'] ?? ''}-${data['maxPlayers'] ?? ''}人',
           'time': '${data['duration'] ?? ''}分',
           'overview': data['overview'] ?? '',
           'description': data['description'] ?? '',

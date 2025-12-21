@@ -1,11 +1,13 @@
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
 
@@ -38,10 +40,45 @@ class NgWordPlayingPage extends ConsumerStatefulWidget {
 }
 
 class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
-    with GameExitHandler {
+    with GameExitHandler, RouteAware {
+  late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool _hasReported = false;
   bool _isWaitingForOthers = false;
   bool _isSubmittingReport = false; // 追加
+  final pageTitle = '/0001/ngword_playing_page';
+
+  @override
+  void initState() {
+    super.initState();
+    _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      _routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPush() {
+    super.didPush();
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+  }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
@@ -101,9 +138,22 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
     final isHost = ref.watch(isHostProvider);
+
+    // ゲームデータが空になった（＝ゲーム終了処理中）場合は、
+    // 無理に描画せず、ローディングや空のコンテナを返してエラーを防ぐ
+    if (currentGame.gameData == null || currentGame.gameData!.isEmpty) {
+      return const Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        body: Center(
+          child: CircularProgressIndicator(), // または SizedBox() でもOK
+        ),
+      );
+    }
+
     final gameData = currentGame.gameData;
     final gameTitle = gameData?['title'] as String;
 
+    final gameId = currentGame.gameId;
     final roomId = currentUser.roomId;
 
     // 部屋情報がない場合のエラーハンドリング
@@ -188,7 +238,13 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
         appBar: GameAppBar(
           gameTitle: gameTitle,
           isHost: isHost,
-          onExitPressed: showExitGameDialog,
+          onExitPressed: () {
+            ref.read(analyticsServiceProvider).logClick(
+              button: 'game_quit',
+              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
+            );
+            showExitGameDialog();
+          },
         ),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
@@ -248,7 +304,14 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
                     child: ElevatedLoadingButton(
                       text: _hasReported ? '他プレイヤー待ち' : 'NGワードを言ってしまった！',
                       isLoading: _isSubmittingReport,
-                      onPressed: _hasReported ? null : _onReportPressed,
+                      onPressed: _hasReported
+                          ? null
+                          : () {
+                              ref
+                                  .read(analyticsServiceProvider)
+                                  .logClick(button: '0001_declare');
+                              _onReportPressed();
+                            },
                     ),
                   ),
                 ],

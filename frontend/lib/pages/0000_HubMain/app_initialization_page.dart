@@ -1,5 +1,4 @@
-// frontend/lib/pages/app_initialization_page.dart
-
+import 'package:bodogehub/models/user_state.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +8,12 @@ import '/components/app_theme.dart';
 import '/providers/user_provider.dart';
 import '/providers/game_provider.dart';
 import '/providers/game_state_provider.dart';
+import '/providers/analytics_provider.dart';
 import '/services/auth_service.dart';
 import '/services/navigation_service.dart';
 import '/Pages/0000_HubMain/select_game_page.dart';
 import '/Pages/0000_HubMain/top_page.dart';
+import 'package:bodogehub/services/analytics_service.dart';
 
 class AppInitializationPage extends ConsumerStatefulWidget {
   final String? urlRoomId;
@@ -54,13 +55,13 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
           // 復元された部屋とURLの部屋が違う場合、URLを優先して参加フローへ
           // (あるいは、進行中のセッションがあると警告を出すなどの実装も可能)
           await ref.read(userProvider.notifier).leaveRoom(); // 古いセッション情報をクリア
-          _navigateToJoinRoom(widget.urlRoomId!);
+          _navigateToJoinRoom(widget.urlRoomId!, false);
         }
       } else {
         // 復帰に失敗した場合
         if (widget.urlRoomId != null && widget.urlRoomId!.isNotEmpty) {
           // URLにroomIdがあれば、参加フローへ
-          _navigateToJoinRoom(widget.urlRoomId!);
+          _navigateToJoinRoom(widget.urlRoomId!, true);
         } else {
           // 何も情報がなければTopPageへ
           _navigateToTop();
@@ -140,6 +141,58 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
       if (!mounted) return;
 
+      // ★追加: GameIDによる分岐
+      if (gameId == '0005') {
+        Logger.log('🔍 SoloBiasProfileの復帰処理を実行');
+
+        final userState = ref.read(userProvider);
+
+        // 1. gamePhase が ended (結果画面) かどうかを確認
+        if (userState.gamePhase == GamePhase.ended) {
+          Logger.log('🎮 復帰: GamePhase.ended -> 結果画面へ');
+          // 結果画面への遷移（ResultPageへ）
+          // ※結果画面に必要なデータがあれば引数で渡すか、ResultPage内で再取得する
+          ref
+              .read(navigationServiceProvider)
+              .navigateToSoloBiasProfileResultPage();
+
+          // 状態監視を開始して終了
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(roomGameStateProvider(roomId));
+          });
+          return;
+        }
+
+        // 2. gamePhase が started (ゲーム開始済み) かどうかを確認
+        if (userState.gamePhase == GamePhase.started) {
+          Logger.log('🎮 復帰: GamePhase.started -> ゲーム中の画面へ');
+          // started であれば、localGameData (選択状態) を確認
+          // UserProviderからローカルデータを取得
+          final localData = ref.read(userProvider).localGameData;
+
+          // 専用の復帰メソッドを呼び出し
+          ref
+              .read(navigationServiceProvider)
+              .navigateToSoloBiasProfileRestore(localData);
+
+          // 状態監視を開始して終了
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(roomGameStateProvider(roomId));
+          });
+          return;
+        }
+
+        Logger.log('🎮 復帰: ゲームタイトル画面へ');
+
+        ref.read(navigationServiceProvider).navigateToGameTitle();
+
+        // 状態監視を開始して終了
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(roomGameStateProvider(roomId));
+        });
+        return;
+      }
+
       // 保存されたgamePhaseを使用して正確な画面に遷移
       final navigationService = ref.read(navigationServiceProvider);
 
@@ -183,8 +236,14 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     }
   }
 
-  void _navigateToJoinRoom(String roomId) {
+  void _navigateToJoinRoom(String roomId, bool isFromRoomURL) {
     if (!mounted) return;
+
+    if (isFromRoomURL) {
+      ref.read(analyticsServiceProvider).logPageView(
+          pageTitle: '/register_profile_page',
+          additionalParams: {'trigger_source': 'direct_room_url'});
+    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => TopPage(roomId: roomId)),
     );

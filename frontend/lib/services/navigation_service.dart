@@ -1,7 +1,11 @@
 import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
+import 'package:bodogehub/Pages/0002_NoForeignWord/no_foregin_word_playing_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
+import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_check_answer_page.dart';
+import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_result_page.dart';
+import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_select_picture_page.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -122,6 +126,13 @@ class NavigationService {
           ),
         );
         break;
+      case '0002': // カタカナ語禁止
+        _navigator!.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const NoForeignWordPlayingPage(),
+          ),
+        );
+        break;
       default:
         navigateToGameTitle();
     }
@@ -134,13 +145,6 @@ class NavigationService {
 
     // ゲームIDに基づいて適切な画面に遷移
     switch (gameId) {
-      case '0002': // カタカナ語禁止
-        _navigator!.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => _buildPlaceholderGameScreen('カタカナ語禁止', '出題者'),
-          ),
-        );
-        break;
       case '0003': // 水平思考
         _navigator!.pushReplacement(
           MaterialPageRoute(
@@ -201,6 +205,63 @@ class NavigationService {
         builder: (context) => const BiasProfileCheckAnswerPage(),
       ),
     );
+  }
+
+  void navigateToSoloBiasProfileSelectPicturePage() {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SoloBiasProfileSelectPicturePage(),
+      ),
+    );
+  }
+
+  void navigateToSoloBiasProfileCheckAnswerPage(int selectedImageIndex) {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => SoloBiasProfileCheckAnswerPage(
+            selectedImageIndex: selectedImageIndex),
+      ),
+    );
+  }
+
+  void navigateToSoloBiasProfileResultPage() {
+    if (_navigator == null) return;
+
+    _navigator!.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SoloBiasProfileResultPage(),
+      ),
+    );
+  }
+
+  // ★追加: SoloBiasProfile用復帰メソッド
+  void navigateToSoloBiasProfileRestore(Map<String, dynamic>? localData) {
+    if (_navigator == null) return;
+
+    // ローカルデータから選択インデックスを取得
+    final selectedIndex = localData?['selectedIndex'];
+
+    if (selectedIndex != null) {
+      Logger.log('🎮 復帰: 画像選択済み -> 正誤確認画面へ (index: $selectedIndex)');
+      _navigator!.pushReplacement(
+        MaterialPageRoute(
+          // インデックスを渡して遷移
+          builder: (context) =>
+              SoloBiasProfileCheckAnswerPage(selectedImageIndex: selectedIndex),
+        ),
+      );
+    } else {
+      Logger.log('🎮 復帰: 画像未選択 -> 写真選択画面へ');
+      _navigator!.pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const SoloBiasProfileSelectPicturePage(),
+        ),
+      );
+    }
   }
 
   void navigateToResult(Map<String, dynamic> currentGame) {

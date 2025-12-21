@@ -1,40 +1,62 @@
 import 'package:bodogehub/utils/logger.dart';
+import 'package:bodogehub/utils/image_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
 import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/providers/user_provider.dart';
-import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/analytics_provider.dart';
-import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
+import 'package:bodogehub/services/navigation_service.dart';
 
-class BiasProfileParentTurnPage extends ConsumerStatefulWidget {
-  const BiasProfileParentTurnPage({super.key});
+class SoloBiasProfileSelectPicturePage extends ConsumerStatefulWidget {
+  const SoloBiasProfileSelectPicturePage({super.key});
 
   @override
-  ConsumerState<BiasProfileParentTurnPage> createState() =>
-      _BiasProfileParentTurnPageState();
+  ConsumerState<SoloBiasProfileSelectPicturePage> createState() =>
+      _SoloBiasProfileSelectPicturePageState();
 }
 
-class _BiasProfileParentTurnPageState
-    extends ConsumerState<BiasProfileParentTurnPage>
+class _SoloBiasProfileSelectPicturePageState
+    extends ConsumerState<SoloBiasProfileSelectPicturePage>
     with GameExitHandler, RouteAware {
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   String? _errorMessage;
   int _selectedImageIndex = 0;
   int _imageReloadTrigger = 0;
-
   late final ScrollController _scrollController;
-
-  final pageTitle = '/0004/bias_profile_parent_turn_page';
+  Future<void>? _precacheFuture;
+  final pageTitle = '/0005/solo_bias_profile_select_picture_page';
 
   @override
   void initState() {
     super.initState();
     _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+
+    // 画像データを取得（この時点ではcontextが使えないのでreadを使用）
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
+
+    // フレーム描画後にプリキャッシュを開始
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // ウィジェットがまだマウントされているか確認
+      if (!mounted) return;
+
+      setState(() {
+        // プリキャッシュ処理を開始し、Futureを保持
+        _precacheFuture =
+            precacheImages(context, currentImages).catchError((error) {
+          // プリキャッシュ全体が失敗した場合のフォールバック
+          Logger.log('⚠️ プリキャッシュ処理でエラー: $error');
+          // 画像はImage.networkのloadingBuilderで個別にハンドリングされるため
+          // ここでは特別な処理は不要
+        });
+      });
+    });
+
     _scrollController = ScrollController();
   }
 
@@ -57,19 +79,25 @@ class _BiasProfileParentTurnPageState
   @override
   void didPush() {
     super.didPush();
-    final isHost = ref.watch(isHostProvider);
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: pageTitle,
-        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    final isHost = ref.watch(isHostProvider);
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: pageTitle,
-        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
+    final currentGame = ref.read(currentGameProvider);
+    final gameData = currentGame.gameData;
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -78,7 +106,7 @@ class _BiasProfileParentTurnPageState
     if (mounted) {
       // エラーはErrorHandlerでグローバルに処理されるため、
       // ここでは主にデバッグログの出力や、必要に応じたUI状態の更新を行う
-      Logger.log('BiasProfileParentTurnPageでエラー発生: $message');
+      Logger.log('SoloBiasProfileSelectPicturePageでエラー発生: $message');
       setState(() {
         _errorMessage = message;
       });
@@ -123,68 +151,22 @@ class _BiasProfileParentTurnPageState
 
     // 必要な情報を直接取得
     final gameData = currentGame.gameData;
-    final currentParent = gameData?['currentParent'] as String?;
-    final isCurrentParent = currentParent == currentUser.uid;
     final gameTitle = gameData?['title'] as String;
 
-    // 現在の部屋のお題を取得
-    final topics = gameData?['topics'] as Map<String, dynamic>? ?? {};
-
-    final roomSnapshot = ref.watch(roomStreamProvider(roomId));
-    Map<String, dynamic> players = {};
-    List<MapEntry<String, String>> sortedTopics = [];
-
-    roomSnapshot.when(
-      data: (snapshot) {
-        if (snapshot.exists) {
-          final data = snapshot.data() as Map<String, dynamic>?;
-          players = data?['players'] as Map<String, dynamic>? ?? {};
-
-          final playerUids = players.keys.toList();
-          sortedTopics = playerUids
-              .where((uid) => topics.containsKey(uid))
-              .map((uid) => MapEntry(uid, topics[uid] as String))
-              .toList();
-        }
-      },
-      loading: () {
-        sortedTopics = topics.entries
-            .map((e) => MapEntry(e.key, e.value as String))
-            .toList();
-      },
-      error: (_, __) {
-        sortedTopics = topics.entries
-            .map((e) => MapEntry(e.key, e.value as String))
-            .toList();
-      },
-    );
-
-    // 現在の部屋の回答を取得
-    final hints = gameData?['hints'] as Map<String, dynamic>? ?? {};
+    // 現在の問題のお題と回答を取得
+    final topicsAndHints =
+        gameData?['topicsAndHints'] as Map<String, dynamic>? ?? {};
+    // お題と回答をリストに変換
+    final List<String> topics = topicsAndHints.keys.toList();
+    final List<String> hints = topicsAndHints.values.cast<String>().toList();
 
     // 画像情報を取得
     final currentImages = gameData?['currentImages'] as List<dynamic>? ?? [];
 
-    String _getNicknameByUid(String uid) {
-      // ユーザー情報はroomのplayersフィールドから取得
+    final currentQuestionNumber =
+        gameData?['currentQuestionNumber'] as int? ?? 0;
 
-      final roomSnapshot = ref.read(roomStreamProvider(roomId));
-
-      return roomSnapshot.when(
-        data: (snapshot) {
-          if (!snapshot.exists) return 'Unknown';
-
-          final data = snapshot.data() as Map<String, dynamic>?;
-          final players = data?['players'] as Map<String, dynamic>? ?? {};
-
-          return players[uid]?['nickname'] ?? 'Unknown';
-        },
-        loading: () => 'Loading...',
-        error: (_, __) => 'Unknown',
-      );
-    }
-
-    void _showTopicDialog(String topic, String? hint, String uid) {
+    void _showTopicDialog(String topic, String hint) {
       showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -198,10 +180,6 @@ class _BiasProfileParentTurnPageState
                   '$hint',
                   style: AppTextStyles.body,
                 ),
-                const SizedBox(height: AppSpacing.large),
-                Text(_getNicknameByUid(uid),
-                    style: AppTextStyles.body
-                        .copyWith(color: AppTheme.secondaryTextColor))
               ],
             ),
             actions: [
@@ -213,6 +191,19 @@ class _BiasProfileParentTurnPageState
           );
         },
       );
+    }
+
+    void _onPictureSelected(int index) async {
+      // 1. ローカルデータに選択状態を保存
+      await ref.read(userProvider.notifier).updateLocalGameData({
+        'selectedIndex': index,
+      });
+
+      // 2. 次の画面へ遷移
+      if (!mounted) return;
+      ref
+          .read(navigationServiceProvider)
+          .navigateToSoloBiasProfileCheckAnswerPage(_selectedImageIndex);
     }
 
     return PopScope(
@@ -233,45 +224,31 @@ class _BiasProfileParentTurnPageState
         body: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            isCurrentParent
-                ? const Center(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'あなたは親プレイヤーです',
-                          style: AppTextStyles.h5,
-                        ),
-                        SizedBox(
-                          height: AppSpacing.medium,
-                        ),
-                        Text(
-                          '子プレイヤーが入力した偏見をもとに\n5枚の画像の中から正解の人物を当てよう',
-                          style: AppTextStyles.body,
-                          textAlign: TextAlign.center,
-                        )
-                      ],
-                    ),
-                  )
-                : const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'あなたは子プレイヤーです',
-                          style: AppTextStyles.h5,
-                        ),
-                        SizedBox(
-                          height: AppSpacing.medium,
-                        ),
-                        Text(
-                          '親が回答している間、他のプレイヤーが入力した\n偏見を覗いてみましょう',
-                          style: AppTextStyles.body,
-                          textAlign: TextAlign.center,
-                        )
-                      ],
+            Center(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
+                    child: Text(
+                      '$currentQuestionNumber / 5 問目',
+                      style: AppTextStyles.subtitle2,
+                      textAlign: TextAlign.center,
                     ),
                   ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xSmall),
+                    child: Text(
+                      '偏見ヒントをもとに\n'
+                      '5枚の画像の中から正解の人物を当てよう',
+                      style: AppTextStyles.body,
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(
                   vertical: AppSpacing.medium, horizontal: AppSpacing.large),
@@ -400,26 +377,21 @@ class _BiasProfileParentTurnPageState
                         child: ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             controller: _scrollController,
-                            itemCount: sortedTopics.length,
+                            itemCount: topics.length,
                             itemBuilder: (context, index) {
                               return Card(
                                   margin: const EdgeInsets.only(
                                       bottom: AppSpacing.large),
                                   child: InkWell(
                                     onTap: () {
-                                      final topicEntry = sortedTopics[index];
-                                      final topicKey = topicEntry.key;
-                                      final topic = topicEntry.value;
-                                      final hint = hints[topicKey] as String?;
+                                      final topic = topics[index];
+                                      final hint = hints[index];
                                       ref
                                           .read(analyticsServiceProvider)
                                           .logPageView(
                                               pageTitle:
-                                                  '/0004/bias_profile_topic_dialog',
-                                              additionalParams: isHost
-                                                  ? {'role': 'parent'}
-                                                  : {'role': 'child'});
-                                      _showTopicDialog(topic, hint, topicKey);
+                                                  '/0005/solo_bias_profile_topic_dialog');
+                                      _showTopicDialog(topic, hint);
                                     },
                                     child: Padding(
                                       padding: const EdgeInsets.all(
@@ -429,7 +401,7 @@ class _BiasProfileParentTurnPageState
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            sortedTopics[index].value,
+                                            topics[index],
                                             style: AppTextStyles.subtitle2,
                                           ),
                                           const Icon(Icons.chevron_right),
@@ -444,51 +416,24 @@ class _BiasProfileParentTurnPageState
                 ),
               ),
             ),
-            isCurrentParent
-                ? Padding(
-                    padding: const EdgeInsets.all(AppSpacing.large),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              ref
-                                  .read(analyticsServiceProvider)
-                                  .logClick(button: '0004_determine_answer');
-
-                              // API呼び出しのエラーハンドリング追加
-                              try {
-                                await ApiService.determineAnswer0004(
-                                  context,
-                                  roomId,
-                                  currentUser.uid!,
-                                  _selectedImageIndex,
-                                );
-
-                                Logger.log('💡 回答を提出: $_selectedImageIndex');
-
-                                // 成功時のスナックバー表示
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('回答を送信しました'),
-                                      backgroundColor: AppTheme.successColor,
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                Logger.log('❌ 回答にに失敗: $e');
-                                // エラーダイアログはErrorHandlerで表示される
-                              }
-                            },
-                            child: const Text('この人物に決定する'),
-                          ),
-                        ),
-                      ],
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.large),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        ref
+                            .read(analyticsServiceProvider)
+                            .logClick(button: '0005_determine_answer');
+                        _onPictureSelected(_selectedImageIndex);
+                      },
+                      child: const Text('この人物に決定する'),
                     ),
-                  )
-                : const SizedBox()
+                  ),
+                ],
+              ),
+            )
           ],
         ),
       ),

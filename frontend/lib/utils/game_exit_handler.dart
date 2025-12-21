@@ -8,6 +8,7 @@ import 'package:bodogehub/providers/user_provider.dart';
 import 'package:bodogehub/providers/room_provider.dart';
 import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/game_state_provider.dart';
+import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/services/navigation_service.dart';
 
@@ -115,6 +116,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
                 final roomId = currentUser.roomId;
 
                 if (roomId != null) {
+                  await ref.read(userProvider.notifier).clearLocalGameData();
                   await exitGame(roomId);
                 }
               },

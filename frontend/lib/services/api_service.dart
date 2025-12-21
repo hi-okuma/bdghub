@@ -151,6 +151,25 @@ class ApiService {
     );
   }
 
+  static Future<dynamic> reportResult0002(
+    BuildContext context,
+    String roomId,
+    bool result,
+    String answererUid, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'reportResult0002',
+      context,
+      {
+        'roomId': roomId,
+        'result': result,
+        'answererUid': answererUid,
+      },
+      handleError: handleError,
+    );
+  }
+
   static Future<dynamic> submitHint0004(
     BuildContext context,
     String roomId,
@@ -203,6 +222,23 @@ class ApiService {
         'roomId': roomId,
         'uid': uid,
         'bestHintPlayerUid': bestHintPlayerUid,
+      },
+      handleError: handleError,
+    );
+  }
+
+  static Future<dynamic> proceedToNext0005(
+    BuildContext context,
+    String roomId,
+    bool isCorrect, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'proceedToNext0005',
+      context,
+      {
+        'roomId': roomId,
+        'isCorrect': isCorrect,
       },
       handleError: handleError,
     );
