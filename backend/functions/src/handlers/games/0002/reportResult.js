@@ -36,7 +36,7 @@ async function reportResult0002Handler(request) {
       }
 
       // answererUidのバリデーション
-      if (result === true && !currentGameData.players[answererUid]) {
+      if (result === true && !(answererUid in currentGameData.players)) {
         throwValidationError("正答者が存在しません。");
       }
 
