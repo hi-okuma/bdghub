@@ -35,14 +35,17 @@ async function reportResult0002Handler(request) {
         throwGameStatusError("playing", currentGameData.gameStatus);
       }
 
+      // answererUidのバリデーション
+      if (result === true && !currentGameData.players[answererUid]) {
+        throwValidationError("正答者が存在しません。");
+      }
+
       const updatedPlayers = {...currentGameData.players};
       if (result === true) {
-        if (updatedPlayers[answererUid]) {
-          updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
-        }
-        if (updatedPlayers[currentGameData.currentPresenter]) {
-          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
-        }
+        // 正答者にポイントを加算
+        updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
+        // 出題者にポイントを加算
+        updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
       }
 
       const playerUids = Object.keys(updatedPlayers);
@@ -66,9 +69,48 @@ async function reportResult0002Handler(request) {
 
       if (isOneRoundCompleted) {
         // 全プレイヤーが出題者になったらゲーム終了
+        // 次のゲームの準備: 新しい出題者をランダムに決定
+        const topicsDoc = await transaction.get(
+            db.collection("games").doc("0002")
+                .collection("assets")
+                .doc("topics"),
+        );
+
+        if (!topicsDoc.exists) {
+          throwStructuredError("Internal", "お題リストが見つかりません");
+        }
+        const topicsList = topicsDoc.data().topics;
+
+        const unusedTopics = topicsList.filter(
+            (topic) => !currentGameData.usedTopic.includes(topic),
+        );
+
+        let nextTopic;
+        if (unusedTopics.length > 0) {
+          nextTopic = unusedTopics[Math.floor(Math.random() * unusedTopics.length)];
+        } else {
+          nextTopic = selectNewTopic(topicsList, currentGameData.currentTopic);
+        }
+
+        const playerUids = Object.keys(updatedPlayers);
+        const randomPlayerIndex = Math.floor(Math.random() * playerUids.length);
+        const firstPresenter = playerUids[randomPlayerIndex];
+
         updateData = {
           gameStatus: "waiting",
-          players: updatedPlayers,
+          currentPresenter: firstPresenter,
+          currentTopic: nextTopic,
+          usedTopic: [...currentGameData.usedTopic, nextTopic],
+          players: Object.fromEntries(
+              Object.entries(updatedPlayers).map(([uid, player]) => [
+                uid,
+                {
+                  ...player,
+                  isReady: false,
+                  isEverPresenter: uid === firstPresenter,
+                },
+              ]),
+          ),
         };
       } else {
         // 次の出題者に移行
