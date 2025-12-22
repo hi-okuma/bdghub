@@ -36,21 +36,23 @@ async function reportResult0002Handler(request) {
       }
 
       const updatedPlayers = {...currentGameData.players};
-      if (result === true) {
+      if (result === true && answererUid) {
+        // 回答者が正解した場合、回答者にポイントを付与
         if (updatedPlayers[answererUid]) {
           updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
-        }
-        if (updatedPlayers[currentGameData.currentPresenter]) {
-          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
         }
       }
 
       const playerUids = Object.keys(updatedPlayers);
       const currentIndex = playerUids.findIndex((uid) => uid === currentGameData.currentPresenter);
+
+      if (currentIndex === -1) {
+        throwStructuredError("Internal", "現在の出題者がプレイヤーリストに見つかりません");
+      }
+
       const nextIndex = (currentIndex + 1) % playerUids.length;
       const nextPresenter = playerUids[nextIndex];
-      const isOneRoundCompleted = updatedPlayers[nextPresenter].isEverPresenter &&
-                                  Object.values(updatedPlayers).every((player) => player.isEverPresenter);
+      const isOneRoundCompleted = updatedPlayers[nextPresenter].isEverPresenter;
 
       const topicsDoc = await transaction.get(
           db.collection("games").doc("0002")
