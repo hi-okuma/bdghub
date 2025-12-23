@@ -37,9 +37,15 @@ async function reportResult0002Handler(request) {
 
       const updatedPlayers = {...currentGameData.players};
       if (result === true) {
-        if (updatedPlayers[answererUid]) {
-          updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
+        // answererUidをトリミング（余分な空白を削除）
+        const trimmedAnswererUid = answererUid ? answererUid.trim() : answererUid;
+
+        // 正答者にポイントを加算
+        if (updatedPlayers[trimmedAnswererUid]) {
+          updatedPlayers[trimmedAnswererUid] = {...updatedPlayers[trimmedAnswererUid], point: (updatedPlayers[trimmedAnswererUid].point || 0) + 1};
         }
+
+        // 出題者にポイントを加算
         if (updatedPlayers[currentGameData.currentPresenter]) {
           updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
         }
@@ -47,57 +53,81 @@ async function reportResult0002Handler(request) {
 
       const playerUids = Object.keys(updatedPlayers);
       const currentIndex = playerUids.findIndex((uid) => uid === currentGameData.currentPresenter);
-      const nextIndex = (currentIndex + 1) % playerUids.length;
-      const nextPresenter = playerUids[nextIndex];
-      const isOneRoundCompleted = updatedPlayers[nextPresenter].isEverPresenter;
 
-      const topicsDoc = await transaction.get(
-          db.collection("games").doc("0002")
-              .collection("assets")
-              .doc("topics"),
-      );
-
-      if (!topicsDoc.exists) {
-        throwStructuredError("Internal", "お題リストが見つかりません");
+      // 次の出題者を探す（isEverPresenterがfalseの人を優先）
+      let nextPresenter = null;
+      for (let i = 1; i <= playerUids.length; i++) {
+        const nextIndex = (currentIndex + i) % playerUids.length;
+        const candidateUid = playerUids[nextIndex];
+        if (!updatedPlayers[candidateUid].isEverPresenter) {
+          nextPresenter = candidateUid;
+          break;
+        }
       }
-      const topicsList = topicsDoc.data().topics;
+
+      // 全プレイヤーがisEverPresenter=trueかチェック
+      const isOneRoundCompleted = nextPresenter === null;
+
       let updateData = {};
 
       if (isOneRoundCompleted) {
+        // 全プレイヤーが出題者になったらゲーム終了
+        // 次のゲームの準備: 新しい出題者をランダムに決定
+        const topicsDoc = await transaction.get(
+            db.collection("games").doc("0002")
+                .collection("assets")
+                .doc("topics"),
+        );
+
+        if (!topicsDoc.exists) {
+          throwStructuredError("Internal", "お題リストが見つかりません");
+        }
+        const topicsList = topicsDoc.data().topics;
+
         const unusedTopics = topicsList.filter(
             (topic) => !currentGameData.usedTopic.includes(topic),
         );
 
-        let newTopic;
+        let nextTopic;
         if (unusedTopics.length > 0) {
-          newTopic = unusedTopics[Math.floor(Math.random() * unusedTopics.length)];
+          nextTopic = unusedTopics[Math.floor(Math.random() * unusedTopics.length)];
         } else {
-          newTopic = selectNewTopic(topicsList, currentGameData.currentTopic);
+          nextTopic = selectNewTopic(topicsList, currentGameData.currentTopic);
         }
 
         const playerUids = Object.keys(updatedPlayers);
-        const nextIndex = (currentIndex + 1) % playerUids.length;
-        const firstPresenter = playerUids[nextIndex];
-
-        const finalPlayers = Object.fromEntries(
-            Object.keys(updatedPlayers).map((uid) => [
-              uid,
-              {
-                isReady: false,
-                isEverPresenter: uid === firstPresenter,
-                point: updatedPlayers[uid].point || 0,
-              },
-            ]),
-        );
+        const randomPlayerIndex = Math.floor(Math.random() * playerUids.length);
+        const firstPresenter = playerUids[randomPlayerIndex];
 
         updateData = {
           gameStatus: "waiting",
-          currentTopic: newTopic,
-          usedTopic: [...currentGameData.usedTopic, newTopic],
           currentPresenter: firstPresenter,
-          players: finalPlayers,
+          currentTopic: nextTopic,
+          usedTopic: [...currentGameData.usedTopic, nextTopic],
+          players: Object.fromEntries(
+              Object.entries(updatedPlayers).map(([uid, player]) => [
+                uid,
+                {
+                  ...player,
+                  isReady: false,
+                  isEverPresenter: uid === firstPresenter,
+                },
+              ]),
+          ),
         };
       } else {
+        // 次の出題者に移行
+        const topicsDoc = await transaction.get(
+            db.collection("games").doc("0002")
+                .collection("assets")
+                .doc("topics"),
+        );
+
+        if (!topicsDoc.exists) {
+          throwStructuredError("Internal", "お題リストが見つかりません");
+        }
+        const topicsList = topicsDoc.data().topics;
+
         const unusedTopics = topicsList.filter(
             (topic) => !currentGameData.usedTopic.includes(topic),
         );
