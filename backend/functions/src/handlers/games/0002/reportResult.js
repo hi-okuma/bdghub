@@ -35,17 +35,16 @@ async function reportResult0002Handler(request) {
         throwGameStatusError("playing", currentGameData.gameStatus);
       }
 
-      // answererUidのバリデーション
-      if (result === true && !(answererUid in currentGameData.players)) {
-        throwValidationError("正答者が存在しません。");
-      }
-
       const updatedPlayers = {...currentGameData.players};
       if (result === true) {
         // 正答者にポイントを加算
-        updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
+        if (updatedPlayers[answererUid]) {
+          updatedPlayers[answererUid] = {...updatedPlayers[answererUid], point: (updatedPlayers[answererUid].point || 0) + 1};
+        }
         // 出題者にポイントを加算
-        updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
+        if (updatedPlayers[currentGameData.currentPresenter]) {
+          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
+        }
       }
 
       const playerUids = Object.keys(updatedPlayers);
