@@ -40,30 +40,14 @@ async function reportResult0002Handler(request) {
         // answererUidをトリミング（余分な空白を削除）
         const trimmedAnswererUid = answererUid ? answererUid.trim() : answererUid;
 
-        // デバッグログ
-        logger.info("ポイント加算処理", {
-          answererUid: trimmedAnswererUid,
-          currentPresenter: currentGameData.currentPresenter,
-          playerKeys: Object.keys(updatedPlayers),
-          answererExists: !!updatedPlayers[trimmedAnswererUid],
-          presenterExists: !!updatedPlayers[currentGameData.currentPresenter],
-        });
-
         // 正答者にポイントを加算
         if (updatedPlayers[trimmedAnswererUid]) {
           updatedPlayers[trimmedAnswererUid] = {...updatedPlayers[trimmedAnswererUid], point: (updatedPlayers[trimmedAnswererUid].point || 0) + 1};
-          logger.info(`正答者 ${trimmedAnswererUid} にポイント加算: ${updatedPlayers[trimmedAnswererUid].point}`);
-        } else {
-          logger.warn(`正答者 ${trimmedAnswererUid} が見つかりません`, {
-            trimmedAnswererUid,
-            playerKeys: Object.keys(updatedPlayers),
-          });
         }
 
         // 出題者にポイントを加算
         if (updatedPlayers[currentGameData.currentPresenter]) {
           updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
-          logger.info(`出題者 ${currentGameData.currentPresenter} にポイント加算: ${updatedPlayers[currentGameData.currentPresenter].point}`);
         }
       }
 
