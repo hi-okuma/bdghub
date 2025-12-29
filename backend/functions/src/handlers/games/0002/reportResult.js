@@ -40,14 +40,46 @@ async function reportResult0002Handler(request) {
         // answererUidをトリミング（余分な空白を削除）
         const trimmedAnswererUid = answererUid ? answererUid.trim() : answererUid;
 
+        // デバッグログ: ポイント加算前の状態を記録
+        logger.info("🔍 [DEBUG] ポイント加算処理開始", {
+          roomId,
+          originalAnswererUid: answererUid,
+          trimmedAnswererUid,
+          answererUidType: typeof answererUid,
+          answererUidLength: answererUid ? answererUid.length : null,
+          currentPresenter: currentGameData.currentPresenter,
+          playerKeys: Object.keys(updatedPlayers),
+          answererExists: !!updatedPlayers[trimmedAnswererUid],
+          presenterExists: !!updatedPlayers[currentGameData.currentPresenter],
+          playersData: JSON.stringify(updatedPlayers),
+        });
+
         // 正答者にポイントを加算
         if (updatedPlayers[trimmedAnswererUid]) {
-          updatedPlayers[trimmedAnswererUid] = {...updatedPlayers[trimmedAnswererUid], point: (updatedPlayers[trimmedAnswererUid].point || 0) + 1};
+          const oldPoint = updatedPlayers[trimmedAnswererUid].point || 0;
+          updatedPlayers[trimmedAnswererUid] = {...updatedPlayers[trimmedAnswererUid], point: oldPoint + 1};
+          logger.info(`✅ [DEBUG] 正答者 ${trimmedAnswererUid} にポイント加算: ${oldPoint} → ${updatedPlayers[trimmedAnswererUid].point}`);
+        } else {
+          logger.warn(`⚠️ [DEBUG] 正答者 ${trimmedAnswererUid} が見つかりません`, {
+            trimmedAnswererUid,
+            playerKeys: Object.keys(updatedPlayers),
+            answererUidMatchTest: Object.keys(updatedPlayers).map((key) => ({
+              key,
+              exactMatch: key === trimmedAnswererUid,
+              looseMatch: key == trimmedAnswererUid,
+              keyLength: key.length,
+              answerLength: trimmedAnswererUid ? trimmedAnswererUid.length : null,
+            })),
+          });
         }
 
         // 出題者にポイントを加算
         if (updatedPlayers[currentGameData.currentPresenter]) {
-          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: (updatedPlayers[currentGameData.currentPresenter].point || 0) + 1};
+          const oldPoint = updatedPlayers[currentGameData.currentPresenter].point || 0;
+          updatedPlayers[currentGameData.currentPresenter] = {...updatedPlayers[currentGameData.currentPresenter], point: oldPoint + 1};
+          logger.info(`✅ [DEBUG] 出題者 ${currentGameData.currentPresenter} にポイント加算: ${oldPoint} → ${updatedPlayers[currentGameData.currentPresenter].point}`);
+        } else {
+          logger.warn(`⚠️ [DEBUG] 出題者 ${currentGameData.currentPresenter} が見つかりません`);
         }
       }
 
