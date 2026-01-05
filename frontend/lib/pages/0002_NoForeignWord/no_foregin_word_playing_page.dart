@@ -202,7 +202,7 @@ class _NoForeignWordPlayingPageState
                 final nickname = playerData['nickname'] as String? ?? '名無し';
                 playerDropdownItems.add(
                   DropdownMenuItem(
-                    value: nickname,
+                    value: uid,
                     child: Text(nickname),
                   ),
                 );
