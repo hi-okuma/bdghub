@@ -52,13 +52,37 @@ class _NoForeignWordPlayingPageState
   @override
   void didPush() {
     super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final currentGame = ref.read(currentGameProvider);
+    final currentUser = ref.watch(userProvider);
+    final gameData = currentGame.gameData;
+    // 現在の出題者情報を取得
+    final currentPresenterUid = gameData?['currentPresenter'] as String?;
+    final bool isCurrentPresenter = (currentPresenterUid != null &&
+        currentUser.uid != null &&
+        currentPresenterUid == currentUser.uid);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle,
+        additionalParams: isCurrentPresenter
+            ? {'role': 'presenter'}
+            : {'role': 'respondent'});
   }
 
   @override
   void didPopNext() {
     super.didPopNext();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
+    final currentGame = ref.read(currentGameProvider);
+    final currentUser = ref.watch(userProvider);
+    final gameData = currentGame.gameData;
+    // 現在の出題者情報を取得
+    final currentPresenterUid = gameData?['currentPresenter'] as String?;
+    final bool isCurrentPresenter = (currentPresenterUid != null &&
+        currentUser.uid != null &&
+        currentPresenterUid == currentUser.uid);
+    ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle,
+        additionalParams: isCurrentPresenter
+            ? {'role': 'presenter'}
+            : {'role': 'respondent'});
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
