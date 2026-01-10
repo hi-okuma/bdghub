@@ -11,8 +11,9 @@ class AnalyticsService {
       RouteObserver<ModalRoute<void>>();
 
   bool get _isAnalyticsEnabled {
+    return true;
     // development環境では無効化
-    return EnvironmentConfig.currentEnvironment != Environment.development;
+    // return EnvironmentConfig.currentEnvironment != Environment.development;
   }
 
   Future<void> logPageView({
