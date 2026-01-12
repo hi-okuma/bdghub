@@ -2,36 +2,157 @@
 
 actor HostPlayer
 actor Participant
-
+participant localStorage
+participant URLParams
+participant App
 participant FirebaseAuth
 participant APIgateway_Functions
 participant Firestore
 
+== アプリケーション起動 / レジューム / ブラウザ再起動時の処理 ==
+
+App -> Firestore: メンテナンス状態確認（認証不要）
+App <-- Firestore: メンテナンス情報
+
+alt メンテナンス中の場合
+    App -> App: メンテナンス画面表示
+    note right: 以降の処理は行わない
+else 通常時
+    
+    App -> FirebaseAuth: 認証状態確認
+    alt 認証済み
+        App <-- FirebaseAuth: 認証トークン(uid)取得
+    else 未認証
+        App <-- FirebaseAuth: null返却
+        App -> FirebaseAuth: signInAnonymously()コール
+        App <-- FirebaseAuth: 認証トークン(uid)取得
+    end
+
+    App -> URLParams: URLパラメータからroomId取得試行
+    App -> localStorage: localStorageからroomId取得試行
+
+    alt URLパラメータにroomIdが存在する場合
+        
+        alt localStorageにもroomIdが存在する場合
+            
+            alt URLとlocalStorageのroomIdが異なる場合
+                note over App: ゲーム中は退出できない仕様のため\n元いた部屋(localStorageのroomId)の退出処理は行わないこととする
+                App -> localStorage: roomId削除
+                App -> App: 新しい部屋への参加処理へ
+                note right: 次の「localStorageにroomIdがない場合」の処理へ
+            else URLとlocalStorageのroomIdが同じ場合
+                App -> Firestore: 部屋情報取得リクエスト(roomId)
+                
+                alt 部屋が存在する場合
+                    App <-- Firestore: 部屋情報取得成功
+                    
+                    alt 部屋の状態がaccepting または full で、かつ ユーザーのUIDがplayersに含まれている場合 
+                        App -> App: ゲーム選択画面を表示
+                        
+                    else 部屋の状態がinProgress で、かつ ユーザーのUIDがplayersに含まれている場合 
+                        App -> App: ゲーム中の画面を表示
+                        
+                    else 部屋の状態がclosedの場合
+                        App -> localStorage: roomId削除
+                        App -> URLParams: URLパラメータからroomId削除
+                        App -> App: TOP画面を表示
+                        note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可
+                    end
+                    
+                else 部屋が削除済み または ユーザーのUIDがplayersに含まれていない場合
+                    App <-- Firestore: エラーレスポンス
+                    App -> localStorage: roomId削除
+                    App -> URLParams: URLパラメータからroomId削除
+                    App -> App: TOP画面を表示
+                    note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可
+                end
+            end
+            
+        else localStorageにroomIdがない場合
+            note right: 新規で部屋参加URLからアクセス
+            App -> Firestore: 部屋情報取得リクエスト(URLのroomId)
+            
+            alt 部屋の状態がacceptingの場合
+                App <-- Firestore: 部屋情報取得成功
+                App -> App: ユーザー情報登録ダイアログ表示
+                note right: 部屋コード入力欄は非表示
+                
+            else 部屋の状態がaccepting以外の場合
+                App <-- Firestore: 部屋情報(accepting以外)
+                App -> URLParams: URLパラメータからroomId削除
+                App -> App: TOP画面を表示
+                note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可
+                
+            else 部屋が存在しない場合
+                App <-- Firestore: エラーレスポンス
+                App -> URLParams: URLパラメータからroomId削除
+                App -> App: TOP画面を表示
+                note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可
+            end
+        end
+        
+    else URLパラメータにroomIdがない場合（通常起動）
+        
+        alt localStorageにroomIdが存在する場合
+            App -> Firestore: 部屋情報取得リクエスト(roomId, uid)
+            
+            alt 部屋が存在する場合
+                App <-- Firestore: 部屋情報取得成功
+                
+                alt 部屋の状態がaccepting または full で、かつ ユーザーのUIDがplayersに含まれている場合 
+                    App -> App: ゲーム選択画面を表示
+                    
+                else 部屋の状態がinProgress で、かつ ユーザーのUIDがplayersに含まれている場合 
+                    App -> App: ゲーム中の画面を表示
+                    
+                else 部屋の状態がclosedの場合
+                    App -> localStorage: roomId削除
+                    App -> App: TOP画面を表示
+                    note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可
+                end
+                
+            else 部屋が削除済み または ユーザーのUIDがplayersに含まれていない場合
+                App <-- Firestore: エラーレスポンス
+                App -> localStorage: roomId削除
+                App -> App: TOP画面を表示
+                note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可
+            end
+            
+        else localStorageにroomIdがない場合
+            App -> App: TOP画面を表示
+            note right: 初回起動状態
+        end
+    end
+end
+
 == 部屋の作成 ==
 
 HostPlayer -> APIgateway_Functions: 部屋作成リクエスト（uid, nickname）
-APIgateway_Functions -> Firestore: 全てのroom_idを取得
-APIgateway_Functions <-- Firestore: 返却
-loop 存在しないroom_idが生成できるまで
-    APIgateway_Functions -> APIgateway_Functions: room_id生成と重複チェック
+
+loop 最大3回までチャレンジ
+    APIgateway_Functions -> APIgateway_Functions: roomId生成
+    APIgateway_Functions -> Firestore: 重複チェック
+    APIgateway_Functions <-- Firestore: 結果返却
 end
+
 APIgateway_Functions -> Firestore: 部屋ドキュメント生成リクエスト
 Firestore -> Firestore: 部屋ドキュメント生成
 APIgateway_Functions <-- Firestore: 完了レスポンス
 HostPlayer <-- APIgateway_Functions: 完了レスポンス
-HostPlayer -> HostPlayer: localStorageにroom_idを保存
+HostPlayer -> localStorage: roomIdを保存
 HostPlayer -> HostPlayer: 参加URLを生成しゲーム選択画面表示
 HostPlayer -> Participant: URLを参加者に共有
 
 == 部屋への参加 ==
 
-Participant -> APIgateway_Functions: プレイヤー追加リクエスト（uid, nickname, room_id）
+Participant -> APIgateway_Functions: プレイヤー追加リクエスト（uid, nickname, roomId）
+
 alt 部屋のステータスが"accepting" かつ 部屋が満員でない
     APIgateway_Functions -> Firestore: プレイヤー追加リクエスト
     Firestore -> Firestore: playersに追加
     APIgateway_Functions <-- Firestore: 完了レスポンス
     Participant <-- APIgateway_Functions: 完了レスポンス
-    Participant -> Participant: localStorageにroom_idを保存
+    Participant -> localStorage: roomIdを保存
     Participant -> Participant: ゲーム選択画面表示
     HostPlayer <- Firestore: 同部屋のプレイヤー追加を検知
     Participant <- Firestore: 同部屋のプレイヤー追加を検知
@@ -41,17 +162,18 @@ else エラー時
     Participant <-- APIgateway_Functions: エラーレスポンス
 end
 
-== 部屋から退出 (例: ホストが退出する場合) ==
+== 部屋からの退出（例: ホストが退出する場合） ==
 
-HostPlayer -> APIgateway_Functions: 退出リクエスト（room_id）
+HostPlayer -> APIgateway_Functions: 退出リクエスト（roomId,uid）
 APIgateway_Functions -> Firestore: 部屋情報取得
 APIgateway_Functions <-- Firestore: 部屋情報
 APIgateway_Functions -> APIgateway_Functions: ホストかどうかのチェック
 APIgateway_Functions -> Firestore: 退出リクエスト
 Firestore -> Firestore: playersから削除\n（ホストなら切替も）
 APIgateway_Functions <-- Firestore: 完了レスポンス
-HostPlayer <- APIgateway_Functions: 完了レスポンス
-HostPlayer -> HostPlayer: localStorageからroom_idを削除\nTOP画面表示
+HostPlayer <-- APIgateway_Functions: 完了レスポンス
+HostPlayer -> localStorage: roomId削除
+HostPlayer -> HostPlayer: TOP画面表示
 Participant <- Firestore: 同部屋のプレイヤー削除を検知
 Participant -> Participant: 再描画
 
