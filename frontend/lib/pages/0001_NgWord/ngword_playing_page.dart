@@ -74,12 +74,6 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
     ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
-  }
-
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {

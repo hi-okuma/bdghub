@@ -88,18 +88,6 @@ class _SoloBiasProfileSelectPicturePageState
         .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
   }
 
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final currentGame = ref.read(currentGameProvider);
-    final gameData = currentGame.gameData;
-    final currentQuestionNumber =
-        gameData?['currentQuestionNumber'] as int? ?? 0;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '$pageTitle/$currentQuestionNumber');
-  }
-
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {

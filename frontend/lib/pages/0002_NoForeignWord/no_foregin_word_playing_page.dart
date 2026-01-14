@@ -52,28 +52,10 @@ class _NoForeignWordPlayingPageState
   @override
   void didPush() {
     super.didPush();
+    // 初回のroleを記録
     final currentGame = ref.read(currentGameProvider);
-    final currentUser = ref.watch(userProvider);
+    final currentUser = ref.read(userProvider);
     final gameData = currentGame.gameData;
-    // 現在の出題者情報を取得
-    final currentPresenterUid = gameData?['currentPresenter'] as String?;
-    final bool isCurrentPresenter = (currentPresenterUid != null &&
-        currentUser.uid != null &&
-        currentPresenterUid == currentUser.uid);
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: pageTitle,
-        additionalParams: isCurrentPresenter
-            ? {'role': 'presenter'}
-            : {'role': 'respondent'});
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final currentGame = ref.read(currentGameProvider);
-    final currentUser = ref.watch(userProvider);
-    final gameData = currentGame.gameData;
-    // 現在の出題者情報を取得
     final currentPresenterUid = gameData?['currentPresenter'] as String?;
     final bool isCurrentPresenter = (currentPresenterUid != null &&
         currentUser.uid != null &&
@@ -165,6 +147,46 @@ class _NoForeignWordPlayingPageState
 
   @override
   Widget build(BuildContext context) {
+    // currentPresenterの変更を監視
+    ref.listen<CurrentGameState>(
+      currentGameProvider,
+      (previous, next) {
+        // 1. gameData自体がない場合はリターン
+        final gameData = next.gameData;
+        if (gameData == null || gameData.isEmpty) return;
+
+        // 2. gameStatusが 'playing' 以外（終了や準備中）ならログ送信を無視する
+        // これにより、結果画面への遷移直前の「次ゲーム準備」による誤検知を防ぐ
+        final String? status =
+            gameData['gameStatus'] as String?; // DBのフィールド名に合わせて調整
+        if (status != 'playing') {
+          Logger.log('statusがplayingではないためログ送信をスキップします: $status');
+          return;
+        }
+
+        final currentUser = ref.read(userProvider);
+        final previousPresenterUid =
+            previous?.gameData?['currentPresenter'] as String?;
+        final currentPresenterUid = gameData['currentPresenter'] as String?;
+
+        // 3. 出題者が実際に変更された場合のみ実行
+        if (previousPresenterUid != currentPresenterUid &&
+            currentPresenterUid != null) {
+          final bool isCurrentPresenter = (currentUser.uid != null &&
+              currentPresenterUid == currentUser.uid);
+
+          ref.read(analyticsServiceProvider).logPageView(
+              pageTitle: pageTitle,
+              additionalParams: isCurrentPresenter
+                  ? {'role': 'presenter'}
+                  : {'role': 'respondent'});
+
+          Logger.log(
+              'Role changed and logged as: ${isCurrentPresenter ? 'presenter' : 'respondent'}');
+        }
+      },
+    );
+
     // プロバイダーからデータを取得
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
