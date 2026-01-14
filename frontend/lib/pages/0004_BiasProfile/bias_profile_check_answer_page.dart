@@ -65,15 +65,6 @@ class _BiasProfileCheckAnswerPageState
         additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
   }
 
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final isHost = ref.watch(isHostProvider);
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: pageTitle,
-        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
-  }
-
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {

@@ -57,15 +57,6 @@ class _SoloBiasProfileResultPageState
         .logPageView(pageTitle: '/${gameId}${pageTitle}');
   }
 
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final gameId = ref.read(currentGameProvider).gameId;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/${gameId}${pageTitle}');
-  }
-
   // エラーメッセージを設定する関数（GameExitHandler用）
   @override
   void setError(String message) {

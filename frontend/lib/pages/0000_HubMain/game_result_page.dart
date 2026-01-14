@@ -70,16 +70,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   @override
   void didPush() {
     super.didPush();
-    final gameId = ref.read(currentGameProvider).gameId;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/${gameId}${pageTitle}');
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final gameId = ref.read(currentGameProvider).gameId;
+    final gameId = ref.read(currentGameProvider).gameId ?? 'unknown';
     ref
         .read(analyticsServiceProvider)
         .logPageView(pageTitle: '/${gameId}${pageTitle}');
