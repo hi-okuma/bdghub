@@ -5,18 +5,30 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A board game platform project.">
+
+  <title>ボドゲハブ | インストール不要の暇つぶしボドゲアプリ</title>
+  <meta name="description" content="インストール不要のボドゲアプリ「ボドゲハブ」！　テーマパークの待ち時間にパートナーと、ラーメン屋の行列で友人たちと、電車の待ち時間に１人でも🙌">
+  <meta name="keywords" content="ボドゲ,ボードゲーム,すぐ遊べる,ボドゲバー,ボドゲカフェ,ブラウザゲーム,暇つぶし,マルチプレイ">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="bodogehub">
+  <meta name="apple-mobile-web-app-title" content="ボドゲハブ">
+
+  <meta property="og:title" content="ボドゲハブ" />
+  <meta property="og:description" content="インストール不要のボドゲアプリ「ボドゲハブ」！　テーマパークの待ち時間にパートナーと、ラーメン屋の行列で友人たちと、電車の待ち時間に１人でも🙌" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://bdghub-dev.web.app/" />
+  <meta property="og:image" content="https://bdghub-dev.web.app/ogp.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ボドゲハブ" />
+  <meta name="twitter:description" content="インストール不要のボドゲアプリ「ボドゲハブ」！　テーマパークの待ち時間にパートナーと、ラーメン屋の行列で友人たちと、電車の待ち時間に１人でも🙌" />
+  <meta name="twitter:image" content="https://bdghub-dev.web.app/ogp.png" />
+
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" href="favicon.ico" />
 
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>bodogehub</title>
   <link rel="manifest" href="manifest.json">
 
   <style>
@@ -86,6 +98,27 @@
       }
     }
   </style>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('set', { 'send_page_view': false });
+  </script>
+  <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ボドゲハブ",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "JPY"
+        },
+        "description": "インストール不要ですぐに遊べるブラウザボードゲームアプリ。",
+        "keywords": "ボドゲ, ボードゲーム, すぐ遊べる, ボドゲバー, ボドゲカフェ"
+    }
+  </script>
 </head>
 <body>
 <div id="loading-indicator" class="loading-container">
