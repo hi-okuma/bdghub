@@ -88,7 +88,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'ボードゲームハブ',
+      title: 'ボドゲハブ | インストール不要の暇つぶしボドゲアプリ',
       theme: AppTheme.lightTheme,
       navigatorKey: NavigationService.navigatorKey,
       navigatorObservers: [
