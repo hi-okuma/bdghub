@@ -34,7 +34,11 @@ class _BiasProfileCheckAnswerPageState
 
   late final ScrollController _scrollController;
 
+  @override
   final pageTitle = '/0005/solo_bias_profile_check_answer_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   // ★ 追加: このページで表示するデータを固定するための変数
   late final Map<String, dynamic> _fixedGameData;
@@ -152,16 +156,12 @@ class _BiasProfileCheckAnswerPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: _gameTitle,
-          isHost: isHost,
-          onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
-            showExitGameDialog();
-          },
-        ),
+            gameTitle: _gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [

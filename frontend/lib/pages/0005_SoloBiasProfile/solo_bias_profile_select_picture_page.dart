@@ -28,7 +28,12 @@ class _SoloBiasProfileSelectPicturePageState
   int _imageReloadTrigger = 0;
   late final ScrollController _scrollController;
   Future<void>? _precacheFuture;
+
+  @override
   final pageTitle = '/0005/solo_bias_profile_select_picture_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -198,16 +203,12 @@ class _SoloBiasProfileSelectPicturePageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
-          isHost: isHost,
-          onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
-            showExitGameDialog();
-          },
-        ),
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           mainAxisAlignment: MainAxisAlignment.start,

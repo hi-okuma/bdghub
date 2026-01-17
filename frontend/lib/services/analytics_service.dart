@@ -54,6 +54,7 @@ class AnalyticsService {
     try {
       final params = <String, Object>{
         'button': button,
+        'page_title': '',
       };
 
       if (additionalParams != null) {

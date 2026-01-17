@@ -25,7 +25,11 @@ class _SoloBiasProfileResultPageState
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   String? _errorMessage;
 
+  @override
   final pageTitle = '/game_result_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -134,16 +138,14 @@ class _SoloBiasProfileResultPageState
         canPop: false,
         child: Scaffold(
           appBar: GameAppBar(
-            gameTitle: gameTitle,
-            isHost: isHost,
-            onExitPressed: () {
-              ref.read(analyticsServiceProvider).logClick(
-                button: 'game_quit',
-                additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-              );
-              showExitGameDialog();
-            },
-          ),
+              gameTitle: gameTitle,
+              isHost: isHost,
+              onExitPressed: () {
+                ref
+                    .read(analyticsServiceProvider)
+                    .logClick(button: 'game_quit');
+                showExitGameDialog();
+              }),
           backgroundColor: AppTheme.backgroundColor,
           body: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
