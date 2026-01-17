@@ -18,7 +18,7 @@ class ExitRoomDialog extends ConsumerStatefulWidget {
 class _ExitRoomPageState extends ConsumerState<ExitRoomDialog> with RouteAware {
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool _isLoading = false;
-  final String pageTitle = '/room_exit_confirmation_dialog';
+  final String pageTitle = '/room_leave_confirmation_dialog';
 
   @override
   void initState() {
@@ -135,7 +135,7 @@ class _ExitRoomPageState extends ConsumerState<ExitRoomDialog> with RouteAware {
           onPressed: () async {
             ref
                 .read(analyticsServiceProvider)
-                .logClick(button: 'confirm_game_exit');
+                .logClick(button: 'room_leave_confirm');
             await _handleLeaveRoom();
           },
         ),
