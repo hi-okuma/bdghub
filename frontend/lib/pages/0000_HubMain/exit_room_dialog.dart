@@ -72,6 +72,10 @@ class _ExitRoomPageState extends ConsumerState<ExitRoomDialog> with RouteAware {
 
       Logger.log('🚪 API退出成功');
 
+      ref
+          .read(analyticsServiceProvider)
+          .logUserProperty(property: 'roomID', value: '');
+
       // 状態クリアを実行
       ref.read(userProvider.notifier).leaveRoom();
 

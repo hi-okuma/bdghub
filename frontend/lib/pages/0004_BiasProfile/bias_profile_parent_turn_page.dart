@@ -29,7 +29,11 @@ class _BiasProfileParentTurnPageState
 
   late final ScrollController _scrollController;
 
+  @override
   final pageTitle = '/0004/bias_profile_parent_turn_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -210,16 +214,12 @@ class _BiasProfileParentTurnPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
-          isHost: isHost,
-          onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
-            showExitGameDialog();
-          },
-        ),
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           mainAxisAlignment: MainAxisAlignment.start,

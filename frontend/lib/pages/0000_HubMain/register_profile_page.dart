@@ -160,7 +160,6 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage>
 
       if (!mounted) return;
 
-      Navigator.of(context).pop();
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => const SelectGamePage(),
