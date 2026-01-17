@@ -25,8 +25,13 @@ class _NoForeignWordPlayingPageState
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   bool isCorrectButtonLoading = false;
   bool isSkipButtonLoading = false;
-  final pageTitle = '/0002/no_foreign_word_playing_page';
   String? isSelectedPlayer;
+
+  @override
+  final pageTitle = '/0002/no_foreign_word_playing_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -281,10 +286,7 @@ class _NoForeignWordPlayingPageState
           gameTitle: gameTitle,
           isHost: isHost,
           onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
+            ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
             showExitGameDialog();
           },
         ),

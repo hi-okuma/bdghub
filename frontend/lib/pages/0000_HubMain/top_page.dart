@@ -271,6 +271,9 @@ class _TopPageState extends ConsumerState<TopPage>
       );
     } else if (_isMaintenance) {
       // カスタムウィジェットを使用
+      ref
+          .read(analyticsServiceProvider)
+          .logPageView(pageTitle: '/maintenance_page');
       bodyContent = MaintenanceScreen(message: _maintenanceMessage);
     } else {
       // 通常のUI表示
