@@ -17,6 +17,12 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   /// エラーメッセージを設定する関数（各クラスで実装する必要がある）
   void setError(String message);
 
+  /// ページタイトルを取得（実装クラスで定義を強制）
+  String get pageTitle;
+
+  /// ゲームIDを取得（実装クラスで定義を強制）
+  String? get gameId;
+
   /// 状態クリア処理
   void clearGameState() {
     // プロバイダーの状態をクリア
@@ -93,6 +99,9 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
 
   /// 終了確認ダイアログを表示
   void showExitGameDialog() {
+    ref
+        .read(analyticsServiceProvider)
+        .logPageView(pageTitle: '/game_quit_confirmation_dialog');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -109,6 +118,13 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
             TextButton(
               child: const Text('ゲーム終了'),
               onPressed: () async {
+                ref
+                    .read(analyticsServiceProvider)
+                    .logClick(button: 'game_quit_confirm', additionalParams: {
+                  'gameId': gameId!,
+                  'page_title': pageTitle,
+                });
+
                 Navigator.of(context).pop();
 
                 // 部屋IDを取得してゲーム終了処理を実行

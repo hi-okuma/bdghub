@@ -28,7 +28,15 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
   final PageController _pageController = PageController();
-  final pageTitle = '/game_title_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
+
+  @override
+  String get pageTitle {
+    final id = gameId ?? 'unknown';
+    return '/$id/game_title_page';
+  }
 
   @override
   void initState() {
@@ -56,19 +64,7 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
   @override
   void didPush() {
     super.didPush();
-    final gameId = ref.read(currentGameProvider).gameId;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/${gameId}${pageTitle}');
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final gameId = ref.read(currentGameProvider).gameId;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/${gameId}${pageTitle}');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   @override
@@ -211,7 +207,10 @@ class _GameTitlePageState extends ConsumerState<GameTitlePage>
         appBar: GameAppBar(
             gameTitle: gameTitle,
             isHost: isHost,
-            onExitPressed: showExitGameDialog),
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),

@@ -26,7 +26,12 @@ class _BiasProfileChildTurnPageState
   late final RouteObserver<ModalRoute<void>> _routeObserver;
   Future<void>? _precacheFuture;
   int _imageReloadTrigger = 0;
+
+  @override
   final pageTitle = '/0004/bias_profile_child_turn_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -74,15 +79,6 @@ class _BiasProfileChildTurnPageState
   @override
   void didPush() {
     super.didPush();
-    final isHost = ref.watch(isHostProvider);
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: pageTitle,
-        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
         pageTitle: pageTitle,
@@ -200,16 +196,12 @@ class _BiasProfileChildTurnPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
-          isHost: isHost,
-          onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
-            showExitGameDialog();
-          },
-        ),
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: FutureBuilder(
           future: _precacheFuture,

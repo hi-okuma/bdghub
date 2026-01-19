@@ -45,7 +45,12 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
   bool _hasReported = false;
   bool _isWaitingForOthers = false;
   bool _isSubmittingReport = false; // 追加
-  final pageTitle = '/0001/ngword_playing_page';
+
+  @override
+  final String pageTitle = '/0001/ngword_playing_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -71,12 +76,6 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
   @override
   void didPush() {
     super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
     ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
@@ -236,16 +235,12 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
-          isHost: isHost,
-          onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
-            showExitGameDialog();
-          },
-        ),
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [

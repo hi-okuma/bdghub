@@ -10,7 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '/components/game_list_widget.dart';
 import '/components/custom_widgets.dart';
 import '/components/app_theme.dart';
-import 'top_page.dart';
+import 'exit_room_dialog.dart';
 import 'package:bodogehub/models/game_enums.dart';
 import '/Pages/0000_HubMain/game_detail_page.dart';
 import '/utils/game_service.dart';
@@ -18,7 +18,6 @@ import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';
 import '/providers/game_state_provider.dart';
 import '/providers/analytics_provider.dart';
-import '/services/api_service.dart';
 
 class SelectGamePage extends ConsumerStatefulWidget {
   const SelectGamePage({Key? key}) : super(key: key);
@@ -60,7 +59,7 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
             case 0:
               ref.read(analyticsServiceProvider).logClick(
                   button: 'category_filter',
-                  additionalParams: {'category': 'すべて'});
+                  additionalParams: {'category': '全て'});
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
@@ -325,7 +324,6 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             onPressed: () {
-              ref.read(analyticsServiceProvider).logClick(button: 'room_leave');
               _showExitDialog();
             },
             child: const Row(
@@ -548,79 +546,13 @@ class _SelectGamePageState extends ConsumerState<SelectGamePage>
   }
 
   void _showExitDialog() {
+    ref.read(analyticsServiceProvider).logClick(button: 'room_leave');
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
-        return AlertDialog(
-          content: const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.large),
-            child: Text(
-              '部屋から退出しますか？',
-              style: AppTextStyles.body,
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'キャンセル',
-                  style: TextStyle(color: AppTheme.secondaryTextColor),
-                )),
-            TextLoadingButton(
-              text: '退出する',
-              isLoading: false,
-              onPressed: () {
-                _leaveRoom();
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
+        return const ExitRoomDialog();
       },
     );
-  }
-
-  void _leaveRoom() async {
-    try {
-      final userState = ref.read(userProvider);
-      if (userState.roomId == null || userState.uid == null) {
-        Logger.log('🚪 退出エラー: roomId or uid is null');
-        return;
-      }
-
-      Logger.log('🚪 退出開始: ${userState.nickname} が部屋 ${userState.roomId} から退出');
-
-      // ApiServiceを使用して退出処理
-      await ApiService.leaveRoom(
-        context,
-        userState.roomId!,
-        userState.uid!,
-      );
-
-      Logger.log('🚪 API退出成功');
-
-      // 状態クリアを先に実行
-      ref.read(userProvider.notifier).leaveRoom();
-
-      // ★ 修正: TopPageに直接遷移（全スタッククリア） ★
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const TopPage(),
-        ),
-        (route) => false, // 全ての前のルートを削除
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('部屋を退出しました')),
-        );
-      }
-    } catch (e) {
-      Logger.log('🚪 退出エラー: $e');
-      // エラーダイアログはErrorHandlerで表示される
-    }
   }
 }

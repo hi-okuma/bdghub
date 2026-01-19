@@ -44,7 +44,15 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   bool _isPreparationCompleted = false; // 準備完了状態
   bool _isUpdatingReady = false; // ★API呼び出し中かどうか
   bool _isLoading = true;
-  final pageTitle = '/game_result_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
+
+  @override
+  String get pageTitle {
+    final id = gameId ?? 'unknown';
+    return '/$id/game_result_page';
+  }
 
   @override
   void initState() {
@@ -70,19 +78,7 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
   @override
   void didPush() {
     super.didPush();
-    final gameId = ref.read(currentGameProvider).gameId;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/${gameId}${pageTitle}');
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
-    final gameId = ref.read(currentGameProvider).gameId;
-    ref
-        .read(analyticsServiceProvider)
-        .logPageView(pageTitle: '/${gameId}${pageTitle}');
+    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
   }
 
   // エラーメッセージを設定する関数（GameExitHandler用）
@@ -241,10 +237,12 @@ class _GameResultPageState extends ConsumerState<GameResultPage>
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
-          isHost: isHost,
-          onExitPressed: showExitGameDialog,
-        ),
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.center,

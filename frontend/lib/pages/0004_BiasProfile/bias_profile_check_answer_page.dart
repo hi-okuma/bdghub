@@ -31,7 +31,11 @@ class _BiasProfileCheckAnswerPageState
 
   late final ScrollController _scrollController;
 
+  @override
   final pageTitle = '/0004/bias_profile_check_answer_page';
+
+  @override
+  String? get gameId => ref.read(currentGameProvider).gameId;
 
   @override
   void initState() {
@@ -59,15 +63,6 @@ class _BiasProfileCheckAnswerPageState
   @override
   void didPush() {
     super.didPush();
-    final isHost = ref.watch(isHostProvider);
-    ref.read(analyticsServiceProvider).logPageView(
-        pageTitle: pageTitle,
-        additionalParams: isHost ? {'role': 'parent'} : {'role': 'child'});
-  }
-
-  @override
-  void didPopNext() {
-    super.didPopNext();
     final isHost = ref.watch(isHostProvider);
     ref.read(analyticsServiceProvider).logPageView(
         pageTitle: pageTitle,
@@ -288,16 +283,12 @@ class _BiasProfileCheckAnswerPageState
       canPop: false,
       child: Scaffold(
         appBar: GameAppBar(
-          gameTitle: gameTitle,
-          isHost: isHost,
-          onExitPressed: () {
-            ref.read(analyticsServiceProvider).logClick(
-              button: 'game_quit',
-              additionalParams: {'gameId': gameId!, 'page_title': pageTitle},
-            );
-            showExitGameDialog();
-          },
-        ),
+            gameTitle: gameTitle,
+            isHost: isHost,
+            onExitPressed: () {
+              ref.read(analyticsServiceProvider).logClick(button: 'game_quit');
+              showExitGameDialog();
+            }),
         backgroundColor: AppTheme.backgroundColor,
         body: Column(
           children: [

@@ -68,7 +68,7 @@ class _TopPageState extends ConsumerState<TopPage>
             case 0:
               ref.read(analyticsServiceProvider).logClick(
                   button: 'category_filter',
-                  additionalParams: {'category': 'すべて'});
+                  additionalParams: {'category': '全て'});
               _selectedGenre = {GameGenre.all};
               break;
             case 1:
@@ -271,6 +271,9 @@ class _TopPageState extends ConsumerState<TopPage>
       );
     } else if (_isMaintenance) {
       // カスタムウィジェットを使用
+      ref
+          .read(analyticsServiceProvider)
+          .logPageView(pageTitle: '/maintenance_page');
       bodyContent = MaintenanceScreen(message: _maintenanceMessage);
     } else {
       // 通常のUI表示
