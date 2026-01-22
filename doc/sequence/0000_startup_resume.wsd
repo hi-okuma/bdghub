@@ -37,37 +37,37 @@ alt localStorageにroomIdが存在する場合
         
     alt 部屋に復帰可能な場合
         note across: 以下を全て満たす場合に復帰可能\n・部屋の状態がaccepting/full/inProgress\n・ユーザーのUIDが該当する部屋のplayersに含まれている
-        App -> App: <color:red>部屋復帰確認ダイアログを表示</color>
+        App -> App: 部屋復帰確認ダイアログを表示
         
-        alt <color:red>部屋に戻ることを選択した場合</color>
+        alt 部屋に戻ることを選択した場合
             alt 部屋の状態が accepting または full の場合
                 App -> App: ゲーム選択画面を表示
             else 部屋の状態が inProgress の場合
                 App -> App: currentGameに従い、ゲーム中画面を表示
             end
-        else <color:red>TOP画面に戻ることを選択した場合</color>
-            App -> localStorage: <color:red>roomId削除</color>
-            note right #ffcccc: user_propertyのroomIdも削除
+        else TOP画面に戻ることを選択した場合
+            App -> localStorage: roomId削除
+            note right: user_propertyのroomIdも削除
             
-            opt <color:red>URLパラメータのroomIdがlocalStorageと一致する場合</color>
-                App -> URLParams: <color:red>URLパラメータからroomId削除</color>
+            opt URLパラメータのroomIdがlocalStorageと一致する場合
+                App -> URLParams: URLパラメータからroomId削除
             end
 
-            App -> App: <color:red>TOP画面を表示</color>
-            note right: ・エラーメッセージは表示しない\n・URLパラメータにroomIdが存在する場合は、\n「部屋参加」押下時に部屋コードが自動入力されていること\n（ただし部屋コードは編集可能であること）
+            App -> App: TOP画面を表示
+            note right: ・エラーメッセージは表示しない\n・URLパラメータにroomIdが存在する場合は、\n　プレイヤー情報登録ダイアログを表示し、\n「部屋参加」押下時に部屋コードが自動入力されていること\n（ただし部屋コードは編集可能であること）
             note across: 誤ってTOPに戻ることを選んでしまった場合、元いた部屋のゲームがそれ以上進行できなくなる
         end
     else 部屋に復帰不可能な場合
         note across: 例）部屋の状態がclose、または既に削除されている場合
-        App -> localStorage: <color:red>roomId削除</color>
-        note right #ffcccc: user_propertyのroomIdも削除
+        App -> localStorage: roomId削除
+        note right: user_propertyのroomIdも削除
                 
-        opt <color:red>URLパラメータのroomIdがlocalStorageと一致する場合</color>
-            App -> URLParams: <color:red>URLパラメータからroomId削除</color>
+        opt URLパラメータのroomIdがlocalStorageと一致する場合
+            App -> URLParams: URLパラメータからroomId削除
         end
 
-        App -> App: <color:red>TOP画面を表示</color>
-        note right: ・エラーメッセージは表示しない\n・URLパラメータにroomIdが存在する場合は、\n「部屋参加」押下時に部屋コードが自動入力されていること\n（ただし部屋コードは編集可能であること）
+        App -> App: TOP画面を表示
+        note right: ・エラーメッセージは表示しない\n・URLパラメータにroomIdが存在する場合は、\n　プレイヤー情報登録ダイアログを表示し、\n「部屋参加」押下時に部屋コードが自動入力されていること\n（ただし部屋コードは編集可能であること）
     end
 
 else localStorageにroomIdが存在しない場合
