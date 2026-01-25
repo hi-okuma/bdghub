@@ -73,18 +73,8 @@ alt localStorageにroomIdが存在する場合
 else localStorageにroomIdが存在しない場合
 
     alt URLパラメータのroomIdが存在する場合
-        App -> Firestore: 部屋情報取得リクエスト(URLのroomId)
-
-        alt 部屋の状態がacceptingの場合
-            App <-- Firestore: 部屋情報(accepting)
             App -> App: ユーザー情報登録ダイアログ表示
             note right: 部屋コードが自動入力されていること\n（ただし部屋コードは編集可能であること）
-        else 部屋の状態がaccepting以外の場合（削除済みも含む）
-            App <-- Firestore: 部屋情報(accepting以外) または エラーレスポンス
-            App -> URLParams: URLパラメータからroomId削除
-            App -> App: TOP画面を表示
-            note right: ・エラーメッセージは表示しない\n・部屋参加時に部屋コード入力可            
-        end
     else URLパラメータのroomIdが存在しない場合
         App -> App: TOP画面表示
     end
