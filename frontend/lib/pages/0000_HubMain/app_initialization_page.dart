@@ -14,6 +14,8 @@ import '/services/navigation_service.dart';
 import '/Pages/0000_HubMain/select_game_page.dart';
 import '/Pages/0000_HubMain/top_page.dart';
 import 'package:bodogehub/services/analytics_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:universal_html/html.dart' as html;
 
 class AppInitializationPage extends ConsumerStatefulWidget {
   final String? urlRoomId;
@@ -30,6 +32,8 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // URLパラメータをクリア（Web環境のみ）
+      _clearUrlParameters();
       _initializeApp();
     });
   }
@@ -52,10 +56,45 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
             restoredRoomId == widget.urlRoomId) {
           await _handleDetailedGameStateRestore();
         } else {
-          // 復元された部屋とURLの部屋が違う場合、URLを優先して参加フローへ
-          // (あるいは、進行中のセッションがあると警告を出すなどの実装も可能)
-          await ref.read(userProvider.notifier).leaveRoom(); // 古いセッション情報をクリア
-          _navigateToJoinRoom(widget.urlRoomId!, false);
+          // 復元された部屋とURLの部屋が違う場合
+          // localStorageの部屋のステータスを確認
+          final restoredRoomStatus = await _fetchRoomStatus(restoredRoomId!);
+
+          Logger.log(
+              '🔍 部屋の不一致を検出: localStorage=$restoredRoomId, URL=${widget.urlRoomId}');
+          Logger.log('🔍 localStorageの部屋ステータス: $restoredRoomStatus');
+
+          // localStorageの部屋がaccepting/full/inProgressの場合、選択ダイアログを表示
+          if (restoredRoomStatus != null &&
+              (restoredRoomStatus == 'accepting' ||
+                  restoredRoomStatus == 'full' ||
+                  restoredRoomStatus == 'inProgress')) {
+            // ダイアログで確認
+            final shouldReturnToSavedRoom = await _showRoomReturnDialog();
+
+            if (shouldReturnToSavedRoom == true) {
+              // 元の部屋に戻る選択 → 既存の復帰ロジックを実行
+              Logger.log('🔍 ユーザーが元の部屋への復帰を選択');
+              await _handleDetailedGameStateRestore();
+              return;
+            } else {
+              // TOP画面に戻る選択
+              Logger.log('🔍 ユーザーがキャンセルを選択');
+              ref
+                  .read(analyticsServiceProvider)
+                  .logUserProperty(property: 'roomID', value: '');
+              await ref.read(userProvider.notifier).leaveRoom();
+              _navigateToJoinRoom(widget.urlRoomId!, true);
+            }
+          } else {
+            // localStorageの部屋がclosedまたは存在しない場合、通常通りURLを優先
+            Logger.log('🔍 localStorageの部屋がclosedまたは存在しない → URLの部屋を優先');
+            ref
+                .read(analyticsServiceProvider)
+                .logUserProperty(property: 'roomID', value: '');
+            await ref.read(userProvider.notifier).leaveRoom();
+            _navigateToJoinRoom(widget.urlRoomId!, true);
+          }
         }
       } else {
         // 復帰に失敗した場合
@@ -100,15 +139,71 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
       final roomData = roomDoc.data() as Map<String, dynamic>;
       final roomStatus = roomData['status'] as String?;
 
+      // ★ 新規追加: players Map の取得
+      final players = roomData['players'] as Map<String, dynamic>? ?? {};
+      final currentUid = userState.uid;
+      final isPlayerInRoom =
+          currentUid != null && players.containsKey(currentUid);
+
+      // ★ 新規追加: 復帰ダイアログを表示する条件判定
+      // 条件: roomStatus が accepting/full/inProgress かつ 自分が players に含まれる
+      if (roomStatus != null &&
+          (roomStatus == 'accepting' ||
+              roomStatus == 'full' ||
+              roomStatus == 'inProgress') &&
+          isPlayerInRoom) {
+        Logger.log(
+            '🔍 復帰可能な部屋を検出: status=$roomStatus, isPlayerInRoom=$isPlayerInRoom');
+
+        // ダイアログで確認
+        final shouldReturn = await _showRoomReturnDialog();
+
+        if (shouldReturn == null || !shouldReturn) {
+          // 新しく部屋を作る選択
+          Logger.log('🔍 ユーザーが新しい部屋作成を選択');
+          ref
+              .read(analyticsServiceProvider)
+              .logUserProperty(property: 'roomID', value: '');
+          await ref.read(userProvider.notifier).leaveRoom();
+          _navigateToTop();
+          return;
+        }
+
+        // 元の部屋に戻る選択 → 既存の復帰ロジックを継続
+        Logger.log('🔍 ユーザーが部屋復帰を選択 → 復帰処理を継続');
+      }
+
       switch (roomStatus) {
         case 'closed':
-          _showErrorAndNavigateToTop('部屋はすでに終了しています');
+          ref
+              .read(analyticsServiceProvider)
+              .logUserProperty(property: 'roomID', value: '');
+          await ref.read(userProvider.notifier).leaveRoom();
+          _navigateToTop();
           return;
         case 'full':
-          _showErrorAndNavigateToTop('部屋の参加人数上限に達しています');
-          return;
+          // ★ 注: ここに到達するケース
+          // - ダイアログで「元の部屋に戻る」を選択した場合
+          // - または isPlayerInRoom が false の場合（念のための安全策）
+          if (!isPlayerInRoom) {
+            _showErrorAndNavigateToTop('部屋の参加人数上限に達しています');
+            return;
+          }
+          // 自分が含まれている場合は復帰処理を継続（break して次へ）
+          break;
         case 'inProgress':
           break;
+        case 'accepting':
+          // ★ 注: ここに到達するケース
+          // - ダイアログで「元の部屋に戻る」を選択した場合
+          // - または isPlayerInRoom が false の場合（念のための安全策）
+          if (!isPlayerInRoom) {
+            _showErrorAndNavigateToTop('この部屋に参加する権限がありません');
+            return;
+          }
+          // 自分が含まれている場合は SelectGamePage へ遷移
+          _navigateToSelectGame();
+          return;
         default:
           _navigateToSelectGame();
           return;
@@ -261,6 +356,71 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const TopPage()),
     );
+  }
+
+  Future<String?> _fetchRoomStatus(String roomId) async {
+    try {
+      final roomDoc = await FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(roomId)
+          .get();
+
+      if (!roomDoc.exists) {
+        return null;
+      }
+
+      final roomData = roomDoc.data() as Map<String, dynamic>;
+      return roomData['status'] as String?;
+    } catch (e) {
+      Logger.log('❌ 部屋ステータス取得エラー: $e');
+      return null;
+    }
+  }
+
+  /// 部屋復帰確認ダイアログ
+  /// [hasUrlRoomId] がtrueの場合、URLに別の部屋IDが存在することを示す
+  Future<bool?> _showRoomReturnDialog() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('部屋への復帰'),
+        content: const Text(
+          '前回参加していた部屋が見つかりました。\n'
+          '参加していた部屋に戻りますか？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('元の部屋に戻る'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _clearUrlParameters() {
+    if (kIsWeb) {
+      try {
+        final String currentUrl = html.window.location.href;
+
+        // URLに ? が含まれている場合のみ処理
+        if (currentUrl.contains('?')) {
+          // ? より前の部分（Base URL + Path + Fragment）だけを取り出す
+          final String newUrl = currentUrl.split('?')[0];
+
+          // ブラウザの履歴を書き換え（リロードせずにURLをクリーンにする）
+          html.window.history.replaceState(null, '', newUrl);
+          Logger.log('🔍 URLを完全にクリーンにしました: $newUrl');
+        }
+      } catch (e) {
+        Logger.log('❌ URLパラメータクリアエラー: $e');
+      }
+    }
   }
 
   void _showErrorAndNavigateToTop(String message) {
