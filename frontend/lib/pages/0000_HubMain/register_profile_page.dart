@@ -241,19 +241,11 @@ class _RegisterProfilePageState extends ConsumerState<RegisterProfilePage>
               ),
             ),
 
-          // URLから遷移時（部屋参加時のみ）
-          if (widget.isJoiningRoom &&
-              widget.initialRoomId != null &&
-              widget.initialRoomId!.isNotEmpty)
-            const SizedBox.shrink()
-
           // 部屋コード入力（部屋参加時のみ）
-          else if (widget.isJoiningRoom) ...[
+          if (widget.isJoiningRoom) ...[
             const SizedBox(height: AppSpacing.large),
             TextField(
               controller: _roomIdController,
-              enabled:
-                  widget.initialRoomId == null || widget.initialRoomId!.isEmpty,
               decoration: const InputDecoration(
                 labelText: '部屋コードを入力',
                 hintText: 'ABCD123456',
