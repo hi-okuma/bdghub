@@ -169,3 +169,5 @@ app.*.symbols
 # index.html
 web/index.html
 web/index.html.backup
+
+/.claude/
