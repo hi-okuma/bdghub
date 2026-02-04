@@ -463,7 +463,8 @@ class _BiasProfileParentTurnPageState
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('回答を送信しました'),
-                                      backgroundColor: AppTheme.successColor,
+                                      backgroundColor:
+                                          AppTheme.successGreyColor,
                                       duration: Duration(seconds: 2),
                                     ),
                                   );

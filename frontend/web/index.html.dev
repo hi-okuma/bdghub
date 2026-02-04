@@ -30,6 +30,12 @@
   <link rel="icon" href="favicon.ico" />
 
   <link rel="manifest" href="manifest.json">
+  <link rel="preload" href="assets/assets/images/bdghub_icon_main.png" as="image">
+  <link rel="preload" href="assets/assets/fonts/002zouver.2-Regular.ttf" as="font" type="font/ttf" crossorigin>
+
+  <!-- Google Fonts CDN - preconnect for google_fonts package -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
   <style>
     @font-face {

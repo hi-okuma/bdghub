@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // TODO UI適応後、不要なカラーを削除
   static const Color primaryColor = Color(0xFFE07000); // Mango Tango
   static const Color secondaryColor = Color(0xFFF5A524); // Buttercup
-  // static const Color primaryColor = Color(0xFF424242); // grey[800] - 深いグレー
-  static const Color accentColor = Color(0xFF616161); // grey[700] - やや薄いグレー
   static const Color disabledBackgroundColor = Color(0x1F000000);
   static const Color selectedBackgroundColor = Color(0xFFF2F4F7);
   static const Color backgroundColor = Colors.white;
@@ -18,26 +17,17 @@ class AppTheme {
   static const Color winnerResultRank2ndColor = Color(0xFF999999);
   static const Color winnerResultRank3rdColor = Color(0xFF927200);
   static const Color resultRankDefaultColor = Color(0xFFE6E6E6);
-
-  // ステータスカラー - グレースケール対応
-  // static const Color hostBadgeColor = Color(0xFFEEEEEE); // grey[200] - 薄いグレー
-  // static const Color hostTextColor = Color(0xFF424242); // grey[800] - 深いグレー
-  // static const Color genreChipBackground =
-  //     Color(0xFFF5F5F5); // grey[100] - 極薄グレー
-  // static const Color genreChipText = Color(0xFF616161); // grey[700] - 中間グレー
   static const Color error1Color = Color(0xFFEC0001);
   static const Color error2Color = Color(0xFFCE0000);
   static const Color errorColor = Color(0xFF757575); // grey[600] - エラーもグレー
   static const Color warningColor = Color(0xFF9E9E9E); // grey[500] - 警告もグレー
-  static const Color success1Color = Color(0xFF111827);
-  static const Color success2Color = Color(0xFF6B7280);
-  static const Color successColor = Color(0xFF616161); // grey[700] - 成功もグレー
+  static const Color success1Color = Color(0xFF239D63);
+  static const Color success2Color = Color(0xFF197A4B);
+  static const Color successGreyColor = Color(0xFF616161); // grey[700] - 成功もグレー
 
   // テキストカラー - グレースケール階調
   static const Color primaryTextColor = Color(0xFF111827);
-  // static const Color primaryTextColor = Color(0xFF212121); // grey[900] - 最も濃い
   static const Color secondaryTextColor = Color(0xFF6B7280);
-  // static const Color secondaryTextColor = Color(0xFF757575); // grey[600] - 中間
   static const Color disabledTextColor = Color(0x61000000);
   static const Color hintTextColor = Color(0xFFBDBDBD); // grey[400] - 淡い
 
@@ -49,9 +39,12 @@ class AppTheme {
 
   // ThemeDataの作成
   static ThemeData get lightTheme {
+    // Google Fontsを使用してNoto Sans JPのTextThemeを取得
+    final textTheme = GoogleFonts.notoSansJpTextTheme();
+
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'NotoSansJP',
+      textTheme: textTheme,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         surface: surfaceColor,
@@ -59,15 +52,14 @@ class AppTheme {
       ),
 
       // AppBarテーマ
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: backgroundColor,
         foregroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.notoSansJp(
           fontSize: AppTextStyles.h5FontSize,
           fontWeight: FontWeight.bold,
-          fontFamily: 'NotoSansJP',
         ),
       ),
 
@@ -102,7 +94,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: primaryColor,
-          side: BorderSide(color: primaryColor),
+          side: const BorderSide(color: primaryColor),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.large,
             vertical: AppSpacing.large,
@@ -130,28 +122,28 @@ class AppTheme {
         color: cardColor,
         elevation: AppElevation.veryLow,
         shape: RoundedRectangleBorder(
-          side: BorderSide(color: cardBorderColor),
+          side: const BorderSide(color: cardBorderColor),
           borderRadius: BorderRadius.circular(AppBorderRadius.card),
         ),
         margin: const EdgeInsets.all(AppSpacing.small),
       ),
 
       // InputDecorationテーマ
-      inputDecorationTheme: InputDecorationTheme(
+      inputDecorationTheme: const InputDecorationTheme(
         labelStyle: TextStyle(color: secondaryTextColor),
         border: OutlineInputBorder(
-          borderSide: const BorderSide(color: borderColor),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(),
         errorBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: error1Color),
+          borderSide: BorderSide(color: error1Color),
         ),
         disabledBorder: OutlineInputBorder(
           borderSide: BorderSide(color: disabledBackgroundColor),
         ),
         filled: true,
         fillColor: surfaceColor,
-        hintStyle: const TextStyle(color: secondaryTextColor),
+        hintStyle: TextStyle(color: secondaryTextColor),
       ),
 
       // SnackBarテーマ
@@ -184,7 +176,7 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         titleTextStyle: AppTextStyles.title,
-        actionsPadding: EdgeInsets.all(AppSpacing.medium),
+        actionsPadding: const EdgeInsets.all(AppSpacing.medium),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppBorderRadius.small),
         ),

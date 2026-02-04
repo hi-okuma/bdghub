@@ -5,8 +5,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 
 class AnalyticsService {
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-
   final RouteObserver<ModalRoute<void>> routeObserver =
       RouteObserver<ModalRoute<void>>();
 
@@ -34,11 +32,13 @@ class AnalyticsService {
         params.addAll(additionalParams);
       }
 
-      await _analytics.logEvent(
+      // ★変更: ここで .instance を呼ぶことで、実行時のタイミングまで評価を遅らせる
+      await FirebaseAnalytics.instance.logEvent(
         name: 'page_view',
         parameters: params,
       );
     } catch (e, s) {
+      // Firebase初期化前に呼ばれた場合はここでキャッチされ、アプリは落ちない
       Logger.log('Failed to log page_view: $e\n$s');
     }
   }
@@ -54,14 +54,14 @@ class AnalyticsService {
     try {
       final params = <String, Object>{
         'button': button,
-        'page_title': '',
       };
 
       if (additionalParams != null) {
         params.addAll(additionalParams);
       }
 
-      await _analytics.logEvent(
+      // ★変更
+      await FirebaseAnalytics.instance.logEvent(
         name: 'click_event',
         parameters: params,
       );
@@ -79,7 +79,9 @@ class AnalyticsService {
     }
 
     try {
-      await _analytics.setUserProperty(name: property, value: value);
+      // ★変更
+      await FirebaseAnalytics.instance
+          .setUserProperty(name: property, value: value);
     } catch (e, s) {
       Logger.log('Failed to set user property: $e\n$s');
     }

@@ -410,8 +410,8 @@ class _BiasProfileChildTurnPageState
                                                     .showSnackBar(
                                                   const SnackBar(
                                                     content: Text('提出を受け付けました'),
-                                                    backgroundColor:
-                                                        AppTheme.successColor,
+                                                    backgroundColor: AppTheme
+                                                        .successGreyColor,
                                                     duration:
                                                         Duration(seconds: 2),
                                                   ),

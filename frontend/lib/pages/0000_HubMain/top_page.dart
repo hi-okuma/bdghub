@@ -7,7 +7,6 @@ import '../../components/app_theme.dart';
 import 'package:bodogehub/utils/game_service.dart';
 import 'package:flutter/material.dart';
 import 'package:bodogehub/Pages/0000_HubMain/game_detail_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,10 +33,6 @@ class _TopPageState extends ConsumerState<TopPage>
   late TabController _tabController;
   List<Map<String, dynamic>> _gameList = [];
   bool _isGameLoading = true;
-  bool _isLoading = true;
-  String? _errorMessage;
-  bool _isMaintenance = false;
-  String _maintenanceMessage = '';
   Set<GameGenre> _selectedGenre = {GameGenre.all};
 
   final List<CustomTab> tabs = <CustomTab>[
@@ -146,7 +141,6 @@ class _TopPageState extends ConsumerState<TopPage>
         _isGameLoading = false;
       });
     }
-    _fetchGlobalConfig();
   }
 
   void _showCreateRoomDialog() {
@@ -188,50 +182,6 @@ class _TopPageState extends ConsumerState<TopPage>
     );
   }
 
-  Future<void> _fetchGlobalConfig() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('serviceConfig')
-          .doc('global')
-          .get();
-
-      if (snapshot.exists && snapshot.data() != null) {
-        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-        if (data.containsKey('maintenance')) {
-          Map<String, dynamic> globalConfig = data['maintenance'];
-          setState(() {
-            _isMaintenance = globalConfig['isMaintenance'] ?? false;
-            _maintenanceMessage = globalConfig['maintenanceMessage'] ?? '';
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _isMaintenance = false;
-            _maintenanceMessage = '';
-            _isLoading = false;
-          });
-        }
-      } else {
-        setState(() {
-          _isMaintenance = false;
-          _maintenanceMessage = '';
-          _isLoading = false;
-        });
-      }
-    } catch (error) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'データの取得中にエラーが発生しました';
-        Logger.log('Firestoreエラー: $error');
-      });
-    }
-  }
-
   List<Map<String, dynamic>> get _filteredGames {
     if (_selectedGenre.contains(GameGenre.all)) {
       return _gameList;
@@ -262,22 +212,8 @@ class _TopPageState extends ConsumerState<TopPage>
   Widget build(BuildContext context) {
     Widget bodyContent;
 
-    if (_isLoading) {
-      bodyContent = const Center(child: CircularProgressIndicator());
-    } else if (_errorMessage != null) {
-      bodyContent = ErrorDisplay(
-        errorMessage: _errorMessage,
-        onRetry: _fetchGlobalConfig,
-      );
-    } else if (_isMaintenance) {
-      // カスタムウィジェットを使用
-      ref
-          .read(analyticsServiceProvider)
-          .logPageView(pageTitle: '/maintenance_page');
-      bodyContent = MaintenanceScreen(message: _maintenanceMessage);
-    } else {
-      // 通常のUI表示
-      bodyContent = Column(
+    // 通常のUI表示（メンテナンス確認はmain.dartで実施済み）
+    bodyContent = Column(
         children: [
           // 固定ヘッダー部分
           Container(
@@ -382,7 +318,6 @@ class _TopPageState extends ConsumerState<TopPage>
           ),
         ],
       );
-    }
 
     return Scaffold(
       appBar: AppBar(
