@@ -165,9 +165,13 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
             _showErrorAndNavigateToTop('この部屋に参加する権限がありません');
             return;
           }
+          // ゲーム選択画面への復帰ではcurrentGameの監視が発火しないため、
+          // ここで明示的に復帰モードを終了する
+          ref.read(userProvider.notifier).completeRestoration();
           _navigateToSelectGame();
           return;
         default:
+          ref.read(userProvider.notifier).completeRestoration();
           _navigateToSelectGame();
           return;
       }
@@ -190,6 +194,9 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
         .get();
 
     if (currentGameQuery.docs.isEmpty) {
+      // currentGameが空のためcurrentGameの監視が発火しない。
+      // ここで明示的に復帰モードを終了する
+      ref.read(userProvider.notifier).completeRestoration();
       _navigateToSelectGame();
       return;
     }
