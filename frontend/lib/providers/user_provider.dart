@@ -220,9 +220,13 @@ class UserNotifier extends StateNotifier<UserState> {
     Logger.log('👥 部屋参加: $state');
   }
 
-  Future<bool> tryRestoreFromStorage() async {
+  Future<Map<String, dynamic>?> loadRawDataFromStorage() async {
+    return await _loadFromStorage();
+  }
+
+  Future<bool> tryRestoreWithData(
+      String currentUid, Map<String, dynamic>? data) async {
     try {
-      final data = await _loadFromStorage();
       if (data == null) {
         Logger.log('🔍 復帰データなし');
         return false;
@@ -231,16 +235,16 @@ class UserNotifier extends StateNotifier<UserState> {
       Logger.log(
           '🔍 復帰データ発見: ${data['roomId']} (gamePhase: ${data['gamePhase']})');
 
-      final currentUid = await AuthService.ensureAuthenticated();
       if (currentUid != data['uid']) {
         Logger.log('⚠️ UIDが変更されているため復帰をスキップ');
         await _clearStorage();
         return false;
       }
 
+      final roomId = data['roomId'];
       final roomSnapshot = await FirebaseFirestore.instance
           .collection('rooms')
-          .doc(data['roomId'])
+          .doc(roomId)
           .get();
 
       if (!roomSnapshot.exists) {
@@ -249,7 +253,7 @@ class UserNotifier extends StateNotifier<UserState> {
         return false;
       }
 
-      final roomData = roomSnapshot.data() as Map<String, dynamic>?;
+      final roomData = roomSnapshot.data();
       final players = roomData?['players'] as Map<String, dynamic>? ?? {};
 
       if (!players.containsKey(currentUid)) {

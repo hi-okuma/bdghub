@@ -354,7 +354,7 @@ class _NgWordPlayingPageState extends ConsumerState<NgWordPlayingPage>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('申告を受け付けました'),
-            backgroundColor: AppTheme.successColor,
+            backgroundColor: AppTheme.successGreyColor,
             duration: Duration(seconds: 2),
           ),
         );

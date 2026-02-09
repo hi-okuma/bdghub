@@ -256,7 +256,7 @@ class _BiasProfileCheckAnswerPageState
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('わかるde賞を提出しました'),
-                                backgroundColor: AppTheme.successColor,
+                                backgroundColor: AppTheme.successGreyColor,
                                 duration: AppAnimations.snackBarDuration,
                               ),
                             );
@@ -555,7 +555,8 @@ class _BiasProfileCheckAnswerPageState
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text('準備完了！'),
-                                        backgroundColor: AppTheme.successColor,
+                                        backgroundColor:
+                                            AppTheme.successGreyColor,
                                         duration: Duration(seconds: 2),
                                       ),
                                     );

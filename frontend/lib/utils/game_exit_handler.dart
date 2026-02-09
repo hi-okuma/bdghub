@@ -79,7 +79,7 @@ mixin GameExitHandler<T extends ConsumerStatefulWidget> on ConsumerState<T> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('ゲームを終了しました'),
-            backgroundColor: AppTheme.successColor,
+            backgroundColor: AppTheme.successGreyColor,
             duration: Duration(seconds: 2),
           ),
         );
