@@ -38,9 +38,21 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
   Future<void> _initializeApp() async {
     try {
-      await AuthService.ensureAuthenticated();
-      final restoreSuccess =
-          await ref.read(userProvider.notifier).tryRestoreFromStorage();
+      // 認証とストレージ読み込みを同時に開始
+      final results = await Future.wait([
+        AuthService.ensureAuthenticated(),
+        ref
+            .read(userProvider.notifier)
+            .loadRawDataFromStorage(), // 認証を待たずにlocalStorageからデータを取得しておく
+      ]);
+
+      final String currentUid = results[0] as String;
+      final Map<String, dynamic>? rawData = results[1] as Map<String, dynamic>?;
+
+      // 認証完了後に、取得済みのデータを使って復帰ロジックを走らせる
+      final restoreSuccess = await ref
+          .read(userProvider.notifier)
+          .tryRestoreWithData(currentUid, rawData);
 
       if (restoreSuccess) {
         final restoredRoomId = ref.read(userProvider).roomId;
