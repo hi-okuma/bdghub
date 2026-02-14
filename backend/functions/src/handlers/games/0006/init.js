@@ -30,7 +30,7 @@ async function createCurrentGame(players) {
   const playersData = {};
   playerUids.forEach((uid) => {
     playersData[uid] = {
-      isReady: false,
+      isReady: uid === CPU_UID,
       score: 0,
       lastScore: 0,
       cardCount: 0,
@@ -68,7 +68,7 @@ async function reinitializeGame(currentGameData) {
   playerUids.forEach((uid) => {
     const currentPlayer = currentGameData.players[uid];
     playersData[uid] = {
-      isReady: false,
+      isReady: uid === CPU_UID,
       score: 0,
       lastScore: currentPlayer.score || 0,
       cardCount: 0,
