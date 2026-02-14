@@ -1,0 +1,93 @@
+@startuml
+
+actor CurrentPlayer as "CurrentPlayer\n(手番プレイヤー)"
+actor OtherPlayers as "OtherPlayers\n(他の全プレイヤー)"
+
+participant APIgateway_Functions
+participant Firestore
+
+== 〜タイトル画面表示 ==
+note over CurrentPlayer, Firestore
+  currentGameが生成され、クライアントはroomStatusがinProgressとなったことを契機に取得
+end note
+
+== 〜準備完了 ==
+note over CurrentPlayer, Firestore
+  全員のisReadyがtrueとなったらgameStatusがwaiting→playingに変更される
+end note
+CurrentPlayer <- Firestore: gameStatusの更新を検知\n(waiting→playing)
+OtherPlayers <- Firestore: gameStatusの更新を検知\n(waiting→playing)
+CurrentPlayer -> CurrentPlayer: ボードを表示
+OtherPlayers -> OtherPlayers: ボードを表示
+
+== カード選択（ターン制・全プレイヤー順番に繰り返す） ==
+
+loop 各プレイヤーのターンを順に繰り返す（最大=maxCardsPerPlayer）
+
+  CurrentPlayer -> CurrentPlayer: カードを押下し、\nカード決定確認ダイアログを表示
+  CurrentPlayer -> APIgateway_Functions: 決定を押下
+  APIgateway_Functions -> Firestore: selectedCardIndex を更新（null→非null）
+  CurrentPlayer <-- APIgateway_Functions: 完了レスポンス
+  CurrentPlayer -> CurrentPlayer: 年代選択ダイアログを表示
+
+  OtherPlayers <- Firestore: selectedCardIndexの更新を検知（null→非null）
+  OtherPlayers -> OtherPlayers: 選択されたカードが\n短時間表示されたのち裏返る\n（ダイアログ表示、閉じられない）
+
+  CurrentPlayer -> APIgateway_Functions: 西暦 or 和暦を押下
+  APIgateway_Functions -> APIgateway_Functions: スコア計算・ゲーム終了判定
+
+  alt スコアがtargetScoreを超えない場合（通常継続）
+
+    APIgateway_Functions -> Firestore: スコア更新 &\nselectedCardIndex をnullに戻す
+    CurrentPlayer <-- APIgateway_Functions: 完了レスポンス
+
+    CurrentPlayer <- Firestore: 更新を検知
+    CurrentPlayer -> CurrentPlayer: ボードを表示 &\nスコア更新アニメーション
+
+    OtherPlayers <- Firestore: 更新を検知
+    OtherPlayers -> OtherPlayers: ボードを表示 &\nスコア更新アニメーション
+
+    note over CurrentPlayer, Firestore
+      手番が次のプレイヤーに移る
+      （CurrentPlayerとOtherPlayersが入れ替わる）
+    end note
+
+  else スコアがtargetScoreを超えた場合（バースト）
+
+    APIgateway_Functions -> Firestore: 該当プレイヤーをバースト状態に更新 &\nselectedCardIndex をnullに戻す
+    CurrentPlayer <-- APIgateway_Functions: 完了レスポンス
+
+    CurrentPlayer <- Firestore: 更新を検知
+    CurrentPlayer -> CurrentPlayer: バーストしたプレイヤーをグレーアウトに
+
+    OtherPlayers <- Firestore: 更新を検知
+    OtherPlayers -> OtherPlayers: バーストしたプレイヤーをグレーアウトに
+
+    alt 未バーストのプレイヤーが2人以上残っている
+      note over CurrentPlayer, Firestore
+        バーストしたプレイヤーはスキップされ、
+        次の未バーストプレイヤーに手番が移る
+      end note
+    else 未バーストのプレイヤーが1人以下（ゲーム終了）
+      note over CurrentPlayer, Firestore: → ゲーム終了フローへ
+    end
+
+  else 全プレイヤーがmaxCardsPerPlayer枚引き終わった場合（規定枚数到達）
+    note over CurrentPlayer, Firestore: → ゲーム終了フローへ
+
+  end
+
+end
+
+== ゲーム終了・結果発表 ==
+APIgateway_Functions -> Firestore: ゲーム終了&次ゲーム準備リクエスト
+CurrentPlayer <- Firestore: gameStatusの更新を検知\n(playing→waiting)
+OtherPlayers <- Firestore: gameStatusの更新を検知\n(playing→waiting)
+CurrentPlayer -> Firestore: currentGame（最終結果）をリクエスト
+OtherPlayers -> Firestore: currentGame（最終結果）をリクエスト
+CurrentPlayer <-- Firestore: 返却
+OtherPlayers <-- Firestore: 返却
+CurrentPlayer -> CurrentPlayer: 結果発表画面表示
+OtherPlayers -> OtherPlayers: 結果発表画面表示
+
+@enduml

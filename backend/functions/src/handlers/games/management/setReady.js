@@ -8,6 +8,8 @@ const {
   throwStructuredError,
 } = require("../../../utils/errorHandler");
 
+const CPU_UID = "cpu";
+
 /**
  * ゲーム準備完了リクエストの共通ハンドラー
  * @param {object} request - リクエストオブジェクト
@@ -30,13 +32,22 @@ async function setReadyHandler(request) {
         throwNotFoundError("ゲーム", gameId);
       }
 
-      const roomDoc = await transaction.get(roomRef);
+      // CPUプレイヤーはroom.playersに存在しないため、
+      // currentGame.playersで存在チェックを行う
+      if (uid !== CPU_UID) {
+        const roomDoc = await transaction.get(roomRef);
 
-      if (!roomDoc.data().players[uid]) {
-        throwNotFoundError("プレイヤー", uid);
+        if (!roomDoc.data().players[uid]) {
+          throwNotFoundError("プレイヤー", uid);
+        }
       }
 
       const currentGameData = currentGameDoc.data();
+
+      // CPUがcurrentGame.playersに存在するか確認
+      if (!currentGameData.players[uid]) {
+        throwNotFoundError("プレイヤー", uid);
+      }
 
       if (currentGameData.gameStatus !== "waiting") {
         throwGameStatusError("waiting", currentGameData.gameStatus);
