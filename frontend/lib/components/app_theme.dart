@@ -24,6 +24,13 @@ class AppTheme {
   static const Color success1Color = Color(0xFF239D63);
   static const Color success2Color = Color(0xFF197A4B);
   static const Color successGreyColor = Color(0xFF616161); // grey[700] - 成功もグレー
+  static const Color trendWordGameBackGroundColor = Color(0xFF0F171B);
+  static const Color trendWordGamePlayerCardColor = Color(0xFF15161B);
+  static const Color trendWordGameWordCardColor = Color(0xFFF5F3EF);
+  static const Color trendWordGameWordCardBorderColor = Color(0xFFFBE586);
+  static const Color trendWordGamePlayerColor = Color(0xFF00D19D);
+  static const Color trendWordGameOpponentColor = Color(0xFF5B8DEF);
+  static const Color trendWordGameDisabledColor = Color(0xFF252A2E);
 
   // テキストカラー - グレースケール階調
   static const Color primaryTextColor = Color(0xFF111827);
@@ -187,6 +194,7 @@ class AppTheme {
 
 // スペーシング定数
 class AppSpacing {
+  static const double xxSmall = 2.0;
   static const double xSmall = 4.0;
   static const double small = 8.0;
   static const double medium = 12.0;
@@ -194,6 +202,7 @@ class AppSpacing {
   static const double xLarge = 20.0;
   static const double xxLarge = 24.0;
   static const double xxxLarge = 32.0;
+  static const double trendWordCardInnerLine = 6.0;
 }
 
 // ボーダー半径定数
@@ -211,6 +220,14 @@ class AppBorderRadius {
   static const double playerBadge = 20.0;
 }
 
+class AppBorderStroke {
+  static const double none = 0.0;
+  static const double small = 1.0;
+  static const double medium = 2.0;
+  static const double large = 4.0;
+  static const trendWordWordCardOutline = 1.42;
+}
+
 // エレベーション定数
 class AppElevation {
   static const double none = 0.0;
@@ -224,6 +241,7 @@ class AppElevation {
 class AppTextStyles {
   // フォントサイズ
   static const double h5FontSize = 24.0;
+  static const double h3FontSize = 48.0;
   static const double titleMediumFontSize = 20.0;
   static const double titleFontSize = 18.0;
   static const double subtitleFontSize = 16.0;
@@ -232,11 +250,18 @@ class AppTextStyles {
   static const double captionFontSize = 11.0;
   static const double bdghubTitleFontSize = 40.0;
   static const double bdghubHeaderFontSize = 28.0;
+  static const double trendWordCardFontSize = 12.0;
   // static const double smallFontSize = 10.0;
 
   // タイトルスタイル
   static const TextStyle h5 = TextStyle(
     fontSize: h5FontSize,
+    fontWeight: FontWeight.bold,
+    color: AppTheme.primaryTextColor,
+  );
+
+  static const TextStyle h3 = TextStyle(
+    fontSize: h3FontSize,
     fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
@@ -283,6 +308,12 @@ class AppTextStyles {
     color: AppTheme.secondaryTextColor,
   );
 
+  static const TextStyle trendWordCard = TextStyle(
+    fontSize: trendWordCardFontSize,
+    fontWeight: FontWeight.bold,
+    color: AppTheme.primaryTextColor,
+  );
+
   // static const TextStyle genreChip = TextStyle(
   //   fontSize: captionFontSize,
   //   color: AppTheme.genreChipText,
@@ -323,6 +354,7 @@ class AppIconSizes {
   static const double gameCardThumbnail = 112.0;
   static const double gameDetailThumbnail = 100.0;
   static const double rankIcon = 28.0;
+  static const double cardCountDot = 10.0;
 }
 
 // レイアウト定数
@@ -339,6 +371,7 @@ class AppLayout {
   static const double circleIndicatorStroke = 2;
   static const double iconSize = 24.0;
   static const double tutorialIconSize = 36.0;
+  static const double trendWordGameCardHeight = 124.0;
 }
 
 // アニメーション定数
