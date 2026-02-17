@@ -1,3 +1,5 @@
+import 'dart:math' show pi;
+
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -327,7 +329,11 @@ class _TrendWordBlackJackPlayingPageState
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: AppSpacing.small),
-                child: BoardGridSection(gameData: gameData),
+                child: BoardGridSection(
+                  gameData: gameData,
+                  isCurrentTurn: currentUser.uid == currentTurnPlayerUid,
+                  onConfirmCard: _onConfirmCard,
+                ),
               ),
             ),
           ],
@@ -440,11 +446,18 @@ class _TrendWordBlackJackPlayingPageState
   }
 }
 
-// ボードグリッドセクション（スクロール対応フェード付き）
+// ボードグリッドセクション
 class BoardGridSection extends StatefulWidget {
   final Map<String, dynamic>? gameData;
+  final bool isCurrentTurn;
+  final Future<void> Function(String cardId)? onConfirmCard;
 
-  const BoardGridSection({super.key, this.gameData});
+  const BoardGridSection({
+    super.key,
+    this.gameData,
+    this.isCurrentTurn = false,
+    this.onConfirmCard,
+  });
 
   @override
   State<BoardGridSection> createState() => _BoardGridSectionState();
@@ -473,52 +486,51 @@ class _BoardGridSectionState extends State<BoardGridSection> {
     return null;
   }
 
+  // カード選択確認ダイアログを表示
+  void _showCardSelectionDialog(
+      BuildContext context, Map<String, dynamic> card) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.xLarge),
+        ),
+        // backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.2,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xLarge),
+          child: _CardSelectionDialogContent(
+            card: card,
+            onConfirm: widget.onConfirmCard,
+          ),
+        ),
+      ),
+    );
+  }
+
   // 個別ボードカードウィジェット
   Widget _buildBoardCard(Map<String, dynamic> card) {
     final buzzword = _extractStringValue(card['buzzword']) ?? '';
     final year = _extractIntValue(card['year']) ?? 0;
     final isAvailable = card['isAvailable'] ?? true;
-    return Card(
-      margin: const EdgeInsets.all(AppSpacing.xSmall),
-      color: AppTheme.trendWordGameWordCardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppBorderRadius.medium),
-        side: const BorderSide(
-          color: AppTheme.trendWordGameWordCardBorderColor,
-          width: AppBorderStroke.trendWordWordCardOutline,
-        ),
-      ),
-      child: InkWell(
-        onTap: isAvailable
-            ? () {
-                // TODO: カード選択処理
-                Logger.log('カード選択: $buzzword ($year)');
-              }
-            : null,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.trendWordCardInnerLine),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                  color: const Color(0xFFEAE4D9),
-                  strokeAlign: AppBorderStroke.trendWordWordCardOutline / 2),
-              borderRadius: BorderRadius.circular(AppBorderRadius.small),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xSmall),
-                  child: Text(
-                    buzzword,
-                    style: AppTextStyles.trendWordCard,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xSmall),
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 0.7,
+          child: _TrendWordCardFace(
+            buzzword: buzzword,
+            isAvailable: isAvailable,
+            onTap: isAvailable && widget.isCurrentTurn
+                ? () {
+                    Logger.log('カード選択: $buzzword ($year)');
+                    _showCardSelectionDialog(context, card);
+                  }
+                : null,
           ),
         ),
       ),
@@ -538,19 +550,326 @@ class _BoardGridSectionState extends State<BoardGridSection> {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.xSmall),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: AppSpacing.xxSmall,
-        mainAxisSpacing: AppSpacing.xxSmall,
-        childAspectRatio: 0.7,
-      ),
-      itemCount: boardCards.length,
-      itemBuilder: (context, index) {
-        final card = boardCards[index] as Map<String, dynamic>;
-        return _buildBoardCard(card);
+    const int crossAxisCount = 4;
+    const double crossAxisSpacing = AppSpacing.xxSmall;
+    const double gridPadding = AppSpacing.xSmall;
+    const double aspectRatio = 0.7;
+    const double maxCellHeight = 360.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // セル幅からアスペクト比で高さを計算し、上限でキャップ
+        final cellWidth = (constraints.maxWidth -
+                gridPadding * 2 -
+                crossAxisSpacing * (crossAxisCount - 1)) /
+            crossAxisCount;
+        final cellHeight = (cellWidth / aspectRatio).clamp(0.0, maxCellHeight);
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(gridPadding),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: crossAxisSpacing,
+            mainAxisSpacing: AppSpacing.xxSmall,
+            mainAxisExtent: cellHeight,
+          ),
+          itemCount: boardCards.length,
+          itemBuilder: (context, index) {
+            final card = boardCards[index] as Map<String, dynamic>;
+            return _buildBoardCard(card);
+          },
+        );
       },
+    );
+  }
+}
+
+// ボード・ダイアログ共通のカード表面ウィジェット
+class _TrendWordCardFace extends StatelessWidget {
+  final String buzzword;
+  final bool isAvailable;
+  final double? fontSize;
+  final VoidCallback? onTap;
+
+  const _TrendWordCardFace({
+    required this.buzzword,
+    this.isAvailable = true,
+    this.fontSize,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = isAvailable
+        ? AppTextStyles.trendWordCard.copyWith(fontSize: fontSize)
+        : AppTextStyles.trendWordCard.copyWith(
+            color: AppTheme.secondaryTextColor,
+            fontSize: fontSize,
+          );
+    final innerBorderColor = isAvailable
+        ? const Color(0xFFEAE4D9)
+        : AppTheme.trendWordGameDisabledColor;
+
+    final cardContent = Padding(
+      padding: const EdgeInsets.all(AppSpacing.trendWordCardInnerLine),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: innerBorderColor,
+            strokeAlign: AppBorderStroke.trendWordWordCardOutline / 2,
+          ),
+          borderRadius: BorderRadius.circular(AppBorderRadius.small),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xSmall),
+            child: Text(
+              buzzword,
+              style: textStyle,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: isAvailable
+          ? AppTheme.trendWordGameWordCardColor
+          : AppTheme.trendWordGameBackGroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+        side: BorderSide(
+          color: isAvailable
+              ? AppTheme.trendWordGameWordCardBorderColor
+              : AppTheme.trendWordGameDisabledColor,
+          width: AppBorderStroke.trendWordWordCardOutline,
+        ),
+      ),
+      child: onTap != null
+          ? InkWell(onTap: onTap, child: cardContent)
+          : cardContent,
+    );
+  }
+}
+
+// カード選択確認ダイアログ内コンテンツ（フリップアニメーション付き）
+class _CardSelectionDialogContent extends StatefulWidget {
+  final Map<String, dynamic> card;
+  final Future<void> Function(String cardId)? onConfirm;
+
+  const _CardSelectionDialogContent({
+    required this.card,
+    this.onConfirm,
+  });
+
+  @override
+  State<_CardSelectionDialogContent> createState() =>
+      _CardSelectionDialogContentState();
+}
+
+class _CardSelectionDialogContentState
+    extends State<_CardSelectionDialogContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // 西暦→和暦変換
+  String _toJapaneseEra(int year) {
+    String era(String name, int base) {
+      final y = year - base;
+      return '$name${y == 1 ? '元' : y.toString()}年';
+    }
+
+    if (year >= 2019) return era('令和', 2018);
+    if (year >= 1989) return era('平成', 1988);
+    if (year >= 1926) return era('昭和', 1925);
+    if (year >= 1912) return era('大正', 1911);
+    return era('明治', 1867);
+  }
+
+  // 決定ボタン押下: API実行 → 完了後にフリップアニメーション
+  Future<void> _onDecide() async {
+    if (_isLoading || _controller.isCompleted) return;
+    final cardId = _extractStringValue(widget.card['cardId']) ?? '';
+    print(cardId);
+    setState(() => _isLoading = true);
+    try {
+      await widget.onConfirm?.call(cardId);
+      if (mounted) _controller.forward();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String? _extractStringValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List && value.isNotEmpty) return value.first?.toString();
+    return value.toString();
+  }
+
+  int? _extractIntValue(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    if (value is List && value.isNotEmpty) {
+      final v = value.first;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      if (v is String) return int.tryParse(v);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buzzword = _extractStringValue(widget.card['buzzword']) ?? '';
+    final year = _extractIntValue(widget.card['year']) ?? 0;
+    final japaneseEra = _toJapaneseEra(year);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('このカードに決定しますか？', style: AppTextStyles.subtitle2),
+        const SizedBox(height: AppSpacing.medium),
+        AnimatedBuilder(
+          animation: _animation,
+          builder: (_, __) {
+            final value = _animation.value;
+            final isFlipped = value >= 0.5;
+            // 表面: 0 → π/2、裏面: -π/2 → 0
+            final angle = isFlipped ? (value - 1) * pi : value * pi;
+            return GestureDetector(
+              onTap: () {},
+              child: Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001) // パース設定
+                  ..rotateY(angle),
+                child: isFlipped
+                    ? _buildBackFace(year, japaneseEra)
+                    : _buildFrontFace(buzzword),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.large),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'キャンセル',
+                  style:
+                      AppTextStyles.body.copyWith(color: AppTheme.primaryColor),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.large),
+            Expanded(
+              child: ElevatedLoadingButton(
+                onPressed: _onDecide,
+                isLoading: _isLoading,
+                text: '決定',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCardSized({required Widget child}) {
+    const double aspectRatio = 0.7;
+    const double maxHeight = 240.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desiredWidth = constraints.maxWidth * 0.6;
+        final desiredHeight = desiredWidth / aspectRatio;
+        final height = desiredHeight.clamp(0.0, maxHeight);
+        final width = height * aspectRatio;
+        return SizedBox(width: width, height: height, child: child);
+      },
+    );
+  }
+
+  Widget _buildFrontFace(String buzzword) {
+    return _buildCardSized(
+      child: _TrendWordCardFace(buzzword: buzzword, fontSize: 20),
+    );
+  }
+
+  Widget _buildBackFace(int year, String japaneseEra) {
+    return _buildCardSized(
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: AppTheme.trendWordGameWordCardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+          side: const BorderSide(
+            color: AppTheme.trendWordGameWordCardBorderColor,
+            width: AppBorderStroke.trendWordWordCardOutline,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.trendWordCardInnerLine),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: const Color(0xFFEAE4D9),
+                strokeAlign: AppBorderStroke.trendWordWordCardOutline / 2,
+              ),
+              borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '$year年',
+                  style: AppTextStyles.h3.copyWith(
+                    color: AppTheme.primaryColor,
+                    fontSize: 28,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.xSmall),
+                Text(
+                  japaneseEra,
+                  style: AppTextStyles.subtitle,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
