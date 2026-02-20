@@ -119,121 +119,261 @@ class GameThumbnail extends StatelessWidget {
   }
 }
 
-// Elevatedローディングボタンウィジェット
+// 内部利用向けのベースウィジェット
+class _BaseLoadingButton extends StatelessWidget {
+  final Widget child; // 通常時の表示
+  final bool isLoading;
+  final VoidCallback? onPressed;
+  final Widget Function(BuildContext, VoidCallback?, Widget)
+      buttonBuilder; // ボタンの形状を定義
+
+  const _BaseLoadingButton({
+    required this.child,
+    required this.isLoading,
+    this.onPressed,
+    required this.buttonBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // ローディング中かどうかに応じて子要素を切り替える共通ロジック
+    final effectiveChild = isLoading
+        ? const SizedBox(
+            width: AppIconSizes.small,
+            height: AppIconSizes.small,
+            child: CircularProgressIndicator(
+              strokeWidth: AppLayout.circleIndicatorStroke,
+              color: AppTheme.primaryColor,
+            ),
+          )
+        : child;
+
+    // 各スタイルのボタンウィジェットでラップして返す
+    return buttonBuilder(context, isLoading ? null : onPressed, effectiveChild);
+  }
+}
+
+// Elevatedローディングボタン
 class ElevatedLoadingButton extends StatelessWidget {
-  final String text;
+  final String? text;
+  final Widget? child;
   final bool isLoading;
   final VoidCallback? onPressed;
 
   const ElevatedLoadingButton({
-    Key? key,
-    required this.text,
+    super.key,
+    this.text,
+    this.child,
     required this.isLoading,
     this.onPressed,
-  }) : super(key: key);
+  }) : assert(text != null || child != null, 'textかchildのどちらかは必須です');
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: isLoading ? null : onPressed,
-      child: _buildChild(),
-    );
-  }
-
-  Widget _buildChild() {
-    return isLoading
-        ? const SizedBox(
-            width: AppIconSizes.small,
-            height: AppIconSizes.small,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppTheme.primaryColor,
-            ),
-          )
-        : Text(
-            text,
+    return _BaseLoadingButton(
+      isLoading: isLoading,
+      onPressed: onPressed,
+      // 通常時の見た目を定義
+      child: child ??
+          Text(
+            text!,
             style: AppTextStyles.subtitle2.copyWith(color: Colors.white),
-          );
+          ),
+      // ボタンの「型」を定義
+      buttonBuilder: (context, onBtnPressed, btnChild) => ElevatedButton(
+        onPressed: onBtnPressed,
+        child: btnChild,
+      ),
+    );
   }
 }
 
-// Outlinedローディングボタンウィジェット
+// Outlinedローディングボタン
 class OutlinedLoadingButton extends StatelessWidget {
-  final String text;
+  final String? text;
+  final Widget? child;
   final bool isLoading;
   final VoidCallback? onPressed;
 
   const OutlinedLoadingButton({
-    Key? key,
-    required this.text,
+    super.key,
+    this.text,
+    this.child,
     required this.isLoading,
     this.onPressed,
-  }) : super(key: key);
+  }) : assert(text != null || child != null);
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: isLoading ? null : onPressed,
-      child: _buildChild(),
-    );
-  }
-
-  Widget _buildChild() {
-    return isLoading
-        ? const SizedBox(
-            width: AppIconSizes.small,
-            height: AppIconSizes.small,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppTheme.primaryColor,
-            ),
-          )
-        : Text(
-            text,
+    return _BaseLoadingButton(
+      isLoading: isLoading,
+      onPressed: onPressed,
+      child: child ??
+          Text(
+            text!,
             style:
                 AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
-          );
+          ),
+      buttonBuilder: (context, onBtnPressed, btnChild) => OutlinedButton(
+        onPressed: onBtnPressed,
+        child: btnChild,
+      ),
+    );
   }
 }
 
 // Textローディングボタンウィジェット
 class TextLoadingButton extends StatelessWidget {
-  final String text;
+  final String? text;
+  final Widget? child; // 自由なカスタマイズ用に追加
   final bool isLoading;
   final VoidCallback? onPressed;
 
   const TextLoadingButton({
     Key? key,
-    required this.text,
+    this.text,
+    this.child,
     required this.isLoading,
     this.onPressed,
-  }) : super(key: key);
+  })  : assert(text != null || child != null, 'textかchildのどちらかは必須です'),
+        super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: isLoading ? null : onPressed,
-      child: _buildChild(),
-    );
-  }
-
-  Widget _buildChild() {
-    return isLoading
-        ? const SizedBox(
-            width: AppIconSizes.small,
-            height: AppIconSizes.small,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppTheme.primaryColor,
-            ),
-          )
-        : Text(
-            text,
+    return _BaseLoadingButton(
+      isLoading: isLoading,
+      onPressed: onPressed,
+      // 通常時のテキストスタイルは AppTheme.primaryColor を適用
+      child: child ??
+          Text(
+            text!,
             style:
                 AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
-          );
+          ),
+      // TextButton として構築
+      buttonBuilder: (context, onBtnPressed, btnChild) => TextButton(
+        onPressed: onBtnPressed,
+        child: btnChild,
+      ),
+    );
   }
 }
+
+// // Elevatedローディングボタンウィジェット
+// class ElevatedLoadingButton extends StatelessWidget {
+//   final String text;
+//   final bool isLoading;
+//   final VoidCallback? onPressed;
+//
+//   const ElevatedLoadingButton({
+//     Key? key,
+//     required this.text,
+//     required this.isLoading,
+//     this.onPressed,
+//   }) : super(key: key);
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return ElevatedButton(
+//       onPressed: isLoading ? null : onPressed,
+//       child: _buildChild(),
+//     );
+//   }
+//
+//   Widget _buildChild() {
+//     return isLoading
+//         ? const SizedBox(
+//             width: AppIconSizes.small,
+//             height: AppIconSizes.small,
+//             child: CircularProgressIndicator(
+//               strokeWidth: 2,
+//               color: AppTheme.primaryColor,
+//             ),
+//           )
+//         : Text(
+//             text,
+//             style: AppTextStyles.subtitle2.copyWith(color: Colors.white),
+//           );
+//   }
+// }
+//
+// // Outlinedローディングボタンウィジェット
+// class OutlinedLoadingButton extends StatelessWidget {
+//   final String text;
+//   final bool isLoading;
+//   final VoidCallback? onPressed;
+//
+//   const OutlinedLoadingButton({
+//     Key? key,
+//     required this.text,
+//     required this.isLoading,
+//     this.onPressed,
+//   }) : super(key: key);
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return OutlinedButton(
+//       onPressed: isLoading ? null : onPressed,
+//       child: _buildChild(),
+//     );
+//   }
+//
+//   Widget _buildChild() {
+//     return isLoading
+//         ? const SizedBox(
+//             width: AppIconSizes.small,
+//             height: AppIconSizes.small,
+//             child: CircularProgressIndicator(
+//               strokeWidth: 2,
+//               color: AppTheme.primaryColor,
+//             ),
+//           )
+//         : Text(
+//             text,
+//             style:
+//                 AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
+//           );
+//   }
+// }
+//
+// // Textローディングボタンウィジェット
+// class TextLoadingButton extends StatelessWidget {
+//   final String text;
+//   final bool isLoading;
+//   final VoidCallback? onPressed;
+//
+//   const TextLoadingButton({
+//     Key? key,
+//     required this.text,
+//     required this.isLoading,
+//     this.onPressed,
+//   }) : super(key: key);
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return TextButton(
+//       onPressed: isLoading ? null : onPressed,
+//       child: _buildChild(),
+//     );
+//   }
+//
+//   Widget _buildChild() {
+//     return isLoading
+//         ? const SizedBox(
+//             width: AppIconSizes.small,
+//             height: AppIconSizes.small,
+//             child: CircularProgressIndicator(
+//               strokeWidth: 2,
+//               color: AppTheme.primaryColor,
+//             ),
+//           )
+//         : Text(
+//             text,
+//             style:
+//                 AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
+//           );
+//   }
+// }
 
 // エラー表示ウィジェット
 class ErrorDisplay extends StatelessWidget {

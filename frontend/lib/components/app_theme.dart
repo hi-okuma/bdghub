@@ -28,6 +28,8 @@ class AppTheme {
   static const Color trendWordGamePlayerCardColor = Color(0xFF15161B);
   static const Color trendWordGameWordCardColor = Color(0xFFF5F3EF);
   static const Color trendWordGameWordCardBorderColor = Color(0xFFFBE586);
+  static const Color trendWordGameWordCardInnerBorderColor = Color(0xFFEAE4D9);
+  static const Color trendWordGameWordCardBackFaceDivider = Color(0x3B000000);
   static const Color trendWordGamePlayerColor = Color(0xFF00D19D);
   static const Color trendWordGameOpponentColor = Color(0xFF5B8DEF);
   static const Color trendWordGameDisabledColor = Color(0xFF252A2E);

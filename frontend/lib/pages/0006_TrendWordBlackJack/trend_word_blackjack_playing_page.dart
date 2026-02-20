@@ -45,7 +45,9 @@ class _TrendWordBlackJackPlayingPageState
     extends ConsumerState<TrendWordBlackJackPlayingPage>
     with GameExitHandler, RouteAware {
   late final RouteObserver<ModalRoute<void>> _routeObserver;
+  // ignore: unused_field
   bool _isConfirmingCard = false;
+  // ignore: unused_field
   bool _isAdoptingValue = false;
 
   // --- GameExitHandler 必須オーバーライド ---
@@ -333,6 +335,19 @@ class _TrendWordBlackJackPlayingPageState
                   gameData: gameData,
                   isCurrentTurn: currentUser.uid == currentTurnPlayerUid,
                   onConfirmCard: _onConfirmCard,
+                  onAdoptValue: _onAdoptValue,
+                  currentScore: gamePlayers
+                      .firstWhere(
+                        (p) => p.isCurrentUser,
+                        orElse: () => TrendWordBlackJackPlayer(
+                          uid: '',
+                          nickname: '',
+                          score: 0,
+                          lastScore: 0,
+                          cardCount: 0,
+                        ),
+                      )
+                      .score,
                 ),
               ),
             ),
@@ -451,12 +466,16 @@ class BoardGridSection extends StatefulWidget {
   final Map<String, dynamic>? gameData;
   final bool isCurrentTurn;
   final Future<void> Function(String cardId)? onConfirmCard;
+  final Future<void> Function(String valueType)? onAdoptValue;
+  final int currentScore;
 
   const BoardGridSection({
     super.key,
     this.gameData,
     this.isCurrentTurn = false,
     this.onConfirmCard,
+    this.onAdoptValue,
+    required this.currentScore,
   });
 
   @override
@@ -487,10 +506,10 @@ class _BoardGridSectionState extends State<BoardGridSection> {
   }
 
   // カード選択確認ダイアログを表示
-  void _showCardSelectionDialog(
-      BuildContext context, Map<String, dynamic> card) {
+  Future<void> _showCardSelectionDialog(
+      BuildContext context, Map<String, dynamic> card) async {
     final screenWidth = MediaQuery.of(context).size.width;
-    showDialog(
+    final result = await showDialog<String>(
       context: context,
       barrierDismissible: true,
       builder: (_) => Dialog(
@@ -506,10 +525,16 @@ class _BoardGridSectionState extends State<BoardGridSection> {
           child: _CardSelectionDialogContent(
             card: card,
             onConfirm: widget.onConfirmCard,
+            currentScore: widget.currentScore,
           ),
         ),
       ),
     );
+
+    // ダイアログから valueType が返ってきた場合、年代採用APIを呼び出す
+    if (result != null && widget.onAdoptValue != null) {
+      await widget.onAdoptValue!(result);
+    }
   }
 
   // 個別ボードカードウィジェット
@@ -607,7 +632,7 @@ class _TrendWordCardFace extends StatelessWidget {
             fontSize: fontSize,
           );
     final innerBorderColor = isAvailable
-        ? const Color(0xFFEAE4D9)
+        ? AppTheme.trendWordGameWordCardBorderColor
         : AppTheme.trendWordGameDisabledColor;
 
     final cardContent = Padding(
@@ -660,10 +685,12 @@ class _TrendWordCardFace extends StatelessWidget {
 class _CardSelectionDialogContent extends StatefulWidget {
   final Map<String, dynamic> card;
   final Future<void> Function(String cardId)? onConfirm;
+  final int currentScore;
 
   const _CardSelectionDialogContent({
     required this.card,
     this.onConfirm,
+    required this.currentScore,
   });
 
   @override
@@ -677,6 +704,7 @@ class _CardSelectionDialogContentState
   late final AnimationController _controller;
   late final Animation<double> _animation;
   bool _isLoading = false;
+  bool _isFlipped = false;
 
   @override
   void initState() {
@@ -697,31 +725,60 @@ class _CardSelectionDialogContentState
     super.dispose();
   }
 
-  // 西暦→和暦変換
-  String _toJapaneseEra(int year) {
-    String era(String name, int base) {
-      final y = year - base;
-      return '$name${y == 1 ? '元' : y.toString()}年';
-    }
+  // 西暦から和暦の情報を取得する
+  // (元号名, 元号年) のペアを返す
+  ({String name, int yearNum}) _getJapaneseEraInfo(int year) {
+    if (year >= 2019) return (name: '令和', yearNum: year - 2018);
+    if (year >= 1989) return (name: '平成', yearNum: year - 1988);
+    if (year >= 1926) return (name: '昭和', yearNum: year - 1925);
+    if (year >= 1912) return (name: '大正', yearNum: year - 1911);
+    return (name: '明治', yearNum: year - 1867);
+  }
 
-    if (year >= 2019) return era('令和', 2018);
-    if (year >= 1989) return era('平成', 1988);
-    if (year >= 1926) return era('昭和', 1925);
-    if (year >= 1912) return era('大正', 1911);
-    return era('明治', 1867);
+  String _toJapaneseEra(int year) {
+    final info = _getJapaneseEraInfo(year);
+    final yearStr = info.yearNum == 1 ? '元' : info.yearNum.toString();
+    return '${info.name}$yearStr年';
+  }
+
+  //　西暦からスコア変換
+  int _toScoreFromWesternEra(int year) {
+    if (year >= 2000) {
+      return year - 2000;
+    } else {
+      return year - 1900;
+    }
+  }
+
+  // 和暦からスコア変換
+  int _toScoreFromJapaneseEra(int year) {
+    final info = _getJapaneseEraInfo(year);
+    return info.yearNum;
   }
 
   // 決定ボタン押下: API実行 → 完了後にフリップアニメーション
   Future<void> _onDecide() async {
     if (_isLoading || _controller.isCompleted) return;
     final cardId = _extractStringValue(widget.card['cardId']) ?? '';
-    print(cardId);
+    Logger.log('カード決定: $cardId');
     setState(() => _isLoading = true);
     try {
       await widget.onConfirm?.call(cardId);
-      if (mounted) _controller.forward();
+      if (mounted) {
+        setState(() => _isFlipped = true);
+        _controller.forward();
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // 年代採用ボタン押下: valueType ('Western' or 'Japanese') をダイアログ結果として返す
+  // 実際のAPI呼び出しは親コンポーネントで行われる
+  void _onAdoptValue(String valueType) {
+    if (_isLoading) return;
+    if (mounted) {
+      Navigator.of(context).pop(valueType);
     }
   }
 
@@ -751,11 +808,23 @@ class _CardSelectionDialogContentState
     final buzzword = _extractStringValue(widget.card['buzzword']) ?? '';
     final year = _extractIntValue(widget.card['year']) ?? 0;
     final japaneseEra = _toJapaneseEra(year);
+    final westernScore = _toScoreFromWesternEra(year);
+    final japaneseScore = _toScoreFromJapaneseEra(year);
+
+    // スコア計算とBURST判定
+    final currentScore = widget.currentScore;
+    final newWesternScore = currentScore + westernScore;
+    final newJapaneseScore = currentScore + japaneseScore;
+    final isWesternBurst = newWesternScore > 150;
+    final isJapaneseBurst = newJapaneseScore > 150;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('このカードに決定しますか？', style: AppTextStyles.subtitle2),
+        Text(
+          _isFlipped ? 'どちらの年代を採用しますか？' : 'このカードに決定しますか？',
+          style: AppTextStyles.subtitle2,
+        ),
         const SizedBox(height: AppSpacing.medium),
         AnimatedBuilder(
           animation: _animation,
@@ -779,29 +848,114 @@ class _CardSelectionDialogContentState
           },
         ),
         const SizedBox(height: AppSpacing.large),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  'キャンセル',
-                  style:
-                      AppTextStyles.body.copyWith(color: AppTheme.primaryColor),
-                ),
+        _isFlipped
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedLoadingButton(
+                          onPressed: () => _onAdoptValue('Western'),
+                          isLoading: _isLoading,
+                          child: Column(
+                            children: [
+                              Text('西暦を採用（$westernScore点）',
+                                  style: AppTextStyles.subtitle
+                                      .copyWith(color: Colors.white)),
+                              RichText(
+                                text: TextSpan(
+                                    style: AppTextStyles.caption
+                                        .copyWith(color: Colors.white),
+                                    children: [
+                                      TextSpan(
+                                        text:
+                                            '$currentScore点 → $newWesternScore点',
+                                      ),
+                                      isWesternBurst
+                                          ? TextSpan(
+                                              text: ' BURST!',
+                                              style: AppTextStyles.caption
+                                                  .copyWith(
+                                                      color:
+                                                          AppTheme.error2Color,
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                            )
+                                          : const TextSpan(text: ''),
+                                    ]),
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.medium),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedLoadingButton(
+                          onPressed: () => _onAdoptValue('Japanese'),
+                          isLoading: _isLoading,
+                          child: Column(
+                            children: [
+                              Text('和暦を採用（$japaneseScore点）',
+                                  style: AppTextStyles.subtitle
+                                      .copyWith(color: Colors.white)),
+                              RichText(
+                                text: TextSpan(
+                                    style: AppTextStyles.caption
+                                        .copyWith(color: Colors.white),
+                                    children: [
+                                      TextSpan(
+                                        text:
+                                            '$currentScore点 → $newJapaneseScore点',
+                                      ),
+                                      isJapaneseBurst
+                                          ? TextSpan(
+                                              text: ' BURST!',
+                                              style: AppTextStyles.caption
+                                                  .copyWith(
+                                                      color:
+                                                          AppTheme.error2Color,
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                            )
+                                          : const TextSpan(text: ''),
+                                    ]),
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'キャンセル',
+                        style: AppTextStyles.body
+                            .copyWith(color: AppTheme.primaryColor),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.large),
+                  Expanded(
+                    child: ElevatedLoadingButton(
+                      onPressed: _onDecide,
+                      isLoading: _isLoading,
+                      text: '決定',
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.large),
-            Expanded(
-              child: ElevatedLoadingButton(
-                onPressed: _onDecide,
-                isLoading: _isLoading,
-                text: '決定',
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -843,27 +997,54 @@ class _CardSelectionDialogContentState
           child: Container(
             decoration: BoxDecoration(
               border: Border.all(
-                color: const Color(0xFFEAE4D9),
+                color: AppTheme.trendWordGameWordCardInnerBorderColor,
                 strokeAlign: AppBorderStroke.trendWordWordCardOutline / 2,
               ),
               borderRadius: BorderRadius.circular(AppBorderRadius.small),
             ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Text(
-                  '$year年',
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppTheme.primaryColor,
-                    fontSize: 28,
-                  ),
-                  textAlign: TextAlign.center,
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '西暦',
+                      style: AppTextStyles.trendWordCard
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(
+                      height: AppSpacing.xSmall,
+                    ),
+                    Text(
+                      '$year年',
+                      style: AppTextStyles.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xSmall),
-                Text(
-                  japaneseEra,
-                  style: AppTextStyles.subtitle,
-                  textAlign: TextAlign.center,
+                const Divider(
+                  color: AppTheme.trendWordGameWordCardBackFaceDivider,
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '和暦',
+                      style: AppTextStyles.trendWordCard
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(
+                      height: AppSpacing.xSmall,
+                    ),
+                    Text(
+                      japaneseEra,
+                      style: AppTextStyles.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ],
             ),
