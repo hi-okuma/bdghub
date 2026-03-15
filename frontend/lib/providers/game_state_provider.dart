@@ -650,8 +650,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         }
 
         // ★追加: GameID '0006' の場合の特例処理
-        // '0006' はプレイ画面内のダイアログで結果発表を行うため、
+        // '0006' はプレイ画面内のダイアログで結果発表・リプレイを行うため、
         // 汎用の GameResultPage への自動遷移をスキップする。
+        // フラグはリセットしない: リプレイ時に PlayingPage を再 push させず、
+        // 既存ページ内の ref.listen でゲーム再開を処理する。
         if (activeGameId == '0006') {
           Logger.log('🎮 Game 0006: waiting検知による自動result遷移をスキップします');
           break;

@@ -218,6 +218,18 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     }
 
     final navigationService = ref.read(navigationServiceProvider);
+
+    // 0006 はプレイ画面内ダイアログで結果・年代選択を表示するため、
+    // gameStatus に関わらず常に PlayingPage に遷移させ、
+    // ダイアログ復帰はページ側の initState で行う
+    if (gameId == '0006') {
+      navigationService.navigateToPlayingPage();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(roomGameStateProvider(roomId));
+      });
+      return;
+    }
+
     if (gameStatus == GameStatus.waiting) {
       if (savedGamePhase == GamePhase.ended) {
         navigationService.navigateToResult(gameData);

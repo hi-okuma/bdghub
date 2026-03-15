@@ -50,6 +50,7 @@ dependencies:
   flutter_html: ^3.0.0
   firebase_analytics: ^11.6.0
   google_fonts: ^6.2.1
+  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:

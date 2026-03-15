@@ -1,6 +1,7 @@
 import 'dart:math' show max, pi;
 
 import 'package:bodogehub/utils/logger.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bodogehub/components/app_theme.dart';
@@ -51,6 +52,11 @@ class _TrendWordBlackJackPlayingPageState
   bool _isAdoptingValue = false;
   bool _isWatchCardDialogOpen = false;
   bool _isResultDialogOpen = false;
+  DateTime? _watchCardDialogOpenTime;
+  String? _watchedCardId; // 観戦ダイアログを表示済みの selectedCardId
+  bool _isRestorationHandled = false;
+  bool _isCpuActing = false;
+  int _cpuActionGeneration = 0;
 
   // --- GameExitHandler 必須オーバーライド ---
   @override
@@ -71,6 +77,9 @@ class _TrendWordBlackJackPlayingPageState
   void initState() {
     super.initState();
     _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
+    // 復帰時: 表示すべきダイアログを再現する
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkAndRestoreDialogs());
   }
 
   @override
@@ -142,6 +151,226 @@ class _TrendWordBlackJackPlayingPageState
     }
   }
 
+  // --- CPU スコア計算ヘルパー ---
+  int _cpuToScoreFromWesternEra(int year) =>
+      year >= 2000 ? year - 2000 : year - 1900;
+
+  int _cpuToScoreFromJapaneseEra(int year) {
+    if (year >= 2019) return year - 2018; // 令和
+    if (year >= 1989) return year - 1988; // 平成
+    if (year >= 1926) return year - 1925; // 昭和
+    if (year >= 1912) return year - 1911; // 大正
+    return year - 1867; // 明治
+  }
+
+  // 利用可能なカードの中から最適なカードIDを返す
+  // 戦略: バーストしない範囲で targetScore に最も近くなるカード+年代の組み合わせを優先
+  String? _cpuChooseBestCard(
+      List<dynamic> availableCards, int cpuScore, int targetScore) {
+    String? bestCardId;
+    double bestValue = double.negativeInfinity;
+
+    for (final card in availableCards) {
+      final cardId = _extractStringValue(card['cardId']);
+      if (cardId == null) continue;
+      final year = _extractIntValue(card['year']) ?? 0;
+      final westernAdd = _cpuToScoreFromWesternEra(year);
+      final japaneseAdd = _cpuToScoreFromJapaneseEra(year);
+
+      // 西暦・和暦の両オプションのうち、このカードの最良値を評価
+      double cardBest = double.negativeInfinity;
+      for (final add in [westernAdd, japaneseAdd]) {
+        final newScore = cpuScore + add;
+        // バーストしないほど高評価、バーストは超過量でペナルティ
+        final v = newScore <= targetScore
+            ? newScore.toDouble()
+            : -(newScore - targetScore).toDouble() - 1000;
+        if (v > cardBest) cardBest = v;
+      }
+
+      if (cardBest > bestValue) {
+        bestValue = cardBest;
+        bestCardId = cardId;
+      }
+    }
+    return bestCardId;
+  }
+
+  // 確定済みカードに対して最適な年代種別 ('Western' / 'Japanese') を返す
+  String _cpuChooseBestValueType(
+      Map<String, dynamic> card, int cpuScore, int targetScore) {
+    final year = _extractIntValue(card['year']) ?? 0;
+    final westernAdd = _cpuToScoreFromWesternEra(year);
+    final japaneseAdd = _cpuToScoreFromJapaneseEra(year);
+    final newWestern = cpuScore + westernAdd;
+    final newJapanese = cpuScore + japaneseAdd;
+
+    // 両方バースト → 超過量が小さい方
+    if (newWestern > targetScore && newJapanese > targetScore) {
+      return newWestern <= newJapanese ? 'Western' : 'Japanese';
+    }
+    // 片方バースト → 安全な方
+    if (newWestern > targetScore) return 'Japanese';
+    if (newJapanese > targetScore) return 'Western';
+    // どちらもセーフ → スコアが高い方（targetScore に近い方）
+    return newWestern >= newJapanese ? 'Western' : 'Japanese';
+  }
+
+  // --- CPU アクション実行 ---
+  // カード選択 → 年代選択を1つの非同期メソッドでチェーン実行する。
+  // ref.listen の再発火に依存すると、Firestore リアルタイム更新と
+  // API レスポンスの到着順が逆転し年代選択がスキップされるため。
+  Future<void> _runCpuFullTurn(
+      String roomId, String cpuUid, String cardId, String valueType) async {
+    final generation = _cpuActionGeneration;
+    try {
+      // カード選択フェーズ
+      await Future.delayed(const Duration(milliseconds: 2000));
+      if (!mounted || _cpuActionGeneration != generation) return;
+      await ApiService.confirmCard0006(context, roomId, cpuUid, cardId);
+      Logger.log('CPU カード選択完了: $cardId');
+
+      // 年代選択フェーズ（観戦ダイアログのアニメーション考慮）
+      await Future.delayed(const Duration(milliseconds: 3000));
+      if (!mounted || _cpuActionGeneration != generation) return;
+      await ApiService.adoptValue0006(context, roomId, cpuUid, valueType);
+      Logger.log('CPU 年代選択完了: $valueType');
+      // 成功時は _isCpuActing をリセットしない。
+      // ref.listen がターン変更を検知した時にリセットされる。
+    } catch (e) {
+      Logger.log('CPU ターンエラー: $e');
+      // エラー時のみリセット（ref.listen によるリトライを許可）
+      if (_cpuActionGeneration == generation) _isCpuActing = false;
+    }
+  }
+
+  // 年代選択のみ（復帰時など、カード確定済みの状態から開始する場合）
+  Future<void> _runCpuYearSelection(
+      String roomId, String cpuUid, String valueType) async {
+    final generation = _cpuActionGeneration;
+    try {
+      await Future.delayed(const Duration(milliseconds: 3000));
+      if (!mounted || _cpuActionGeneration != generation) return;
+      await ApiService.adoptValue0006(context, roomId, cpuUid, valueType);
+      Logger.log('CPU 年代選択完了: $valueType');
+    } catch (e) {
+      Logger.log('CPU 年代選択エラー: $e');
+      if (_cpuActionGeneration == generation) _isCpuActing = false;
+    }
+  }
+
+  // --- 復帰時ダイアログ再現 ---
+  Future<void> _checkAndRestoreDialogs() async {
+    if (_isRestorationHandled) return;
+    final user = ref.read(userProvider);
+    if (!user.isRestoring) return;
+
+    _isRestorationHandled = true;
+
+    final gameData = ref.read(currentGameProvider).gameData;
+    if (gameData == null || !mounted) return;
+
+    final roomId = user.roomId;
+    if (roomId == null) return;
+
+    final gameStatus = _extractStringValue(gameData['gameStatus']);
+    final screenSize = MediaQuery.of(context).size;
+
+    // --- 結果発表ダイアログの復帰 ---
+    if (gameStatus == 'waiting' && !_isResultDialogOpen) {
+      _isResultDialogOpen = true;
+      final winnerId = _extractStringValue(gameData['winnerId']);
+      final isWin = winnerId == user.uid;
+      const double dialogHeight = 500.0;
+      final double verticalInset =
+          max(32.0, (screenSize.height - dialogHeight) / 2);
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppBorderRadius.xLarge),
+          ),
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: screenSize.width * 0.05,
+            vertical: verticalInset,
+          ),
+          child: SizedBox(
+            height: dialogHeight,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xLarge),
+              child: _TrendWordResultDialogContent(
+                isWin: isWin,
+                roomId: roomId,
+                onExitPressed: () => showExitGameDialog(),
+              ),
+            ),
+          ),
+        ),
+      ).then((_) {
+        if (mounted) _isResultDialogOpen = false;
+      });
+      return;
+    }
+
+    // --- 年代選択ダイアログの復帰（自分の手番 && カード確定済み）---
+    if (gameStatus == 'playing') {
+      final uid = user.uid;
+      final turnOrder = gameData['turnOrder'] as List?;
+      final currentTurnIndex =
+          _extractIntValue(gameData['currentTurnPlayerIndex']);
+      final currentTurnUid = (currentTurnIndex != null &&
+              turnOrder != null &&
+              currentTurnIndex < turnOrder.length)
+          ? turnOrder[currentTurnIndex] as String?
+          : null;
+      final selectedCardId = _extractStringValue(gameData['selectedCardId']);
+
+      if (uid == currentTurnUid && selectedCardId != null) {
+        final boardCards = gameData['boardCards'] as List<dynamic>?;
+        final selectedCardIndex = boardCards?.indexWhere(
+            (card) => _extractStringValue(card['cardId']) == selectedCardId);
+
+        if (boardCards != null &&
+            selectedCardIndex != null &&
+            selectedCardIndex != -1) {
+          final card = boardCards[selectedCardIndex] as Map<String, dynamic>;
+          final playersData = gameData['players'] as Map<String, dynamic>?;
+          final myPlayerData = playersData?[uid] as Map<String, dynamic>?;
+          final currentScore = _extractIntValue(myPlayerData?['score']) ?? 0;
+
+          if (!mounted) return;
+          final result = await showDialog<String>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppBorderRadius.xLarge),
+              ),
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: screenSize.width * 0.15,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xLarge),
+                child: _CardSelectionDialogContent(
+                  card: card,
+                  onConfirm: null, // カードは既に確定済み
+                  currentScore: currentScore,
+                  startFlipped: true,
+                ),
+              ),
+            ),
+          );
+
+          if (result != null && mounted) {
+            await _onAdoptValue(result);
+          }
+        }
+      }
+    }
+  }
+
   // --- 値採用APIコール ---
   Future<void> _onAdoptValue(String valueType) async {
     final currentUser = ref.read(userProvider);
@@ -198,19 +427,110 @@ class _TrendWordBlackJackPlayingPageState
           (card) => _extractStringValue(card['cardId']) == selectedCardId);
       // 存在しない場合は -1 が返るため、 selectedCardIndex != -1 で判定
 
+      // --- リプレイ検知 ---
+      // playing に戻ったのに結果ダイアログが残っている場合は閉じる
+      // CPU ターン処理より先に実行し、世代カウンタを更新してから CPU アクションを開始する
+      final gameStatus = _extractStringValue(gameData['gameStatus']);
+      if (gameStatus == 'playing' && _isResultDialogOpen) {
+        _isResultDialogOpen = false;
+        _cpuActionGeneration++;
+        _isCpuActing = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) Navigator.of(context).pop(); // 結果ダイアログを閉じる
+        });
+      }
+
+      // --- CPU ターン処理 ---
+      // roomPlayersMap に存在しない UID = CPU プレイヤー
+      final playersGameData =
+          gameData['players'] as Map<String, dynamic>? ?? {};
+      final roomSnap = ref.read(roomStreamProvider(user.roomId ?? ''));
+      final roomPlayersMap = roomSnap.whenData((snapshot) {
+            final roomData = snapshot.data() as Map<String, dynamic>?;
+            return roomData?['players'] as Map<String, dynamic>? ?? {};
+          }).value ??
+          {};
+      final isCpuTurn = currentTurnUid != null &&
+          playersGameData.containsKey(currentTurnUid) &&
+          !roomPlayersMap.containsKey(currentTurnUid);
+
+      // CPU のターンでなくなったらフラグをリセット
+      // （_runCpuFullTurn 成功後、ターン変更の Firestore 更新で到達）
+      if (!isCpuTurn && _isCpuActing) {
+        _isCpuActing = false;
+      }
+
+      // playing 状態の時のみ CPU アクションを実行（waiting 中の誤発火を防止）
+      if (gameStatus == 'playing' && isCpuTurn && !_isCpuActing) {
+        _isCpuActing = true;
+        final cpuUid = currentTurnUid;
+        final cpuPlayerData = playersGameData[cpuUid] as Map<String, dynamic>?;
+        final cpuScore = _extractIntValue(cpuPlayerData?['score']) ?? 0;
+
+        // assets/config から targetScore を取得（全プレイヤー数キー）
+        final assetsConfig =
+            gameData['assets']?['config'] as Map<String, dynamic>?;
+        final totalPlayerCount = playersGameData.length;
+        final targetScore =
+            (assetsConfig?[totalPlayerCount.toString()]?['targetScore'] as num?)
+                    ?.toInt() ??
+                150;
+
+        final roomId = user.roomId;
+        if (roomId == null) {
+          _isCpuActing = false;
+        } else if (selectedCardId == null && boardCards != null) {
+          // カード未選択 → カード選択＋年代選択を一括実行
+          final availableCards = boardCards
+              .where((card) =>
+                  card['isAvailable'] == null || card['isAvailable'] == true)
+              .toList();
+          final bestCardId =
+              _cpuChooseBestCard(availableCards, cpuScore, targetScore);
+          if (bestCardId != null) {
+            // 選択するカードのデータから年代も事前に決定
+            final cardData = availableCards.firstWhere(
+                (c) => _extractStringValue(c['cardId']) == bestCardId);
+            final valueType = _cpuChooseBestValueType(
+                cardData as Map<String, dynamic>, cpuScore, targetScore);
+            _runCpuFullTurn(roomId, cpuUid, bestCardId, valueType);
+          } else {
+            _isCpuActing = false;
+          }
+        } else if (selectedCardId != null && boardCards != null) {
+          // カード確定済み → 年代選択のみ（復帰時など）
+          final idx = boardCards.indexWhere(
+              (card) => _extractStringValue(card['cardId']) == selectedCardId);
+          if (idx != -1) {
+            final card = boardCards[idx] as Map<String, dynamic>;
+            final valueType =
+                _cpuChooseBestValueType(card, cpuScore, targetScore);
+            _runCpuYearSelection(roomId, cpuUid, valueType);
+          } else {
+            _isCpuActing = false;
+          }
+        } else {
+          _isCpuActing = false;
+        }
+      }
+
       // 条件合致 → ダイアログを開く
+      // 同じ selectedCardId に対して一度だけ表示する（手動で閉じた後の再表示を防止）
       if (!isCurrentTurn &&
           selectedCardId != null &&
+          selectedCardId != _watchedCardId &&
           selectedCardIndex != -1 &&
           boardCards != null &&
           !_isWatchCardDialogOpen) {
         _isWatchCardDialogOpen = true;
+        _watchedCardId = selectedCardId;
+        _watchCardDialogOpenTime = DateTime.now();
         final card = boardCards[selectedCardIndex!] as Map<String, dynamic>;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           showDialog<void>(
             context: context,
-            barrierDismissible: false,
+            barrierDismissible: true,
             builder: (_) => Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppBorderRadius.xLarge),
@@ -229,20 +549,47 @@ class _TrendWordBlackJackPlayingPageState
         });
       }
 
-      // selectedCardIndex が null になった → 観戦ダイアログを閉じる
-      if (selectedCardId == null && _isWatchCardDialogOpen) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _isWatchCardDialogOpen) {
-            _isWatchCardDialogOpen = false;
-            Navigator.of(context).pop();
-          }
-        });
+      // selectedCardId が null になった → 観戦ダイアログを閉じる＋追跡リセット
+      // アニメーション(1000ms遅延 + 400ms flip)完了後にバッファを加えた
+      // 最小表示時間(2000ms)を保証してから閉じる
+      if (selectedCardId == null) {
+        _watchedCardId = null; // 次のカード選択で再表示できるようリセット
+        if (_isWatchCardDialogOpen) {
+          const minShowDuration = Duration(milliseconds: 2000);
+          final openTime = _watchCardDialogOpenTime;
+          final elapsed = openTime != null
+              ? DateTime.now().difference(openTime)
+              : minShowDuration;
+          final remaining = minShowDuration - elapsed;
+          final delay = remaining > Duration.zero ? remaining : Duration.zero;
+          final navigator = Navigator.of(context);
+          Future.delayed(delay, () {
+            if (mounted && _isWatchCardDialogOpen) {
+              _isWatchCardDialogOpen = false;
+              _watchCardDialogOpenTime = null;
+              navigator.pop();
+            }
+          });
+        }
       }
 
       // ゲーム終了 (waiting) → 結果発表ダイアログを表示
-      final gameStatus = _extractStringValue(gameData['gameStatus']);
       final roomId = user.roomId;
       if (gameStatus == 'waiting' && !_isResultDialogOpen && roomId != null) {
+        // 進行中の CPU アクションをキャンセル
+        _cpuActionGeneration++;
+        _isCpuActing = false;
+
+        // 観戦ダイアログが開いていれば強制的に閉じる
+        if (_isWatchCardDialogOpen) {
+          _isWatchCardDialogOpen = false;
+          _watchCardDialogOpenTime = null;
+          _watchedCardId = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.of(context).pop();
+          });
+        }
+
         _isResultDialogOpen = true;
         final winnerId = _extractStringValue(gameData['winnerId']);
         final isWin = winnerId == user.uid;
@@ -377,8 +724,21 @@ class _TrendWordBlackJackPlayingPageState
       error: (_, __) => <TrendWordBlackJackPlayer>[],
     );
 
-    // --- maxCardCount を取得（デフォルト5枚） ---
-    final maxCardCount = _extractIntValue(gameData?['maxCardCount']) ?? 5;
+    // --- assets/config からプレイヤー数に応じた設定を取得 ---
+    // CPU プレイヤーを含む全プレイヤー数で config を参照する
+    final playersGameData = gameData?['players'] as Map<String, dynamic>? ?? {};
+    final totalPlayerCount = playersGameData.length;
+    final assetsConfig =
+        gameData?['assets']?['config'] as Map<String, dynamic>?;
+    final playerConfig =
+        assetsConfig?[totalPlayerCount.toString()] as Map<String, dynamic>?;
+    final maxCardCount =
+        (playerConfig?['maxCardsPerPlayer'] as num?)?.toInt() ?? 5;
+    final targetScore = (playerConfig?['targetScore'] as num?)?.toInt();
+
+    // --- 直前ターンで加算されたスコア（currentGame直下） ---
+    final lastTurnScore =
+        _extractIntValue(gameData?['lastTurnScore']) ?? 0;
 
     // --- 現在の手番プレイヤーUIDを取得 ---
     final turnOrder = gameData?['turnOrder'] as List?;
@@ -430,8 +790,13 @@ class _TrendWordBlackJackPlayingPageState
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: AppSpacing.xSmall),
-                              child: _buildPlayerCard(
-                                  player, maxCardCount, currentTurnPlayerUid),
+                              child: _AnimatedPlayerCard(
+                                player: player,
+                                maxCardCount: maxCardCount,
+                                currentTurnPlayerUid: currentTurnPlayerUid,
+                                targetScore: targetScore,
+                                lastTurnScore: lastTurnScore,
+                              ),
                             ),
                           ),
                       ],
@@ -469,11 +834,67 @@ class _TrendWordBlackJackPlayingPageState
     );
   }
 
-  // プレイヤーカードウィジェット
-  Widget _buildPlayerCard(TrendWordBlackJackPlayer player, int maxCardCount,
-      String? currentTurnPlayerUid) {
-    // 現在の手番プレイヤーかどうかを判定
-    final isCurrentTurn = player.uid == currentTurnPlayerUid;
+}
+
+// プレイヤーカードウィジェット（スコアカウントアップアニメーション付き）
+class _AnimatedPlayerCard extends StatefulWidget {
+  final TrendWordBlackJackPlayer player;
+  final int maxCardCount;
+  final String? currentTurnPlayerUid;
+  final int? targetScore;
+  final int lastTurnScore;
+
+  const _AnimatedPlayerCard({
+    required this.player,
+    required this.maxCardCount,
+    this.currentTurnPlayerUid,
+    this.targetScore,
+    required this.lastTurnScore,
+  });
+
+  @override
+  State<_AnimatedPlayerCard> createState() => _AnimatedPlayerCardState();
+}
+
+class _AnimatedPlayerCardState extends State<_AnimatedPlayerCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _scoreAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scoreAnimation = AlwaysStoppedAnimation(widget.player.score);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedPlayerCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.player.score != widget.player.score) {
+      // score - lastTurnScore（加算前）から score（加算後）へカウントアップ
+      final fromScore = widget.player.score - widget.lastTurnScore;
+      _scoreAnimation = IntTween(
+        begin: fromScore,
+        end: widget.player.score,
+      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final player = widget.player;
+    final isCurrentTurn = player.uid == widget.currentTurnPlayerUid;
 
     // 色を決定：自分の手番ならplayer、相手の手番ならopponent、それ以外はdisabled
     final Color cardColor;
@@ -515,57 +936,64 @@ class _TrendWordBlackJackPlayingPageState
         child: Padding(
           padding: const EdgeInsets.symmetric(
               vertical: AppSpacing.small, horizontal: AppSpacing.large),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                player.nickname,
-                style: AppTextStyles.subtitle
-                    .copyWith(height: 1.0, color: textColor),
-              ),
-              const SizedBox(
-                height: AppSpacing.xSmall,
-              ),
-              Text(
-                player.score.toString(),
-                style: AppTextStyles.h3.copyWith(
-                  height: 1.1,
-                  color: Colors.white,
-                  textBaseline: TextBaseline.ideographic,
-                ),
-              ),
-              const SizedBox(
-                height: AppSpacing.xSmall,
-              ),
-              // カード数をドットで表示
-              Row(
+          child: AnimatedBuilder(
+            animation: _scoreAnimation,
+            builder: (context, child) {
+              final animatedScore = _scoreAnimation.value;
+              return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  maxCardCount,
-                  (index) => Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xxSmall),
-                    child: index < player.cardCount
-                        ? Icon(
-                            Icons.circle,
-                            size: AppIconSizes.cardCountDot,
-                            color: dotColor,
-                          )
-                        : const Icon(
-                            Icons.circle,
-                            size: AppIconSizes.cardCountDot,
-                            color: AppTheme.trendWordGameDisabledColor,
-                          ),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    player.nickname,
+                    style: AppTextStyles.subtitle
+                        .copyWith(height: 1.0, color: textColor),
                   ),
-                ),
-              ),
-              Text(
-                'あと${150 - player.score}',
-                style: AppTextStyles.subtitle2
-                    .copyWith(color: AppTheme.secondaryTextColor),
-              ),
-            ],
+                  const SizedBox(
+                    height: AppSpacing.xSmall,
+                  ),
+                  Text(
+                    animatedScore.toString(),
+                    style: AppTextStyles.h3.copyWith(
+                      height: 1.1,
+                      color: Colors.white,
+                      textBaseline: TextBaseline.ideographic,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: AppSpacing.xSmall,
+                  ),
+                  // カード数をドットで表示
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      widget.maxCardCount,
+                      (index) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xxSmall),
+                        child: index < player.cardCount
+                            ? Icon(
+                                Icons.circle,
+                                size: AppIconSizes.cardCountDot,
+                                color: dotColor,
+                              )
+                            : const Icon(
+                                Icons.circle,
+                                size: AppIconSizes.cardCountDot,
+                                color: AppTheme.trendWordGameDisabledColor,
+                              ),
+                      ),
+                    ),
+                  ),
+                  if (widget.targetScore != null)
+                    Text(
+                      'あと${widget.targetScore! - animatedScore}',
+                      style: AppTextStyles.subtitle2
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -798,11 +1226,14 @@ class _CardSelectionDialogContent extends StatefulWidget {
   final Map<String, dynamic> card;
   final Future<void> Function(String cardId)? onConfirm;
   final int currentScore;
+  // 復帰時など、カードが既に確定済みでフリップ済み状態から開始する場合に true
+  final bool startFlipped;
 
   const _CardSelectionDialogContent({
     required this.card,
     this.onConfirm,
     required this.currentScore,
+    this.startFlipped = false,
   });
 
   @override
@@ -829,6 +1260,12 @@ class _CardSelectionDialogContentState
       parent: _controller,
       curve: Curves.easeInOut,
     );
+
+    // 復帰時: カードが既に確定済みならアニメーションを完了状態にセット
+    if (widget.startFlipped) {
+      _isFlipped = true;
+      _controller.value = 1.0;
+    }
   }
 
   @override
@@ -1185,6 +1622,7 @@ class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _animation;
+  bool _isFlipComplete = false;
 
   @override
   void initState() {
@@ -1198,8 +1636,15 @@ class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
       curve: Curves.easeInOut,
     );
 
+    // フリップ完了を検知
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed && mounted) {
+        setState(() => _isFlipComplete = true);
+      }
+    });
+
     // 少し遅延してから裏返す（AnimatedBuilderが変化を自動検知）
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) _controller.forward();
     });
   }
@@ -1252,7 +1697,7 @@ class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
     final japaneseEra = _toJapaneseEra(year);
 
     return PopScope(
-      canPop: false,
+      canPop: _isFlipComplete,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1423,6 +1868,26 @@ class _TrendWordResultDialogContentState
     extends ConsumerState<_TrendWordResultDialogContent> {
   bool _isPreparationCompleted = false;
   bool _isUpdatingReady = false;
+  late final ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 3));
+    if (widget.isWin) {
+      // 少し遅延させてダイアログ表示後に紙吹雪を開始
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) _confettiController.play();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
 
   String? _extractStringValue(dynamic value) {
     if (value == null) return null;
@@ -1530,71 +1995,92 @@ class _TrendWordResultDialogContentState
     // winnerId で勝者を判定
     final winnerId = _extractStringValue(gameData?['winnerId']);
 
-    // targetScore を assets/config から取得
-    final playerCount = roomSnapshot.whenData((snapshot) {
-          final roomData = snapshot.data() as Map<String, dynamic>?;
-          final roomPlayersMap =
-              roomData?['players'] as Map<String, dynamic>? ?? {};
-          return roomPlayersMap.length;
-        }).value ??
-        0;
+    // targetScore を assets/config から取得（CPU 含む全プレイヤー数で参照）
+    final playersGameData = gameData?['players'] as Map<String, dynamic>? ?? {};
+    final totalPlayerCount = playersGameData.length;
     final assetsConfig =
         gameData?['assets']?['config'] as Map<String, dynamic>?;
     final playerConfig =
-        assetsConfig?[playerCount.toString()] as Map<String, dynamic>?;
+        assetsConfig?[totalPlayerCount.toString()] as Map<String, dynamic>?;
     final targetScore = (playerConfig?['targetScore'] as num?)?.toInt();
 
     return PopScope(
       canPop: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          // WIN / LOSE バッジ
-          Text(
-            widget.isWin ? 'WIN' : 'LOSE',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.h2.copyWith(color: AppTheme.primaryColor),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // WIN / LOSE バッジ
+              Text(
+                widget.isWin ? 'WIN' : 'LOSE',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.h2.copyWith(color: AppTheme.primaryColor),
+              ),
+
+              const SizedBox(height: AppSpacing.medium),
+
+              // プレイヤーリスト（残り高さを占有）
+              Expanded(
+                child: resultPlayers.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        itemCount: resultPlayers.length,
+                        itemBuilder: (_, index) {
+                          final player = resultPlayers[index];
+                          return _buildResultCard(
+                              player, player.uid == winnerId, targetScore);
+                        },
+                      ),
+              ),
+
+              const SizedBox(height: AppSpacing.medium),
+
+              // もう一度遊ぶボタン
+              ElevatedLoadingButton(
+                text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
+                isLoading: _isUpdatingReady,
+                onPressed: _isPreparationCompleted || _isUpdatingReady
+                    ? null
+                    : _onReplayPressed,
+              ),
+              if (isHost) ...[
+                const SizedBox(height: AppSpacing.small),
+                // ゲーム終了ボタン（ホストのみ表示）
+                OutlinedButton(
+                  onPressed: () {
+                    ref
+                        .read(analyticsServiceProvider)
+                        .logClick(button: 'game_quit');
+                    widget.onExitPressed();
+                  },
+                  child: const Text('ゲームを終了する'),
+                ),
+              ],
+            ],
           ),
-
-          const SizedBox(height: AppSpacing.medium),
-
-          // プレイヤーリスト（残り高さを占有）
-          Expanded(
-            child: resultPlayers.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: resultPlayers.length,
-                    itemBuilder: (_, index) {
-                      final player = resultPlayers[index];
-                      return _buildResultCard(
-                          player, player.uid == winnerId, targetScore);
-                    },
-                  ),
-          ),
-
-          const SizedBox(height: AppSpacing.medium),
-
-          // もう一度遊ぶボタン
-          ElevatedLoadingButton(
-            text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
-            isLoading: _isUpdatingReady,
-            onPressed: _isPreparationCompleted || _isUpdatingReady
-                ? null
-                : _onReplayPressed,
-          ),
-          if (isHost) ...[
-            const SizedBox(height: AppSpacing.small),
-            // ゲーム終了ボタン（ホストのみ表示）
-            OutlinedButton(
-              onPressed: () {
-                ref
-                    .read(analyticsServiceProvider)
-                    .logClick(button: 'game_quit');
-                widget.onExitPressed();
-              },
-              child: const Text('ゲームを終了する'),
+          // 勝利時の紙吹雪アニメーション
+          if (widget.isWin)
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 20,
+                maxBlastForce: 30,
+                minBlastForce: 10,
+                emissionFrequency: 0.06,
+                gravity: 0.2,
+                colors: const [
+                  Color(0xFFE07000),
+                  Color(0xFFFFD700),
+                  Color(0xFFFF6B6B),
+                  Color(0xFF4ECDC4),
+                  Color(0xFFFFE66D),
+                  Color(0xFFFF8C42),
+                ],
+              ),
             ),
-          ],
         ],
       ),
     );
