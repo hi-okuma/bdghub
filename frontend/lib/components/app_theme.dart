@@ -33,6 +33,7 @@ class AppTheme {
   static const Color trendWordGamePlayerColor = Color(0xFF00D19D);
   static const Color trendWordGameOpponentColor = Color(0xFF5B8DEF);
   static const Color trendWordGameDisabledColor = Color(0xFF252A2E);
+  static const Color trendWordGameResultPlayerCardColor = Color(0xFFF1F5F9);
 
   // テキストカラー - グレースケール階調
   static const Color primaryTextColor = Color(0xFF111827);
@@ -244,6 +245,7 @@ class AppTextStyles {
   // フォントサイズ
   static const double h5FontSize = 24.0;
   static const double h3FontSize = 48.0;
+  static const double h2FontSize = 60.0;
   static const double titleMediumFontSize = 20.0;
   static const double titleFontSize = 18.0;
   static const double subtitleFontSize = 16.0;
@@ -264,6 +266,12 @@ class AppTextStyles {
 
   static const TextStyle h3 = TextStyle(
     fontSize: h3FontSize,
+    fontWeight: FontWeight.bold,
+    color: AppTheme.primaryTextColor,
+  );
+
+  static const TextStyle h2 = TextStyle(
+    fontSize: h2FontSize,
     fontWeight: FontWeight.bold,
     color: AppTheme.primaryTextColor,
   );
@@ -357,6 +365,7 @@ class AppIconSizes {
   static const double gameDetailThumbnail = 100.0;
   static const double rankIcon = 28.0;
   static const double cardCountDot = 10.0;
+  static const double winnerCrownIcon = 32.0;
 }
 
 // レイアウト定数

@@ -1,4 +1,4 @@
-import 'dart:math' show pi;
+import 'dart:math' show max, pi;
 
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +49,8 @@ class _TrendWordBlackJackPlayingPageState
   bool _isConfirmingCard = false;
   // ignore: unused_field
   bool _isAdoptingValue = false;
+  bool _isWatchCardDialogOpen = false;
+  bool _isResultDialogOpen = false;
 
   // --- GameExitHandler 必須オーバーライド ---
   @override
@@ -171,6 +173,116 @@ class _TrendWordBlackJackPlayingPageState
     final currentUser = ref.watch(userProvider);
     final currentGame = ref.watch(currentGameProvider);
     final isHost = ref.watch(isHostProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // --- 手番でないプレイヤー向け: 相手カード選択ダイアログの開閉監視 ---
+    ref.listen(currentGameProvider, (_, next) {
+      final user = ref.read(userProvider);
+      final gameData = next.gameData;
+      if (gameData == null) return;
+
+      final turnOrder = gameData['turnOrder'] as List?;
+      final currentTurnIndex =
+          _extractIntValue(gameData['currentTurnPlayerIndex']);
+      final currentTurnUid = (currentTurnIndex != null &&
+              turnOrder != null &&
+              currentTurnIndex < turnOrder.length)
+          ? turnOrder[currentTurnIndex] as String?
+          : null;
+      final isCurrentTurn = user.uid == currentTurnUid;
+
+      final selectedCardId = _extractStringValue(gameData['selectedCardId']);
+      final boardCards = gameData['boardCards'] as List<dynamic>?;
+      final selectedCardIndex = boardCards?.indexWhere(
+          (card) => _extractStringValue(card['cardId']) == selectedCardId);
+      // 存在しない場合は -1 が返るため、 selectedCardIndex != -1 で判定
+
+      // 条件合致 → ダイアログを開く
+      if (!isCurrentTurn &&
+          selectedCardId != null &&
+          selectedCardIndex != -1 &&
+          boardCards != null &&
+          !_isWatchCardDialogOpen) {
+        _isWatchCardDialogOpen = true;
+        final card = boardCards[selectedCardIndex!] as Map<String, dynamic>;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppBorderRadius.xLarge),
+              ),
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.15,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xLarge),
+                child: _WatchCardDialogContent(card: card),
+              ),
+            ),
+          ).then((_) {
+            if (mounted) _isWatchCardDialogOpen = false;
+          });
+        });
+      }
+
+      // selectedCardIndex が null になった → 観戦ダイアログを閉じる
+      if (selectedCardId == null && _isWatchCardDialogOpen) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _isWatchCardDialogOpen) {
+            _isWatchCardDialogOpen = false;
+            Navigator.of(context).pop();
+          }
+        });
+      }
+
+      // ゲーム終了 (waiting) → 結果発表ダイアログを表示
+      final gameStatus = _extractStringValue(gameData['gameStatus']);
+      final roomId = user.roomId;
+      if (gameStatus == 'waiting' && !_isResultDialogOpen && roomId != null) {
+        _isResultDialogOpen = true;
+        final winnerId = _extractStringValue(gameData['winnerId']);
+        final isWin = winnerId == user.uid;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            barrierColor: Colors.black,
+            builder: (_) {
+              const double dialogHeight = 500.0;
+              final double verticalInset =
+                  max(32.0, (screenHeight - dialogHeight) / 2);
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppBorderRadius.xLarge),
+                ),
+                insetPadding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.05,
+                  vertical: verticalInset,
+                ),
+                child: SizedBox(
+                  height: dialogHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xLarge),
+                    child: _TrendWordResultDialogContent(
+                      isWin: isWin,
+                      roomId: roomId,
+                      onExitPressed: () => showExitGameDialog(),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ).then((_) {
+            if (mounted) _isResultDialogOpen = false;
+          });
+        });
+      }
+    });
 
     // --- ガード: gameData null check ---
     if (currentGame.gameData == null || currentGame.gameData!.isEmpty) {
@@ -316,8 +428,8 @@ class _TrendWordBlackJackPlayingPageState
                         for (final player in gamePlayers)
                           Expanded(
                             child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4.0),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xSmall),
                               child: _buildPlayerCard(
                                   player, maxCardCount, currentTurnPlayerUid),
                             ),
@@ -518,7 +630,7 @@ class _BoardGridSectionState extends State<BoardGridSection> {
         ),
         // backgroundColor: Colors.transparent,
         insetPadding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.2,
+          horizontal: screenWidth * 0.15,
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xLarge),
@@ -818,145 +930,148 @@ class _CardSelectionDialogContentState
     final isWesternBurst = newWesternScore > 150;
     final isJapaneseBurst = newJapaneseScore > 150;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          _isFlipped ? 'どちらの年代を採用しますか？' : 'このカードに決定しますか？',
-          style: AppTextStyles.subtitle2,
-        ),
-        const SizedBox(height: AppSpacing.medium),
-        AnimatedBuilder(
-          animation: _animation,
-          builder: (_, __) {
-            final value = _animation.value;
-            final isFlipped = value >= 0.5;
-            // 表面: 0 → π/2、裏面: -π/2 → 0
-            final angle = isFlipped ? (value - 1) * pi : value * pi;
-            return GestureDetector(
-              onTap: () {},
-              child: Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001) // パース設定
-                  ..rotateY(angle),
-                child: isFlipped
-                    ? _buildBackFace(year, japaneseEra)
-                    : _buildFrontFace(buzzword),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: AppSpacing.large),
-        _isFlipped
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedLoadingButton(
-                          onPressed: () => _onAdoptValue('Western'),
-                          isLoading: _isLoading,
-                          child: Column(
-                            children: [
-                              Text('西暦を採用（$westernScore点）',
-                                  style: AppTextStyles.subtitle
-                                      .copyWith(color: Colors.white)),
-                              RichText(
-                                text: TextSpan(
-                                    style: AppTextStyles.caption
-                                        .copyWith(color: Colors.white),
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            '$currentScore点 → $newWesternScore点',
-                                      ),
-                                      isWesternBurst
-                                          ? TextSpan(
-                                              text: ' BURST!',
-                                              style: AppTextStyles.caption
-                                                  .copyWith(
-                                                      color:
-                                                          AppTheme.error2Color,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                            )
-                                          : const TextSpan(text: ''),
-                                    ]),
-                              )
-                            ],
+    return PopScope(
+      canPop: !_isFlipped,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _isFlipped ? 'どちらの年代を採用しますか？' : 'このカードに決定しますか？',
+            style: AppTextStyles.subtitle2,
+          ),
+          const SizedBox(height: AppSpacing.medium),
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (_, __) {
+              final value = _animation.value;
+              final isFlipped = value >= 0.5;
+              // 表面: 0 → π/2、裏面: -π/2 → 0
+              final angle = isFlipped ? (value - 1) * pi : value * pi;
+              return GestureDetector(
+                onTap: () {},
+                child: Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001) // パース設定
+                    ..rotateY(angle),
+                  child: isFlipped
+                      ? _buildBackFace(year, japaneseEra)
+                      : _buildFrontFace(buzzword),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.large),
+          _isFlipped
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedLoadingButton(
+                            onPressed: () => _onAdoptValue('Western'),
+                            isLoading: _isLoading,
+                            child: Column(
+                              children: [
+                                Text('西暦を採用（$westernScore点）',
+                                    style: AppTextStyles.subtitle
+                                        .copyWith(color: Colors.white)),
+                                RichText(
+                                  text: TextSpan(
+                                      style: AppTextStyles.caption
+                                          .copyWith(color: Colors.white),
+                                      children: [
+                                        TextSpan(
+                                          text:
+                                              '$currentScore点 → $newWesternScore点',
+                                        ),
+                                        isWesternBurst
+                                            ? TextSpan(
+                                                text: ' BURST!',
+                                                style: AppTextStyles.caption
+                                                    .copyWith(
+                                                        color: AppTheme
+                                                            .error2Color,
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                              )
+                                            : const TextSpan(text: ''),
+                                      ]),
+                                )
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.medium),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedLoadingButton(
-                          onPressed: () => _onAdoptValue('Japanese'),
-                          isLoading: _isLoading,
-                          child: Column(
-                            children: [
-                              Text('和暦を採用（$japaneseScore点）',
-                                  style: AppTextStyles.subtitle
-                                      .copyWith(color: Colors.white)),
-                              RichText(
-                                text: TextSpan(
-                                    style: AppTextStyles.caption
-                                        .copyWith(color: Colors.white),
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            '$currentScore点 → $newJapaneseScore点',
-                                      ),
-                                      isJapaneseBurst
-                                          ? TextSpan(
-                                              text: ' BURST!',
-                                              style: AppTextStyles.caption
-                                                  .copyWith(
-                                                      color:
-                                                          AppTheme.error2Color,
-                                                      fontWeight:
-                                                          FontWeight.bold),
-                                            )
-                                          : const TextSpan(text: ''),
-                                    ]),
-                              )
-                            ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.medium),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedLoadingButton(
+                            onPressed: () => _onAdoptValue('Japanese'),
+                            isLoading: _isLoading,
+                            child: Column(
+                              children: [
+                                Text('和暦を採用（$japaneseScore点）',
+                                    style: AppTextStyles.subtitle
+                                        .copyWith(color: Colors.white)),
+                                RichText(
+                                  text: TextSpan(
+                                      style: AppTextStyles.caption
+                                          .copyWith(color: Colors.white),
+                                      children: [
+                                        TextSpan(
+                                          text:
+                                              '$currentScore点 → $newJapaneseScore点',
+                                        ),
+                                        isJapaneseBurst
+                                            ? TextSpan(
+                                                text: ' BURST!',
+                                                style: AppTextStyles.caption
+                                                    .copyWith(
+                                                        color: AppTheme
+                                                            .error2Color,
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                              )
+                                            : const TextSpan(text: ''),
+                                      ]),
+                                )
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'キャンセル',
-                        style: AppTextStyles.body
-                            .copyWith(color: AppTheme.primaryColor),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text(
+                          'キャンセル',
+                          style: AppTextStyles.body
+                              .copyWith(color: AppTheme.primaryColor),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.large),
-                  Expanded(
-                    child: ElevatedLoadingButton(
-                      onPressed: _onDecide,
-                      isLoading: _isLoading,
-                      text: '決定',
+                    const SizedBox(width: AppSpacing.large),
+                    Expanded(
+                      child: ElevatedLoadingButton(
+                        onPressed: _onDecide,
+                        isLoading: _isLoading,
+                        text: '決定',
+                      ),
                     ),
-                  ),
-                ],
-              ),
-      ],
+                  ],
+                ),
+        ],
+      ),
     );
   }
 
@@ -1025,7 +1140,7 @@ class _CardSelectionDialogContentState
                   ],
                 ),
                 const Divider(
-                  color: AppTheme.trendWordGameWordCardBackFaceDivider,
+                  color: AppTheme.trendWordGameWordCardInnerBorderColor,
                 ),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1049,6 +1164,499 @@ class _CardSelectionDialogContentState
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// 手番でないプレイヤー向け: 相手が選んだカードを観戦するダイアログ
+class _WatchCardDialogContent extends StatefulWidget {
+  final Map<String, dynamic> card;
+
+  const _WatchCardDialogContent({required this.card});
+
+  @override
+  State<_WatchCardDialogContent> createState() =>
+      _WatchCardDialogContentState();
+}
+
+class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+
+    // 少し遅延してから裏返す（AnimatedBuilderが変化を自動検知）
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  ({String name, int yearNum}) _getJapaneseEraInfo(int year) {
+    if (year >= 2019) return (name: '令和', yearNum: year - 2018);
+    if (year >= 1989) return (name: '平成', yearNum: year - 1988);
+    if (year >= 1926) return (name: '昭和', yearNum: year - 1925);
+    if (year >= 1912) return (name: '大正', yearNum: year - 1911);
+    return (name: '明治', yearNum: year - 1867);
+  }
+
+  String _toJapaneseEra(int year) {
+    final info = _getJapaneseEraInfo(year);
+    final yearStr = info.yearNum == 1 ? '元' : info.yearNum.toString();
+    return '${info.name}$yearStr年';
+  }
+
+  String? _extractStringValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List && value.isNotEmpty) return value.first?.toString();
+    return value.toString();
+  }
+
+  int? _extractIntValue(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    if (value is List && value.isNotEmpty) {
+      final v = value.first;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      if (v is String) return int.tryParse(v);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buzzword = _extractStringValue(widget.card['buzzword']) ?? '';
+    final year = _extractIntValue(widget.card['year']) ?? 0;
+    final japaneseEra = _toJapaneseEra(year);
+
+    return PopScope(
+      canPop: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '相手がカードを選択しました',
+            style: AppTextStyles.subtitle2,
+          ),
+          const SizedBox(height: AppSpacing.medium),
+          AnimatedBuilder(
+            animation: _animation,
+            builder: (_, __) {
+              final value = _animation.value;
+              final isFlipped = value >= 0.5;
+              final angle = isFlipped ? (value - 1) * pi : value * pi;
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.001)
+                  ..rotateY(angle),
+                child: isFlipped
+                    ? _buildBackFace(year, japaneseEra)
+                    : _buildFrontFace(buzzword),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardSized({required Widget child}) {
+    const double aspectRatio = 0.7;
+    const double maxHeight = 240.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desiredWidth = constraints.maxWidth * 0.6;
+        final desiredHeight = desiredWidth / aspectRatio;
+        final height = desiredHeight.clamp(0.0, maxHeight);
+        final width = height * aspectRatio;
+        return SizedBox(width: width, height: height, child: child);
+      },
+    );
+  }
+
+  Widget _buildFrontFace(String buzzword) {
+    return _buildCardSized(
+      child: _TrendWordCardFace(buzzword: buzzword, fontSize: 20),
+    );
+  }
+
+  Widget _buildBackFace(int year, String japaneseEra) {
+    return _buildCardSized(
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: AppTheme.trendWordGameWordCardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.medium),
+          side: const BorderSide(
+            color: AppTheme.trendWordGameWordCardBorderColor,
+            width: AppBorderStroke.trendWordWordCardOutline,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.trendWordCardInnerLine),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: AppTheme.trendWordGameWordCardInnerBorderColor,
+                strokeAlign: AppBorderStroke.trendWordWordCardOutline / 2,
+              ),
+              borderRadius: BorderRadius.circular(AppBorderRadius.small),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '西暦',
+                      style: AppTextStyles.trendWordCard
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.xSmall),
+                    Text(
+                      '$year年',
+                      style: AppTextStyles.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                const Divider(
+                  color: AppTheme.trendWordGameWordCardInnerBorderColor,
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '和暦',
+                      style: AppTextStyles.trendWordCard
+                          .copyWith(color: AppTheme.secondaryTextColor),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.xSmall),
+                    Text(
+                      japaneseEra,
+                      style: AppTextStyles.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// 結果発表ダイアログ用のローカルデータクラス
+class _ResultEntry {
+  final String uid;
+  final String nickname;
+  final int lastScore;
+  final bool isCurrentUser;
+  final bool isHost;
+  final int rank;
+
+  const _ResultEntry({
+    required this.uid,
+    required this.nickname,
+    required this.lastScore,
+    required this.isCurrentUser,
+    required this.isHost,
+    this.rank = 1,
+  });
+
+  _ResultEntry copyWith({int? rank}) => _ResultEntry(
+        uid: uid,
+        nickname: nickname,
+        lastScore: lastScore,
+        isCurrentUser: isCurrentUser,
+        isHost: isHost,
+        rank: rank ?? this.rank,
+      );
+}
+
+// 結果発表ダイアログコンテンツ
+class _TrendWordResultDialogContent extends ConsumerStatefulWidget {
+  final bool isWin;
+  final String roomId;
+  final VoidCallback onExitPressed;
+
+  const _TrendWordResultDialogContent({
+    required this.isWin,
+    required this.roomId,
+    required this.onExitPressed,
+  });
+
+  @override
+  ConsumerState<_TrendWordResultDialogContent> createState() =>
+      _TrendWordResultDialogContentState();
+}
+
+class _TrendWordResultDialogContentState
+    extends ConsumerState<_TrendWordResultDialogContent> {
+  bool _isPreparationCompleted = false;
+  bool _isUpdatingReady = false;
+
+  String? _extractStringValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List && value.isNotEmpty) return value.first?.toString();
+    return value.toString();
+  }
+
+  int? _extractIntValue(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    if (value is List && value.isNotEmpty) {
+      final v = value.first;
+      if (v is int) return v;
+      if (v is double) return v.toInt();
+      if (v is String) return int.tryParse(v);
+    }
+    return null;
+  }
+
+  Future<void> _onReplayPressed() async {
+    final user = ref.read(userProvider);
+    final gameId = ref.read(currentGameProvider).gameId;
+    final uid = user.uid;
+
+    if (uid == null || gameId == null) return;
+
+    setState(() => _isUpdatingReady = true);
+    try {
+      await ApiService.setReady(context, widget.roomId, uid, gameId);
+      if (mounted) setState(() => _isPreparationCompleted = true);
+    } catch (e) {
+      Logger.log('リプレイ準備エラー: $e');
+    } finally {
+      if (mounted) setState(() => _isUpdatingReady = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentGame = ref.watch(currentGameProvider);
+    final currentUser = ref.watch(userProvider);
+    final isHost = ref.watch(isHostProvider);
+    final roomSnapshot = ref.watch(roomStreamProvider(widget.roomId));
+    final gameData = currentGame.gameData;
+
+    // roomStreamProvider + gameData からプレイヤーリストを構築
+    final resultPlayers = roomSnapshot.when(
+      data: (snapshot) {
+        if (!snapshot.exists) return <_ResultEntry>[];
+
+        final roomData = snapshot.data() as Map<String, dynamic>?;
+        final roomPlayersMap =
+            roomData?['players'] as Map<String, dynamic>? ?? {};
+        final hostPlayer = roomData?['hostPlayer'] as String?;
+        final playersGameData =
+            gameData?['players'] as Map<String, dynamic>? ?? {};
+
+        List<_ResultEntry> players = [];
+        for (final entry in roomPlayersMap.entries) {
+          final uid = entry.key;
+          final roomPlayerData = entry.value as Map<String, dynamic>;
+          final gamePlayerData = playersGameData[uid] as Map<String, dynamic>?;
+
+          final nickname =
+              _extractStringValue(roomPlayerData['nickname']) ?? '名無し';
+          final lastScore = _extractIntValue(gamePlayerData?['lastScore']) ?? 0;
+
+          players.add(_ResultEntry(
+            uid: uid,
+            nickname: nickname,
+            lastScore: lastScore,
+            isCurrentUser: uid == currentUser.uid,
+            isHost: uid == hostPlayer,
+          ));
+        }
+
+        // lastScore 降順ソート（同点はホスト優先）
+        players.sort((a, b) {
+          if (a.lastScore != b.lastScore) {
+            return b.lastScore.compareTo(a.lastScore);
+          }
+          if (a.isHost != b.isHost) return a.isHost ? -1 : 1;
+          return 0;
+        });
+
+        // 順位計算
+        List<_ResultEntry> ranked = [];
+        int currentRank = 1;
+        for (int i = 0; i < players.length; i++) {
+          if (i > 0 && players[i].lastScore != players[i - 1].lastScore) {
+            currentRank = i + 1;
+          }
+          ranked.add(players[i].copyWith(rank: currentRank));
+        }
+
+        return ranked;
+      },
+      loading: () => <_ResultEntry>[],
+      error: (_, __) => <_ResultEntry>[],
+    );
+
+    // winnerId で勝者を判定
+    final winnerId = _extractStringValue(gameData?['winnerId']);
+
+    // targetScore を assets/config から取得
+    final playerCount = roomSnapshot.whenData((snapshot) {
+          final roomData = snapshot.data() as Map<String, dynamic>?;
+          final roomPlayersMap =
+              roomData?['players'] as Map<String, dynamic>? ?? {};
+          return roomPlayersMap.length;
+        }).value ??
+        0;
+    final assetsConfig =
+        gameData?['assets']?['config'] as Map<String, dynamic>?;
+    final playerConfig =
+        assetsConfig?[playerCount.toString()] as Map<String, dynamic>?;
+    final targetScore = (playerConfig?['targetScore'] as num?)?.toInt();
+
+    return PopScope(
+      canPop: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // WIN / LOSE バッジ
+          Text(
+            widget.isWin ? 'WIN' : 'LOSE',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.h2.copyWith(color: AppTheme.primaryColor),
+          ),
+
+          const SizedBox(height: AppSpacing.medium),
+
+          // プレイヤーリスト（残り高さを占有）
+          Expanded(
+            child: resultPlayers.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: resultPlayers.length,
+                    itemBuilder: (_, index) {
+                      final player = resultPlayers[index];
+                      return _buildResultCard(
+                          player, player.uid == winnerId, targetScore);
+                    },
+                  ),
+          ),
+
+          const SizedBox(height: AppSpacing.medium),
+
+          // もう一度遊ぶボタン
+          ElevatedLoadingButton(
+            text: _isPreparationCompleted ? '他プレイヤー待ち' : 'もう一度遊ぶ',
+            isLoading: _isUpdatingReady,
+            onPressed: _isPreparationCompleted || _isUpdatingReady
+                ? null
+                : _onReplayPressed,
+          ),
+          if (isHost) ...[
+            const SizedBox(height: AppSpacing.small),
+            // ゲーム終了ボタン（ホストのみ表示）
+            OutlinedButton(
+              onPressed: () {
+                ref
+                    .read(analyticsServiceProvider)
+                    .logClick(button: 'game_quit');
+                widget.onExitPressed();
+              },
+              child: const Text('ゲームを終了する'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultCard(
+      _ResultEntry player, bool isWinner, int? targetScore) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.small),
+      elevation: AppElevation.none,
+      color: AppTheme.trendWordGameResultPlayerCardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppBorderRadius.card),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.large),
+        child: Row(
+          children: [
+            // 勝利したプレイヤーのみに王冠を表示
+            SizedBox(
+              width: AppIconSizes.winnerCrownIcon,
+              height: AppIconSizes.winnerCrownIcon,
+              child: isWinner
+                  ? const Text('👑',
+                      style: TextStyle(fontSize: AppTextStyles.h5FontSize))
+                  : null,
+            ),
+            const SizedBox(width: AppSpacing.medium),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    player.nickname,
+                    style: AppTextStyles.subtitle2
+                        .copyWith(color: AppTheme.secondaryTextColor),
+                  ),
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${player.lastScore}',
+                          style: AppTextStyles.h5.copyWith(
+                            color: player.isCurrentUser
+                                ? AppTheme.trendWordGamePlayerColor
+                                : AppTheme.trendWordGameOpponentColor,
+                          ),
+                        ),
+                        if (targetScore != null)
+                          TextSpan(
+                            text: ' / $targetScore',
+                            style: AppTextStyles.subtitle2.copyWith(
+                              color: AppTheme.secondaryTextColor,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
