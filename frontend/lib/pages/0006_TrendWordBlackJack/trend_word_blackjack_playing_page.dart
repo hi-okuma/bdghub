@@ -57,6 +57,7 @@ class _TrendWordBlackJackPlayingPageState
   bool _isRestorationHandled = false;
   bool _isCpuActing = false;
   int _cpuActionGeneration = 0;
+  bool _hasLoggedPageView = false;
 
   // --- GameExitHandler 必須オーバーライド ---
   @override
@@ -77,9 +78,11 @@ class _TrendWordBlackJackPlayingPageState
   void initState() {
     super.initState();
     _routeObserver = ref.read(analyticsServiceProvider).routeObserver;
-    // 復帰時: 表示すべきダイアログを再現する
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _checkAndRestoreDialogs());
+    // 復帰時: 表示すべきダイアログを再現する & 初回 CPU ターンチェック
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndRestoreDialogs();
+      _checkInitialCpuTurn();
+    });
   }
 
   @override
@@ -97,11 +100,8 @@ class _TrendWordBlackJackPlayingPageState
     super.dispose();
   }
 
-  @override
-  void didPush() {
-    super.didPush();
-    ref.read(analyticsServiceProvider).logPageView(pageTitle: pageTitle);
-  }
+  // page_view は opponent_type パラメータ付きで送信するため、
+  // didPush() ではなく roomStreamProvider のデータが揃った build 内で一度だけログする
 
   // --- 型安全な値抽出ヘルパー ---
   String? _extractStringValue(dynamic value) {
@@ -138,6 +138,10 @@ class _TrendWordBlackJackPlayingPageState
     });
 
     try {
+      ref.read(analyticsServiceProvider).logClick(
+        button: '0006_select_card',
+        additionalParams: {'cardId': cardId},
+      );
       await ApiService.confirmCard0006(context, roomId, uid, cardId);
       Logger.log('カード確定を送信しました: $cardId');
     } catch (e) {
@@ -371,6 +375,121 @@ class _TrendWordBlackJackPlayingPageState
     }
   }
 
+  // --- 初回 CPU ターンチェック ---
+  // ref.listen は状態変化でのみ発火するため、ゲーム開始時に既に CPU ターンだった場合を
+  // initState の post-frame callback で拾う。roomStreamProvider が loading 中は
+  // CPU 判定ができないため、データが届くまでリトライする。
+  void _checkInitialCpuTurn() {
+    if (!mounted || _isCpuActing) return;
+
+    final user = ref.read(userProvider);
+    final gameData = ref.read(currentGameProvider).gameData;
+    if (gameData == null) return;
+
+    final gameStatus = _extractStringValue(gameData['gameStatus']);
+    if (gameStatus != 'playing') return;
+
+    final roomId = user.roomId;
+    if (roomId == null) return;
+
+    // roomStreamProvider がまだ loading 中なら少し待ってリトライ
+    final roomSnap = ref.read(roomStreamProvider(roomId));
+    final roomData = roomSnap.whenOrNull(
+      data: (snapshot) => snapshot.data() as Map<String, dynamic>?,
+    );
+    if (roomData == null) {
+      // まだロードされていない → 少し待って再試行
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted && !_isCpuActing) _checkInitialCpuTurn();
+      });
+      return;
+    }
+    final roomPlayersMap = roomData['players'] as Map<String, dynamic>? ?? {};
+
+    final playersGameData = gameData['players'] as Map<String, dynamic>? ?? {};
+    final turnOrder = gameData['turnOrder'] as List?;
+    final currentTurnIndex =
+        _extractIntValue(gameData['currentTurnPlayerIndex']);
+    final currentTurnUid = (currentTurnIndex != null &&
+            turnOrder != null &&
+            currentTurnIndex < turnOrder.length)
+        ? turnOrder[currentTurnIndex] as String?
+        : null;
+
+    final isCpuTurn = currentTurnUid != null &&
+        playersGameData.containsKey(currentTurnUid) &&
+        !roomPlayersMap.containsKey(currentTurnUid);
+
+    if (!isCpuTurn) return;
+
+    _triggerCpuAction(
+      gameData: gameData,
+      playersGameData: playersGameData,
+      roomPlayersMap: roomPlayersMap,
+      currentTurnUid: currentTurnUid!,
+      roomId: roomId,
+    );
+  }
+
+  // --- CPU アクションの共通トリガー ---
+  // ref.listen と _checkInitialCpuTurn の両方から呼ばれる
+  void _triggerCpuAction({
+    required Map<String, dynamic> gameData,
+    required Map<String, dynamic> playersGameData,
+    required Map<String, dynamic> roomPlayersMap,
+    required String currentTurnUid,
+    required String roomId,
+  }) {
+    if (_isCpuActing) return;
+    _isCpuActing = true;
+
+    final cpuUid = currentTurnUid;
+    final cpuPlayerData = playersGameData[cpuUid] as Map<String, dynamic>?;
+    final cpuScore = _extractIntValue(cpuPlayerData?['score']) ?? 0;
+
+    final assetsConfig = gameData['assets']?['config'] as Map<String, dynamic>?;
+    final totalPlayerCount = playersGameData.length;
+    final targetScore =
+        (assetsConfig?[totalPlayerCount.toString()]?['targetScore'] as num?)
+                ?.toInt() ??
+            150;
+
+    final selectedCardId = _extractStringValue(gameData['selectedCardId']);
+    final boardCards = gameData['boardCards'] as List<dynamic>?;
+
+    if (selectedCardId == null && boardCards != null) {
+      // カード未選択 → カード選択＋年代選択を一括実行
+      final availableCards = boardCards
+          .where((card) =>
+              card['isAvailable'] == null || card['isAvailable'] == true)
+          .toList();
+      final bestCardId =
+          _cpuChooseBestCard(availableCards, cpuScore, targetScore);
+      if (bestCardId != null) {
+        final cardData = availableCards
+            .firstWhere((c) => _extractStringValue(c['cardId']) == bestCardId);
+        final valueType = _cpuChooseBestValueType(
+            cardData as Map<String, dynamic>, cpuScore, targetScore);
+        _runCpuFullTurn(roomId, cpuUid, bestCardId, valueType);
+      } else {
+        _isCpuActing = false;
+      }
+    } else if (selectedCardId != null && boardCards != null) {
+      // カード確定済み → 年代選択のみ
+      final idx = boardCards.indexWhere(
+          (card) => _extractStringValue(card['cardId']) == selectedCardId);
+      if (idx != -1) {
+        final card = boardCards[idx] as Map<String, dynamic>;
+        final valueType = _cpuChooseBestValueType(card, cpuScore, targetScore);
+        _runCpuYearSelection(roomId, cpuUid, valueType);
+      } else {
+        _isCpuActing = false;
+      }
+    } else {
+      _isCpuActing = false;
+    }
+  }
+
   // --- 値採用APIコール ---
   Future<void> _onAdoptValue(String valueType) async {
     final currentUser = ref.read(userProvider);
@@ -384,6 +503,31 @@ class _TrendWordBlackJackPlayingPageState
     });
 
     try {
+      // GA ログ: 年代選択
+      final gameData = ref.read(currentGameProvider).gameData;
+      final selectedCardId = gameData?['selectedCardId'];
+      final boardCards = gameData?['boardCards'] as List<dynamic>?;
+      if (selectedCardId != null && boardCards != null) {
+        final cardIdx = boardCards.indexWhere(
+            (c) => (c as Map<String, dynamic>)['cardId'] == selectedCardId);
+        if (cardIdx != -1) {
+          final card = boardCards[cardIdx] as Map<String, dynamic>;
+          final year = _extractIntValue(card['year']) ?? 0;
+          final scoreAdded = valueType == 'Western'
+              ? (year >= 2000 ? year - 2000 : year - 1900)
+              : _extractIntValue(card['year']) != null
+                  ? _cpuToScoreFromJapaneseEra(year)
+                  : 0;
+          ref.read(analyticsServiceProvider).logClick(
+            button: '0006_select_year_type',
+            additionalParams: {
+              'year_type': valueType == 'Western' ? 'western' : 'japanese',
+              'score_added': scoreAdded,
+            },
+          );
+        }
+      }
+
       await ApiService.adoptValue0006(context, roomId, uid, valueType);
       Logger.log('値採用を送信しました: $valueType');
     } catch (e) {
@@ -445,72 +589,42 @@ class _TrendWordBlackJackPlayingPageState
       final playersGameData =
           gameData['players'] as Map<String, dynamic>? ?? {};
       final roomSnap = ref.read(roomStreamProvider(user.roomId ?? ''));
-      final roomPlayersMap = roomSnap.whenData((snapshot) {
-            final roomData = snapshot.data() as Map<String, dynamic>?;
-            return roomData?['players'] as Map<String, dynamic>? ?? {};
-          }).value ??
-          {};
-      final isCpuTurn = currentTurnUid != null &&
-          playersGameData.containsKey(currentTurnUid) &&
-          !roomPlayersMap.containsKey(currentTurnUid);
+      // roomStreamProvider がまだ loading 中の場合は CPU 判定を行わない
+      // （空の roomPlayersMap だと全プレイヤーが CPU 扱いになってしまうため）
+      final roomData = roomSnap.whenOrNull(
+        data: (snapshot) => snapshot.data() as Map<String, dynamic>?,
+      );
+      final roomPlayersMap =
+          roomData?['players'] as Map<String, dynamic>? ?? {};
+      final isRoomLoaded = roomSnap.hasValue;
 
-      // CPU のターンでなくなったらフラグをリセット
-      // （_runCpuFullTurn 成功後、ターン変更の Firestore 更新で到達）
-      if (!isCpuTurn && _isCpuActing) {
-        _isCpuActing = false;
-      }
+      if (isRoomLoaded) {
+        final isCpuTurn = currentTurnUid != null &&
+            playersGameData.containsKey(currentTurnUid) &&
+            !roomPlayersMap.containsKey(currentTurnUid);
 
-      // playing 状態の時のみ CPU アクションを実行（waiting 中の誤発火を防止）
-      if (gameStatus == 'playing' && isCpuTurn && !_isCpuActing) {
-        _isCpuActing = true;
-        final cpuUid = currentTurnUid;
-        final cpuPlayerData = playersGameData[cpuUid] as Map<String, dynamic>?;
-        final cpuScore = _extractIntValue(cpuPlayerData?['score']) ?? 0;
-
-        // assets/config から targetScore を取得（全プレイヤー数キー）
-        final assetsConfig =
-            gameData['assets']?['config'] as Map<String, dynamic>?;
-        final totalPlayerCount = playersGameData.length;
-        final targetScore =
-            (assetsConfig?[totalPlayerCount.toString()]?['targetScore'] as num?)
-                    ?.toInt() ??
-                150;
-
-        final roomId = user.roomId;
-        if (roomId == null) {
+        // CPU のターンでなくなったらフラグをリセット
+        // （_runCpuFullTurn 成功後、ターン変更の Firestore 更新で到達）
+        // ただし currentTurnUid が null（ターン情報が不完全な中間状態）の場合は
+        // リセットしない。loadFromCurrentGame の loadGameFromFirestore 直後など、
+        // gameData が基本情報のみで turnOrder を持たない瞬間にリセットされると
+        // 直後の完全な状態更新で CPU アクションが二重起動してしまう。
+        if (currentTurnUid != null && !isCpuTurn && _isCpuActing) {
           _isCpuActing = false;
-        } else if (selectedCardId == null && boardCards != null) {
-          // カード未選択 → カード選択＋年代選択を一括実行
-          final availableCards = boardCards
-              .where((card) =>
-                  card['isAvailable'] == null || card['isAvailable'] == true)
-              .toList();
-          final bestCardId =
-              _cpuChooseBestCard(availableCards, cpuScore, targetScore);
-          if (bestCardId != null) {
-            // 選択するカードのデータから年代も事前に決定
-            final cardData = availableCards.firstWhere(
-                (c) => _extractStringValue(c['cardId']) == bestCardId);
-            final valueType = _cpuChooseBestValueType(
-                cardData as Map<String, dynamic>, cpuScore, targetScore);
-            _runCpuFullTurn(roomId, cpuUid, bestCardId, valueType);
-          } else {
-            _isCpuActing = false;
+        }
+
+        // playing 状態の時のみ CPU アクションを実行（waiting 中の誤発火を防止）
+        if (gameStatus == 'playing' && isCpuTurn && !_isCpuActing) {
+          final roomId = user.roomId;
+          if (roomId != null) {
+            _triggerCpuAction(
+              gameData: gameData,
+              playersGameData: playersGameData,
+              roomPlayersMap: roomPlayersMap,
+              currentTurnUid: currentTurnUid!,
+              roomId: roomId,
+            );
           }
-        } else if (selectedCardId != null && boardCards != null) {
-          // カード確定済み → 年代選択のみ（復帰時など）
-          final idx = boardCards.indexWhere(
-              (card) => _extractStringValue(card['cardId']) == selectedCardId);
-          if (idx != -1) {
-            final card = boardCards[idx] as Map<String, dynamic>;
-            final valueType =
-                _cpuChooseBestValueType(card, cpuScore, targetScore);
-            _runCpuYearSelection(roomId, cpuUid, valueType);
-          } else {
-            _isCpuActing = false;
-          }
-        } else {
-          _isCpuActing = false;
         }
       }
 
@@ -540,7 +654,15 @@ class _TrendWordBlackJackPlayingPageState
               ),
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.xLarge),
-                child: _WatchCardDialogContent(card: card),
+                child: _WatchCardDialogContent(
+                  card: card,
+                  // フリップ後に手動クローズされた際、タイマーより先に同期的にフラグをリセット
+                  // これにより自動クローズタイマーとの競合状態を防ぐ
+                  onManualClose: () {
+                    _isWatchCardDialogOpen = false;
+                    _watchCardDialogOpenTime = null;
+                  },
+                ),
               ),
             ),
           ).then((_) {
@@ -551,11 +673,11 @@ class _TrendWordBlackJackPlayingPageState
 
       // selectedCardId が null になった → 観戦ダイアログを閉じる＋追跡リセット
       // アニメーション(1000ms遅延 + 400ms flip)完了後にバッファを加えた
-      // 最小表示時間(2000ms)を保証してから閉じる
+      // 最小表示時間(4000ms)を保証してから閉じる
       if (selectedCardId == null) {
         _watchedCardId = null; // 次のカード選択で再表示できるようリセット
         if (_isWatchCardDialogOpen) {
-          const minShowDuration = Duration(milliseconds: 2000);
+          const minShowDuration = Duration(milliseconds: 4000);
           final openTime = _watchCardDialogOpenTime;
           final elapsed = openTime != null
               ? DateTime.now().difference(openTime)
@@ -633,9 +755,12 @@ class _TrendWordBlackJackPlayingPageState
 
     // --- ガード: gameData null check ---
     if (currentGame.gameData == null || currentGame.gameData!.isEmpty) {
-      return const Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
-        body: Center(child: CircularProgressIndicator()),
+      return const PopScope(
+        canPop: false,
+        child: Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          body: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -724,6 +849,30 @@ class _TrendWordBlackJackPlayingPageState
       error: (_, __) => <TrendWordBlackJackPlayer>[],
     );
 
+    // --- page_view ログ（opponent_type 付き、一度だけ送信）---
+    if (!_hasLoggedPageView && gamePlayers.isNotEmpty) {
+      _hasLoggedPageView = true;
+      // roomPlayersMap に存在しない = CPU プレイヤー
+      final hasCpu = roomSnapshot.whenOrNull(
+            data: (snapshot) {
+              final roomData = snapshot.data() as Map<String, dynamic>?;
+              final roomPlayersMap =
+                  roomData?['players'] as Map<String, dynamic>? ?? {};
+              final allGamePlayers =
+                  gameData?['players'] as Map<String, dynamic>? ?? {};
+              return allGamePlayers.keys
+                  .any((uid) => !roomPlayersMap.containsKey(uid));
+            },
+          ) ??
+          false;
+      ref.read(analyticsServiceProvider).logPageView(
+        pageTitle: pageTitle,
+        additionalParams: {
+          'opponent_type': hasCpu ? 'cpu' : 'human',
+        },
+      );
+    }
+
     // --- assets/config からプレイヤー数に応じた設定を取得 ---
     // CPU プレイヤーを含む全プレイヤー数で config を参照する
     final playersGameData = gameData?['players'] as Map<String, dynamic>? ?? {};
@@ -737,8 +886,7 @@ class _TrendWordBlackJackPlayingPageState
     final targetScore = (playerConfig?['targetScore'] as num?)?.toInt();
 
     // --- 直前ターンで加算されたスコア（currentGame直下） ---
-    final lastTurnScore =
-        _extractIntValue(gameData?['lastTurnScore']) ?? 0;
+    final lastTurnScore = _extractIntValue(gameData?['lastTurnScore']) ?? 0;
 
     // --- 現在の手番プレイヤーUIDを取得 ---
     final turnOrder = gameData?['turnOrder'] as List?;
@@ -833,7 +981,6 @@ class _TrendWordBlackJackPlayingPageState
       ),
     );
   }
-
 }
 
 // プレイヤーカードウィジェット（スコアカウントアップアニメーション付き）
@@ -1610,8 +1757,13 @@ class _CardSelectionDialogContentState
 // 手番でないプレイヤー向け: 相手が選んだカードを観戦するダイアログ
 class _WatchCardDialogContent extends StatefulWidget {
   final Map<String, dynamic> card;
+  // フリップ後に手動クローズされたときに呼ばれるコールバック（競合状態防止用）
+  final VoidCallback? onManualClose;
 
-  const _WatchCardDialogContent({required this.card});
+  const _WatchCardDialogContent({
+    required this.card,
+    this.onManualClose,
+  });
 
   @override
   State<_WatchCardDialogContent> createState() =>
@@ -1622,7 +1774,7 @@ class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _animation;
-  bool _isFlipComplete = false;
+  bool _isFlipped = false;
 
   @override
   void initState() {
@@ -1636,10 +1788,10 @@ class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
       curve: Curves.easeInOut,
     );
 
-    // フリップ完了を検知
+    // フリップ完了を検知して手動クローズを許可
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed && mounted) {
-        setState(() => _isFlipComplete = true);
+        setState(() => _isFlipped = true);
       }
     });
 
@@ -1697,7 +1849,11 @@ class _WatchCardDialogContentState extends State<_WatchCardDialogContent>
     final japaneseEra = _toJapaneseEra(year);
 
     return PopScope(
-      canPop: _isFlipComplete,
+      canPop: _isFlipped,
+      onPopInvokedWithResult: (didPop, _) {
+        // 同期的にフラグをリセットすることでタイマーとの競合状態を防ぐ
+        if (didPop) widget.onManualClose?.call();
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
