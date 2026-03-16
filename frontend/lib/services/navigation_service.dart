@@ -1,5 +1,6 @@
 import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
 import 'package:bodogehub/Pages/0002_NoForeignWord/no_foregin_word_playing_page.dart';
+import 'package:bodogehub/pages/0006_TrendWordBlackJack/trend_word_blackjack_playing_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
@@ -130,6 +131,13 @@ class NavigationService {
         _navigator!.pushReplacement(
           MaterialPageRoute(
             builder: (context) => const NoForeignWordPlayingPage(),
+          ),
+        );
+        break;
+      case '0006': // トレンドワードブラックジャック
+        _navigator!.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const TrendWordBlackJackPlayingPage(),
           ),
         );
         break;

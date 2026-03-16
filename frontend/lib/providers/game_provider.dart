@@ -135,9 +135,13 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
     // 基本情報をgamesコレクションから取得
     await loadGameFromFirestore(gameId);
 
-    // currentGameの情報で完全置換（マージしない）
+    // currentGameの情報で置換しつつ、assetsは保持する
+    final existingAssets = state.gameData?['assets'];
     state = state.copyWith(
-      gameData: currentGameData, // ← 直接置換
+      gameData: {
+        ...currentGameData,
+        if (existingAssets != null) 'assets': existingAssets,
+      },
     );
 
     Logger.log('🎮 Game loaded from currentGame: $gameId');
@@ -165,9 +169,14 @@ class CurrentGameNotifier extends StateNotifier<CurrentGameState> {
   }
 
   void updateGameData(Map<String, dynamic> newGameData) {
-    Logger.log('🔄 Updating game data (full replace)');
+    Logger.log('🔄 Updating game data (full replace, preserving assets)');
+    final existingAssets = state.gameData?['assets'];
     state = state.copyWith(
-      gameData: newGameData, // マージせず完全置換
+      gameData: {
+        ...newGameData,
+        if (existingAssets != null && !newGameData.containsKey('assets'))
+          'assets': existingAssets,
+      },
     );
   }
 
