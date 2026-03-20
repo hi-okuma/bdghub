@@ -26,11 +26,11 @@ loop 各プレイヤーのターンを順に繰り返す（最大=maxCardsPerPla
 
   CurrentPlayer -> CurrentPlayer: カードを押下し、\nカード決定確認ダイアログを表示
   CurrentPlayer -> APIgateway_Functions: 決定を押下
-  APIgateway_Functions -> Firestore: selectedCardIndex を更新（null→非null）
+  APIgateway_Functions -> Firestore: selectedCardId を更新（null→非null）
   CurrentPlayer <-- APIgateway_Functions: 完了レスポンス
   CurrentPlayer -> CurrentPlayer: 年代選択ダイアログを表示
 
-  OtherPlayers <- Firestore: selectedCardIndexの更新を検知（null→非null）
+  OtherPlayers <- Firestore: selectedCardIdの更新を検知（null→非null）
   OtherPlayers -> OtherPlayers: 選択されたカードが\n短時間表示されたのち裏返る\n（ダイアログ表示、閉じられない）
 
   CurrentPlayer -> APIgateway_Functions: 西暦 or 和暦を押下
@@ -38,7 +38,7 @@ loop 各プレイヤーのターンを順に繰り返す（最大=maxCardsPerPla
 
   alt スコアがtargetScoreを超えない場合（通常継続）
 
-    APIgateway_Functions -> Firestore: スコア更新 &\nselectedCardIndex をnullに戻す
+    APIgateway_Functions -> Firestore: スコア更新 &\nselectedCardId をnullに戻す
     CurrentPlayer <-- APIgateway_Functions: 完了レスポンス
 
     CurrentPlayer <- Firestore: 更新を検知
@@ -54,7 +54,7 @@ loop 各プレイヤーのターンを順に繰り返す（最大=maxCardsPerPla
 
   else スコアがtargetScoreを超えた場合（バースト）
 
-    APIgateway_Functions -> Firestore: 該当プレイヤーをバースト状態に更新 &\nselectedCardIndex をnullに戻す
+    APIgateway_Functions -> Firestore: 該当プレイヤーをバースト状態に更新 &\nselectedCardId をnullに戻す
     CurrentPlayer <-- APIgateway_Functions: 完了レスポンス
 
     CurrentPlayer <- Firestore: 更新を検知
