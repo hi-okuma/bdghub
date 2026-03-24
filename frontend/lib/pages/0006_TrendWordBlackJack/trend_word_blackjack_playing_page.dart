@@ -281,9 +281,10 @@ class _TrendWordBlackJackPlayingPageState
     final screenSize = MediaQuery.of(context).size;
 
     // --- 結果発表ダイアログの復帰 ---
-    if (gameStatus == 'waiting' && !_isResultDialogOpen) {
+    // winnerId が存在する場合のみゲーム終了後の waiting（結果確認待ち）と判定する
+    final winnerId = _extractStringValue(gameData['winnerId']);
+    if (gameStatus == 'waiting' && winnerId != null && !_isResultDialogOpen) {
       _isResultDialogOpen = true;
-      final winnerId = _extractStringValue(gameData['winnerId']);
       final isWin = winnerId == user.uid;
       const double dialogHeight = 500.0;
       final double verticalInset =
@@ -886,7 +887,7 @@ class _TrendWordBlackJackPlayingPageState
     final targetScore = (playerConfig?['targetScore'] as num?)?.toInt();
 
     // --- 直前ターンで加算されたスコア（currentGame直下） ---
-    final lastTurnScore = _extractIntValue(gameData?['lastTurnScore']) ?? 0;
+    final lastTurnScore = _extractIntValue(gameData?['lastTurnScore']);
 
     // --- 現在の手番プレイヤーUIDを取得 ---
     final turnOrder = gameData?['turnOrder'] as List?;
@@ -914,7 +915,7 @@ class _TrendWordBlackJackPlayingPageState
           children: [
             // プレイヤーエリア
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.medium),
+              padding: const EdgeInsets.all(AppSpacing.small),
               child: gamePlayers.isEmpty
                   ? const Center(
                       child: Column(
@@ -930,7 +931,7 @@ class _TrendWordBlackJackPlayingPageState
                       ),
                     )
                   : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start, // 高さを揃える
+                      crossAxisAlignment: CrossAxisAlignment.start, // 高さを揃え
                       children: [
                         // for文を使って直接Widgetを展開
                         for (final player in gamePlayers)
@@ -989,14 +990,14 @@ class _AnimatedPlayerCard extends StatefulWidget {
   final int maxCardCount;
   final String? currentTurnPlayerUid;
   final int? targetScore;
-  final int lastTurnScore;
+  final int? lastTurnScore;
 
   const _AnimatedPlayerCard({
     required this.player,
     required this.maxCardCount,
     this.currentTurnPlayerUid,
     this.targetScore,
-    required this.lastTurnScore,
+    this.lastTurnScore,
   });
 
   @override
@@ -1004,9 +1005,13 @@ class _AnimatedPlayerCard extends StatefulWidget {
 }
 
 class _AnimatedPlayerCardState extends State<_AnimatedPlayerCard>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<int> _scoreAnimation;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  int _displayDelta = 0;
+  bool _hasDelta = false;
 
   @override
   void initState() {
@@ -1016,25 +1021,56 @@ class _AnimatedPlayerCardState extends State<_AnimatedPlayerCard>
       duration: const Duration(milliseconds: 800),
     );
     _scoreAnimation = AlwaysStoppedAnimation(widget.player.score);
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _fadeAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 1.0), weight: 20), // フェードイン
+      TweenSequenceItem(tween: ConstantTween(1.0), weight: 47), // 表示維持
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.0), weight: 33), // フェードアウト
+    ]).animate(_fadeController);
   }
 
   @override
   void didUpdateWidget(covariant _AnimatedPlayerCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.player.score != widget.player.score) {
-      // score - lastTurnScore（加算前）から score（加算後）へカウントアップ
-      final fromScore = widget.player.score - widget.lastTurnScore;
-      _scoreAnimation = IntTween(
-        begin: fromScore,
-        end: widget.player.score,
-      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-      _controller.forward(from: 0.0);
+      if (widget.player.score < oldWidget.player.score) {
+        // スコアが減少（ゲームリセット時）→ アニメーションなしで即座に反映
+        _scoreAnimation = AlwaysStoppedAnimation(widget.player.score);
+        _controller.reset();
+      } else {
+        // スコアが増加（通常のターン）→ カウントアップアニメーション
+        final fromScore = widget.player.score - (widget.lastTurnScore ?? 0);
+        _scoreAnimation = IntTween(
+          begin: fromScore,
+          end: widget.player.score,
+        ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+        _controller.forward(from: 0.0);
+      }
+    }
+
+    // +delta フェードアニメーション
+    // このプレイヤーの手番が終わったタイミングでのみ発火（0点ターンも含む）
+    // nullはゲーム開始前なので非表示
+    if (oldWidget.currentTurnPlayerUid == widget.player.uid &&
+        oldWidget.currentTurnPlayerUid != widget.currentTurnPlayerUid &&
+        widget.lastTurnScore != null) {
+      setState(() {
+        _displayDelta = widget.lastTurnScore!;
+        _hasDelta = true;
+      });
+      _fadeController.forward(from: 0.0);
     }
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -1082,7 +1118,7 @@ class _AnimatedPlayerCardState extends State<_AnimatedPlayerCard>
         height: AppLayout.trendWordGameCardHeight,
         child: Padding(
           padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.small, horizontal: AppSpacing.large),
+              vertical: AppSpacing.xSmall, horizontal: AppSpacing.large),
           child: AnimatedBuilder(
             animation: _scoreAnimation,
             builder: (context, child) {
@@ -1099,13 +1135,36 @@ class _AnimatedPlayerCardState extends State<_AnimatedPlayerCard>
                   const SizedBox(
                     height: AppSpacing.xSmall,
                   ),
-                  Text(
-                    animatedScore.toString(),
-                    style: AppTextStyles.h3.copyWith(
-                      height: 1.1,
-                      color: Colors.white,
-                      textBaseline: TextBaseline.ideographic,
-                    ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Text(
+                        animatedScore.toString(),
+                        style: AppTextStyles.h3.copyWith(
+                          height: 1.1,
+                          color: Colors.white,
+                          textBaseline: TextBaseline.ideographic,
+                        ),
+                      ),
+                      if (_hasDelta)
+                        Positioned(
+                          top: -6,
+                          right: -24,
+                          child: AnimatedBuilder(
+                            animation: _fadeAnimation,
+                            builder: (context, _) => Opacity(
+                              opacity: _fadeAnimation.value,
+                              child: Text(
+                                '+$_displayDelta',
+                                style: AppTextStyles.h5.copyWith(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(
                     height: AppSpacing.xSmall,
@@ -1230,10 +1289,10 @@ class _BoardGridSectionState extends State<BoardGridSection> {
     final year = _extractIntValue(card['year']) ?? 0;
     final isAvailable = card['isAvailable'] ?? true;
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xSmall),
+      padding: const EdgeInsets.all(AppSpacing.xxSmall),
       child: Center(
         child: AspectRatio(
-          aspectRatio: 0.7,
+          aspectRatio: 0.8,
           child: _TrendWordCardFace(
             buzzword: buzzword,
             isAvailable: isAvailable,
@@ -1265,7 +1324,7 @@ class _BoardGridSectionState extends State<BoardGridSection> {
     const int crossAxisCount = 4;
     const double crossAxisSpacing = AppSpacing.xxSmall;
     const double gridPadding = AppSpacing.xSmall;
-    const double aspectRatio = 0.7;
+    const double aspectRatio = 0.8;
     const double maxCellHeight = 360.0;
 
     return LayoutBuilder(
@@ -1339,7 +1398,7 @@ class _TrendWordCardFace extends StatelessWidget {
               buzzword,
               style: textStyle,
               textAlign: TextAlign.center,
-              maxLines: 2,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -1982,6 +2041,7 @@ class _ResultEntry {
   final int lastScore;
   final bool isCurrentUser;
   final bool isHost;
+  final bool isBurst;
   final int rank;
 
   const _ResultEntry({
@@ -1990,6 +2050,7 @@ class _ResultEntry {
     required this.lastScore,
     required this.isCurrentUser,
     required this.isHost,
+    this.isBurst = false,
     this.rank = 1,
   });
 
@@ -1999,6 +2060,7 @@ class _ResultEntry {
         lastScore: lastScore,
         isCurrentUser: isCurrentUser,
         isHost: isHost,
+        isBurst: isBurst,
         rank: rank ?? this.rank,
       );
 }
@@ -2092,6 +2154,9 @@ class _TrendWordResultDialogContentState
     final roomSnapshot = ref.watch(roomStreamProvider(widget.roomId));
     final gameData = currentGame.gameData;
 
+    // winnerId で勝者を判定
+    final winnerId = _extractStringValue(gameData?['winnerId']);
+
     // roomStreamProvider + gameData からプレイヤーリストを構築
     final resultPlayers = roomSnapshot.when(
       data: (snapshot) {
@@ -2105,6 +2170,8 @@ class _TrendWordResultDialogContentState
             gameData?['players'] as Map<String, dynamic>? ?? {};
 
         List<_ResultEntry> players = [];
+
+        // 人間プレイヤー
         for (final entry in roomPlayersMap.entries) {
           final uid = entry.key;
           final roomPlayerData = entry.value as Map<String, dynamic>;
@@ -2113,6 +2180,7 @@ class _TrendWordResultDialogContentState
           final nickname =
               _extractStringValue(roomPlayerData['nickname']) ?? '名無し';
           final lastScore = _extractIntValue(gamePlayerData?['lastScore']) ?? 0;
+          final isBurst = gamePlayerData?['isBurst'] == true;
 
           players.add(_ResultEntry(
             uid: uid,
@@ -2120,11 +2188,35 @@ class _TrendWordResultDialogContentState
             lastScore: lastScore,
             isCurrentUser: uid == currentUser.uid,
             isHost: uid == hostPlayer,
+            isBurst: isBurst,
           ));
         }
 
-        // lastScore 降順ソート（同点はホスト優先）
+        // CPUプレイヤー（roomPlayersMapに存在しないUID）
+        for (final entry in playersGameData.entries) {
+          final uid = entry.key;
+          if (roomPlayersMap.containsKey(uid)) continue;
+
+          final gamePlayerData = entry.value as Map<String, dynamic>?;
+          final nickname =
+              _extractStringValue(gamePlayerData?['nickname']) ?? 'CPU';
+          final lastScore = _extractIntValue(gamePlayerData?['lastScore']) ?? 0;
+          final isBurst = gamePlayerData?['isBurst'] == true;
+
+          players.add(_ResultEntry(
+            uid: uid,
+            nickname: nickname,
+            lastScore: lastScore,
+            isCurrentUser: false,
+            isHost: false,
+            isBurst: isBurst,
+          ));
+        }
+
+        // 勝者を1番上、以降はlastScore降順（同点はホスト優先）
         players.sort((a, b) {
+          if (a.uid == winnerId) return -1;
+          if (b.uid == winnerId) return 1;
           if (a.lastScore != b.lastScore) {
             return b.lastScore.compareTo(a.lastScore);
           }
@@ -2148,9 +2240,6 @@ class _TrendWordResultDialogContentState
       error: (_, __) => <_ResultEntry>[],
     );
 
-    // winnerId で勝者を判定
-    final winnerId = _extractStringValue(gameData?['winnerId']);
-
     // targetScore を assets/config から取得（CPU 含む全プレイヤー数で参照）
     final playersGameData = gameData?['players'] as Map<String, dynamic>? ?? {};
     final totalPlayerCount = playersGameData.length;
@@ -2160,6 +2249,11 @@ class _TrendWordResultDialogContentState
         assetsConfig?[totalPlayerCount.toString()] as Map<String, dynamic>?;
     final targetScore = (playerConfig?['targetScore'] as num?)?.toInt();
 
+    // 全員同点かどうか判定
+    final isDraw = resultPlayers.length > 1 &&
+        resultPlayers
+            .every((p) => p.lastScore == resultPlayers.first.lastScore);
+
     return PopScope(
       canPop: false,
       child: Stack(
@@ -2167,9 +2261,9 @@ class _TrendWordResultDialogContentState
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // WIN / LOSE バッジ
+              // WIN / LOSE / DRAW バッジ
               Text(
-                widget.isWin ? 'WIN' : 'LOSE',
+                isDraw ? 'DRAW' : (widget.isWin ? 'WIN' : 'LOSE'),
                 textAlign: TextAlign.center,
                 style: AppTextStyles.h2.copyWith(color: AppTheme.primaryColor),
               ),
@@ -2185,7 +2279,8 @@ class _TrendWordResultDialogContentState
                         itemBuilder: (_, index) {
                           final player = resultPlayers[index];
                           return _buildResultCard(
-                              player, player.uid == winnerId, targetScore);
+                              player, player.uid == winnerId, targetScore,
+                              isDraw: isDraw);
                         },
                       ),
               ),
@@ -2242,8 +2337,8 @@ class _TrendWordResultDialogContentState
     );
   }
 
-  Widget _buildResultCard(
-      _ResultEntry player, bool isWinner, int? targetScore) {
+  Widget _buildResultCard(_ResultEntry player, bool isWinner, int? targetScore,
+      {bool isDraw = false}) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.small),
       elevation: AppElevation.none,
@@ -2262,17 +2357,24 @@ class _TrendWordResultDialogContentState
               child: isWinner
                   ? const Text('👑',
                       style: TextStyle(fontSize: AppTextStyles.h5FontSize))
-                  : null,
+                  : player.isBurst
+                      ? const Text('🔥',
+                          style: TextStyle(fontSize: AppTextStyles.h5FontSize))
+                      : null,
             ),
             const SizedBox(width: AppSpacing.medium),
             Expanded(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    player.nickname,
-                    style: AppTextStyles.subtitle2
-                        .copyWith(color: AppTheme.secondaryTextColor),
+                  Row(
+                    children: [
+                      Text(
+                        player.nickname,
+                        style: AppTextStyles.subtitle2
+                            .copyWith(color: AppTheme.secondaryTextColor),
+                      ),
+                    ],
                   ),
                   RichText(
                     text: TextSpan(
