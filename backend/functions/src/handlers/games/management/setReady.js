@@ -69,7 +69,11 @@ async function setReadyHandler(request) {
         updateData.players = Object.fromEntries(
             Object.entries(updatedPlayers).map(([uid, player]) => [
               uid,
-              {...player, isReady: false},
+              {
+                ...player,
+                isReady: false,
+                ...(player.isBurst !== undefined && {isBurst: false}),
+              },
             ]),
         );
       }

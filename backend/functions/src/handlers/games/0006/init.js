@@ -72,7 +72,7 @@ async function reinitializeGame(currentGameData) {
       score: 0,
       lastScore: currentPlayer.score || 0,
       cardCount: 0,
-      isBurst: false,
+      isBurst: currentPlayer.isBurst || false,
     };
   });
 
