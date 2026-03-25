@@ -28,15 +28,18 @@ const GAME_ID = "0006";
 
 // games/{GAME_ID} ドキュメント
 const GAME_DOC = {
-  title: "",
-  description: "",
-  overview: "",
-  creatorName: "",
-  thumbnailUrl: "",
+  title: "この流行語、いつのだっけ？",
+  description: "プレイヤーは順番にボード上の流行語カードを引き、その言葉が誕生した年代を西暦か和暦のどちらかから選択します。選択した年代に基づいてスコアが加算されていきますが、設定された目標スコアを超えてしまうと「バースト」となりゲームから脱落してしまいます。バーストを避けながらギリギリを見極めてスコアを稼ぎ、未バーストのプレイヤーが残り1人以下になるか、全プレイヤーが規定の上限枚数までカードを引き終わった時点でゲーム終了となります。",
+  overview: "流行語の年代で目標スコアを目指す、チキンレース風のカードゲーム！",
+  creatorName: "ボドゲハブ",
+  thumbnailUrl: "https://firebasestorage.googleapis.com/v0/b/bdghub-prd.firebasestorage.app/o/gameIcon%2F0006.png?alt=media&token=c68c47fd-931c-4e0f-93fd-0e5c0b448bb6",
   tutorialImageList: [
-    // "https://...",
+    "https://firebasestorage.googleapis.com/v0/b/bdghub-prd.firebasestorage.app/o/title%2F0006%2F0.png?alt=media&token=8a0e2663-bd73-46ac-97fa-f6d0cb2e99f3",
+    "https://firebasestorage.googleapis.com/v0/b/bdghub-prd.firebasestorage.app/o/title%2F0006%2F1.png?alt=media&token=ec18bf27-0f1b-49d5-8a53-bd136b73984b",
+    "https://firebasestorage.googleapis.com/v0/b/bdghub-prd.firebasestorage.app/o/title%2F0006%2F2.png?alt=media&token=c05440a6-1c5c-48b4-84de-8f6bd7736d18",
+    "https://firebasestorage.googleapis.com/v0/b/bdghub-prd.firebasestorage.app/o/title%2F0006%2F3.png?alt=media&token=47703a8c-4fec-4fd1-81b3-88a921db73ff",
   ],
-  isPublished: false,
+  isPublished: true,
   minPlayers: 1,
   maxPlayers: 2,
   duration: 5,
@@ -47,11 +50,11 @@ const GAME_DOC = {
 // games/{GAME_ID}/assets/config ドキュメント
 // キーはプレイヤー数（文字列）、値はそのプレイヤー数用の設定
 const CONFIG_DOC = {
-  // "2": {
-  //   targetScore: 150,
-  //   maxCardsPerPlayer: 5,
-  //   boardSize: 16,
-  // },
+  "2": {
+    targetScore: 150,
+    maxCardsPerPlayer: 5,
+    boardSize: 16,
+  },
 };
 
 // ============================================================
