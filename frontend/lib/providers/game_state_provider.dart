@@ -623,7 +623,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         break;
 
       case GameStatus.result:
-        Logger.log('🎮 NavinavigateToResult(currentGame)');
+        Logger.log('🎮 Navigating to Result(currentGame)');
         _executeNavigation('checkAnswer', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
@@ -646,6 +646,16 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
         if (activeGameId == '0005') {
           Logger.log('🎮 Game 0005: waiting検知による自動ended遷移をスキップします');
           // ここで break することで、下部の処理（endedへの更新など）を実行せずに抜ける
+          break;
+        }
+
+        // ★追加: GameID '0006' の場合の特例処理
+        // '0006' はプレイ画面内のダイアログで結果発表・リプレイを行うため、
+        // 汎用の GameResultPage への自動遷移をスキップする。
+        // フラグはリセットしない: リプレイ時に PlayingPage を再 push させず、
+        // 既存ページ内の ref.listen でゲーム再開を処理する。
+        if (activeGameId == '0006') {
+          Logger.log('🎮 Game 0006: waiting検知による自動result遷移をスキップします');
           break;
         }
 

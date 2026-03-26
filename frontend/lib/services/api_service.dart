@@ -11,14 +11,18 @@ class ApiService {
     BuildContext context,
     Map<String, dynamic> parameters, {
     bool handleError = true,
+    // 特定のエラーコード時にスナックバーを表示させないためのオプションを追加
+    List<String> ignoredErrorCodes = const [],
   }) async {
     final callable = _functions.httpsCallable(functionName);
     try {
       final result = await callable.call(parameters);
       return result.data;
     } on FirebaseFunctionsException catch (e) {
-      // handleErrorがtrueの場合のみスナックバーを表示
-      if (handleError) {
+      // 1. handleError が true である
+      // 2. かつ、今回の例外コードが ignoredErrorCodes に含まれていない
+      // この条件を満たす場合のみ共通エラーハンドラ（スナックバー表示等）を実行する
+      if (handleError && !ignoredErrorCodes.contains(e.code)) {
         ErrorHandler.handleFirebaseFunctionsException(context, e);
       }
       rethrow;
@@ -241,6 +245,46 @@ class ApiService {
         'isCorrect': isCorrect,
       },
       handleError: handleError,
+    );
+  }
+
+  static Future<dynamic> confirmCard0006(
+    BuildContext context,
+    String roomId,
+    String uid,
+    String cardId, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'confirmCard0006',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'cardId': cardId,
+      },
+      handleError: handleError,
+      ignoredErrorCodes: ['InvalidArgument'],
+    );
+  }
+
+  static Future<dynamic> adoptValue0006(
+    BuildContext context,
+    String roomId,
+    String uid,
+    String valueType, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'adoptValue0006',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'valueType': valueType,
+      },
+      handleError: handleError,
+      ignoredErrorCodes: ['InvalidArgument'],
     );
   }
 }
