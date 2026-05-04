@@ -168,33 +168,68 @@ class _TrendWordBlackJackPlayingPageState
   }
 
   // 利用可能なカードの中から最適なカードIDを返す
-  // 戦略: バーストしない範囲で targetScore に最も近くなるカード+年代の組み合わせを優先
-  String? _cpuChooseBestCard(
-      List<dynamic> availableCards, int cpuScore, int targetScore) {
+  // 戦略: 残りターン数(remainingTurns)を使ってすべての組み合わせを計算し、
+  // バーストしない範囲で targetScore に最も近くなるカード群の一部となる1手を選ぶ
+  String? _cpuChooseBestCard(List<dynamic> availableCards, int cpuScore,
+      int targetScore, int remainingTurns) {
+    if (availableCards.isEmpty || remainingTurns <= 0) return null;
+
     String? bestCardId;
-    double bestValue = double.negativeInfinity;
+    double bestGlobalScore = double.negativeInfinity;
 
-    for (final card in availableCards) {
-      final cardId = _extractStringValue(card['cardId']);
-      if (cardId == null) continue;
-      final year = _extractIntValue(card['year']) ?? 0;
-      final westernAdd = _cpuToScoreFromWesternEra(year);
-      final japaneseAdd = _cpuToScoreFromJapaneseEra(year);
-
-      // 西暦・和暦の両オプションのうち、このカードの最良値を評価
-      double cardBest = double.negativeInfinity;
-      for (final add in [westernAdd, japaneseAdd]) {
-        final newScore = cpuScore + add;
-        // バーストしないほど高評価、バーストは超過量でペナルティ
-        final v = newScore <= targetScore
-            ? newScore.toDouble()
-            : -(newScore - targetScore).toDouble() - 1000;
-        if (v > cardBest) cardBest = v;
+    // 深さ優先探索ですべての組み合わせを確認
+    void search(
+        int index, int currentCardsCount, int currentSum, String? firstCardId) {
+      if (currentCardsCount == remainingTurns) {
+        double scoreEval = currentSum <= targetScore
+            ? currentSum.toDouble()
+            : -(currentSum - targetScore).toDouble() - 1000;
+        if (scoreEval > bestGlobalScore) {
+          bestGlobalScore = scoreEval;
+          bestCardId = firstCardId;
+        }
+        return;
+      }
+      if (availableCards.length - index < remainingTurns - currentCardsCount) {
+        return;
       }
 
-      if (cardBest > bestValue) {
-        bestValue = cardBest;
-        bestCardId = cardId;
+      for (int i = index; i < availableCards.length; i++) {
+        final card = availableCards[i];
+        final cardId = _extractStringValue(card['cardId']);
+        if (cardId == null) continue;
+        final year = _extractIntValue(card['year']) ?? 0;
+        final wAdd = _cpuToScoreFromWesternEra(year);
+        final jAdd = _cpuToScoreFromJapaneseEra(year);
+
+        search(i + 1, currentCardsCount + 1, currentSum + wAdd,
+            firstCardId ?? cardId);
+        search(i + 1, currentCardsCount + 1, currentSum + jAdd,
+            firstCardId ?? cardId);
+      }
+    }
+
+    search(0, 0, cpuScore, null);
+
+    // 見つからなかった場合（異常系）は1手先のグリーディにフォールバック
+    if (bestCardId == null) {
+      double bestValue = double.negativeInfinity;
+      for (final card in availableCards) {
+        final cardId = _extractStringValue(card['cardId']);
+        if (cardId == null) continue;
+        final year = _extractIntValue(card['year']) ?? 0;
+        final wAdd = _cpuToScoreFromWesternEra(year);
+        final jAdd = _cpuToScoreFromJapaneseEra(year);
+        for (final add in [wAdd, jAdd]) {
+          final newScore = cpuScore + add;
+          final v = newScore <= targetScore
+              ? newScore.toDouble()
+              : -(newScore - targetScore).toDouble() - 1000;
+          if (v > bestValue) {
+            bestValue = v;
+            bestCardId = cardId;
+          }
+        }
       }
     }
     return bestCardId;
@@ -202,22 +237,68 @@ class _TrendWordBlackJackPlayingPageState
 
   // 確定済みカードに対して最適な年代種別 ('Western' / 'Japanese') を返す
   String _cpuChooseBestValueType(
-      Map<String, dynamic> card, int cpuScore, int targetScore) {
+      Map<String, dynamic> card,
+      List<dynamic> availableCards,
+      int cpuScore,
+      int targetScore,
+      int remainingTurns) {
     final year = _extractIntValue(card['year']) ?? 0;
-    final westernAdd = _cpuToScoreFromWesternEra(year);
-    final japaneseAdd = _cpuToScoreFromJapaneseEra(year);
-    final newWestern = cpuScore + westernAdd;
-    final newJapanese = cpuScore + japaneseAdd;
+    final wAdd = _cpuToScoreFromWesternEra(year);
+    final jAdd = _cpuToScoreFromJapaneseEra(year);
+    final newWestern = cpuScore + wAdd;
+    final newJapanese = cpuScore + jAdd;
 
-    // 両方バースト → 超過量が小さい方
-    if (newWestern > targetScore && newJapanese > targetScore) {
-      return newWestern <= newJapanese ? 'Western' : 'Japanese';
+    if (remainingTurns <= 1) {
+      // 残り1手の場合はグリーディに判定
+      if (newWestern > targetScore && newJapanese > targetScore) {
+        return newWestern <= newJapanese ? 'Western' : 'Japanese';
+      }
+      if (newWestern > targetScore) return 'Japanese';
+      if (newJapanese > targetScore) return 'Western';
+      return newWestern >= newJapanese ? 'Western' : 'Japanese';
     }
-    // 片方バースト → 安全な方
-    if (newWestern > targetScore) return 'Japanese';
-    if (newJapanese > targetScore) return 'Western';
-    // どちらもセーフ → スコアが高い方（targetScore に近い方）
-    return newWestern >= newJapanese ? 'Western' : 'Japanese';
+
+    // それ以降の手番も見据えて評価
+    final fixedCardId = _extractStringValue(card['cardId']);
+    final remainingCards = availableCards
+        .where((c) => _extractStringValue(c['cardId']) != fixedCardId)
+        .toList();
+
+    double getBestSubScore(int initialScore) {
+      double bestScore = double.negativeInfinity;
+      void search(int index, int currentCardsCount, int currentSum) {
+        if (currentCardsCount == remainingTurns - 1) {
+          double scoreEval = currentSum <= targetScore
+              ? currentSum.toDouble()
+              : -(currentSum - targetScore).toDouble() - 1000;
+          if (scoreEval > bestScore) bestScore = scoreEval;
+          return;
+        }
+        if (remainingCards.length - index < (remainingTurns - 1) - currentCardsCount) {
+          return;
+        }
+
+        for (int i = index; i < remainingCards.length; i++) {
+          final c = remainingCards[i];
+          final y = _extractIntValue(c['year']) ?? 0;
+          final w = _cpuToScoreFromWesternEra(y);
+          final j = _cpuToScoreFromJapaneseEra(y);
+          search(i + 1, currentCardsCount + 1, currentSum + w);
+          search(i + 1, currentCardsCount + 1, currentSum + j);
+        }
+      }
+
+      search(0, 0, initialScore);
+      return bestScore != double.negativeInfinity
+          ? bestScore
+          : (initialScore <= targetScore
+              ? initialScore.toDouble()
+              : -(initialScore - targetScore).toDouble() - 1000);
+    }
+
+    final wScore = getBestSubScore(newWestern);
+    final jScore = getBestSubScore(newJapanese);
+    return wScore >= jScore ? 'Western' : 'Japanese';
   }
 
   // --- CPU アクション実行 ---
@@ -427,7 +508,7 @@ class _TrendWordBlackJackPlayingPageState
       gameData: gameData,
       playersGameData: playersGameData,
       roomPlayersMap: roomPlayersMap,
-      currentTurnUid: currentTurnUid!,
+      currentTurnUid: currentTurnUid,
       roomId: roomId,
     );
   }
@@ -458,19 +539,30 @@ class _TrendWordBlackJackPlayingPageState
     final selectedCardId = _extractStringValue(gameData['selectedCardId']);
     final boardCards = gameData['boardCards'] as List<dynamic>?;
 
+    final cardCount = _extractIntValue(cpuPlayerData?['cardCount']) ?? 0;
+    final playerConfig =
+        assetsConfig?[totalPlayerCount.toString()] as Map<String, dynamic>?;
+    final maxCardCount =
+        (playerConfig?['maxCardsPerPlayer'] as num?)?.toInt() ?? 5;
+    final remainingTurns = maxCardCount - cardCount;
+
     if (selectedCardId == null && boardCards != null) {
       // カード未選択 → カード選択＋年代選択を一括実行
       final availableCards = boardCards
           .where((card) =>
               card['isAvailable'] == null || card['isAvailable'] == true)
           .toList();
-      final bestCardId =
-          _cpuChooseBestCard(availableCards, cpuScore, targetScore);
+      final bestCardId = _cpuChooseBestCard(
+          availableCards, cpuScore, targetScore, remainingTurns);
       if (bestCardId != null) {
         final cardData = availableCards
             .firstWhere((c) => _extractStringValue(c['cardId']) == bestCardId);
         final valueType = _cpuChooseBestValueType(
-            cardData as Map<String, dynamic>, cpuScore, targetScore);
+            cardData as Map<String, dynamic>,
+            availableCards,
+            cpuScore,
+            targetScore,
+            remainingTurns);
         _runCpuFullTurn(roomId, cpuUid, bestCardId, valueType);
       } else {
         _isCpuActing = false;
@@ -481,7 +573,11 @@ class _TrendWordBlackJackPlayingPageState
           (card) => _extractStringValue(card['cardId']) == selectedCardId);
       if (idx != -1) {
         final card = boardCards[idx] as Map<String, dynamic>;
-        final valueType = _cpuChooseBestValueType(card, cpuScore, targetScore);
+        final availableCards = boardCards
+            .where((c) => c['isAvailable'] == null || c['isAvailable'] == true)
+            .toList();
+        final valueType = _cpuChooseBestValueType(
+            card, availableCards, cpuScore, targetScore, remainingTurns);
         _runCpuYearSelection(roomId, cpuUid, valueType);
       } else {
         _isCpuActing = false;
@@ -622,7 +718,7 @@ class _TrendWordBlackJackPlayingPageState
               gameData: gameData,
               playersGameData: playersGameData,
               roomPlayersMap: roomPlayersMap,
-              currentTurnUid: currentTurnUid!,
+              currentTurnUid: currentTurnUid,
               roomId: roomId,
             );
           }
