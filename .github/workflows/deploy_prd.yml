@@ -8,6 +8,8 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
 
@@ -18,10 +20,10 @@ jobs:
           cache: true
 
       - name: Make build script executable
-        run: chmod +x ./build_scripts/build_web.sh
+        run: chmod +x ./frontend/build_scripts/build_web.sh
 
       - name: Build for Production
-        run: ./build_scripts/build_web.sh prd
+        run: ./frontend/build_scripts/build_web.sh prd
 
       - name: Deploy to Firebase Hosting (Production)
         uses: FirebaseExtended/action-hosting-deploy@v0
