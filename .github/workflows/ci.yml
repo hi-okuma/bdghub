@@ -11,6 +11,9 @@ jobs:
   test:
     name: Analyze and Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:

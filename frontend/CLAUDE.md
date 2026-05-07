@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 運用ルール
+
+- **git コマンドは明示的な指示がない限り実行しない。** コミット・ステージング・プッシュ等は、ユーザーから「コミットして」などの明示的な指示があった場合のみ行う。
+
 ## Project Overview
 
 BodogeHub (ボドゲハブ) — a web-based board game platform built with Flutter. Players create/join rooms and play various board games in real-time via Firebase. The app is Japanese-language.

@@ -1,4 +1,4 @@
-import 'dart:math' show max, pi;
+import 'dart:math';
 
 import 'package:bodogehub/utils/logger.dart';
 import 'package:confetti/confetti.dart';
@@ -58,6 +58,11 @@ class _TrendWordBlackJackPlayingPageState
   bool _isCpuActing = false;
   int _cpuActionGeneration = 0;
   bool _hasLoggedPageView = false;
+
+  // CPU 難易度（Lv1〜5、ゲーム開始時に1回だけ決定）
+  int? _cpuDifficultyLevel;
+  // CPU が年代を把握しているカードの cardId セット
+  Set<String> _cpuKnownCardIds = {};
 
   // --- GameExitHandler 必須オーバーライド ---
   @override
@@ -155,6 +160,24 @@ class _TrendWordBlackJackPlayingPageState
     }
   }
 
+  // --- CPU 難易度初期化（ゲーム中1回だけ呼ぶ）---
+  // Lv1〜5 をランダム決定し、難易度に応じた枚数のカードを「知っている」カードとして固定する。
+  // Lv1: 20%, Lv2: 37%, Lv3: 56%, Lv4: 75%, Lv5: 100% のカードを把握。
+  void _initCpuDifficulty(List<dynamic> boardCards) {
+    if (_cpuDifficultyLevel != null) return;
+    _cpuDifficultyLevel = Random().nextInt(3) + 2; // Lv2〜4
+    final total = boardCards.length;
+    final knownCount = max(1, (total * _cpuDifficultyLevel! / 5).round());
+    final shuffled = List<dynamic>.from(boardCards)..shuffle();
+    _cpuKnownCardIds = shuffled
+        .take(knownCount)
+        .map((c) => _extractStringValue(c['cardId']) ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    Logger.log(
+        'CPU難易度: Lv$_cpuDifficultyLevel, 知っているカード: $knownCount / $total 枚');
+  }
+
   // --- CPU スコア計算ヘルパー ---
   int _cpuToScoreFromWesternEra(int year) =>
       year >= 2000 ? year - 2000 : year - 1900;
@@ -169,10 +192,22 @@ class _TrendWordBlackJackPlayingPageState
 
   // 利用可能なカードの中から最適なカードIDを返す
   // 戦略: 残りターン数(remainingTurns)を使ってすべての組み合わせを計算し、
-  // バーストしない範囲で targetScore に最も近くなるカード群の一部となる1手を選ぶ
+  // バーストしない範囲で targetScore に最も近くなるカード群の一部となる1手を選ぶ。
+  // knownCardIds に含まれないカードは年代不明として 1950〜2024 のランダム年で評価する。
   String? _cpuChooseBestCard(List<dynamic> availableCards, int cpuScore,
-      int targetScore, int remainingTurns) {
+      int targetScore, int remainingTurns, Set<String> knownCardIds) {
     if (availableCards.isEmpty || remainingTurns <= 0) return null;
+
+    // 年代推定値を事前に確定（DFS 内で一貫した値を使うため）
+    final random = Random();
+    final Map<String, int> yearEstimates = {};
+    for (final card in availableCards) {
+      final cardId = _extractStringValue(card['cardId']);
+      if (cardId == null) continue;
+      yearEstimates[cardId] = knownCardIds.contains(cardId)
+          ? (_extractIntValue(card['year']) ?? 0)
+          : 1950 + random.nextInt(75); // 1950〜2024 のランダム推定
+    }
 
     String? bestCardId;
     double bestGlobalScore = double.negativeInfinity;
@@ -198,7 +233,7 @@ class _TrendWordBlackJackPlayingPageState
         final card = availableCards[i];
         final cardId = _extractStringValue(card['cardId']);
         if (cardId == null) continue;
-        final year = _extractIntValue(card['year']) ?? 0;
+        final year = yearEstimates[cardId] ?? 0;
         final wAdd = _cpuToScoreFromWesternEra(year);
         final jAdd = _cpuToScoreFromJapaneseEra(year);
 
@@ -217,7 +252,7 @@ class _TrendWordBlackJackPlayingPageState
       for (final card in availableCards) {
         final cardId = _extractStringValue(card['cardId']);
         if (cardId == null) continue;
-        final year = _extractIntValue(card['year']) ?? 0;
+        final year = yearEstimates[cardId] ?? 0;
         final wAdd = _cpuToScoreFromWesternEra(year);
         final jAdd = _cpuToScoreFromJapaneseEra(year);
         for (final add in [wAdd, jAdd]) {
@@ -235,13 +270,21 @@ class _TrendWordBlackJackPlayingPageState
     return bestCardId;
   }
 
-  // 確定済みカードに対して最適な年代種別 ('Western' / 'Japanese') を返す
+  // 確定済みカードに対して最適な年代種別 ('Western' / 'Japanese') を返す。
+  // knownCardIds に含まれないカードは年代不明としてランダムに選択する。
   String _cpuChooseBestValueType(
       Map<String, dynamic> card,
       List<dynamic> availableCards,
       int cpuScore,
       int targetScore,
-      int remainingTurns) {
+      int remainingTurns,
+      Set<String> knownCardIds) {
+    final cardId = _extractStringValue(card['cardId']);
+    // 年代不明のカードはランダム選択
+    if (cardId == null || !knownCardIds.contains(cardId)) {
+      return Random().nextBool() ? 'Western' : 'Japanese';
+    }
+
     final year = _extractIntValue(card['year']) ?? 0;
     final wAdd = _cpuToScoreFromWesternEra(year);
     final jAdd = _cpuToScoreFromJapaneseEra(year);
@@ -259,10 +302,21 @@ class _TrendWordBlackJackPlayingPageState
     }
 
     // それ以降の手番も見据えて評価
-    final fixedCardId = _extractStringValue(card['cardId']);
+    final fixedCardId = cardId;
     final remainingCards = availableCards
         .where((c) => _extractStringValue(c['cardId']) != fixedCardId)
         .toList();
+
+    // 残りカードの年代推定値（知らないカードはランダム、事前に確定）
+    final random = Random();
+    final Map<String, int> yearEstimates = {};
+    for (final c in remainingCards) {
+      final cId = _extractStringValue(c['cardId']);
+      if (cId == null) continue;
+      yearEstimates[cId] = knownCardIds.contains(cId)
+          ? (_extractIntValue(c['year']) ?? 0)
+          : 1950 + random.nextInt(75);
+    }
 
     double getBestSubScore(int initialScore) {
       double bestScore = double.negativeInfinity;
@@ -274,13 +328,16 @@ class _TrendWordBlackJackPlayingPageState
           if (scoreEval > bestScore) bestScore = scoreEval;
           return;
         }
-        if (remainingCards.length - index < (remainingTurns - 1) - currentCardsCount) {
+        if (remainingCards.length - index <
+            (remainingTurns - 1) - currentCardsCount) {
           return;
         }
 
         for (int i = index; i < remainingCards.length; i++) {
           final c = remainingCards[i];
-          final y = _extractIntValue(c['year']) ?? 0;
+          final cId = _extractStringValue(c['cardId']);
+          if (cId == null) continue;
+          final y = yearEstimates[cId] ?? 0;
           final w = _cpuToScoreFromWesternEra(y);
           final j = _cpuToScoreFromJapaneseEra(y);
           search(i + 1, currentCardsCount + 1, currentSum + w);
@@ -546,14 +603,16 @@ class _TrendWordBlackJackPlayingPageState
         (playerConfig?['maxCardsPerPlayer'] as num?)?.toInt() ?? 5;
     final remainingTurns = maxCardCount - cardCount;
 
+    if (boardCards != null) _initCpuDifficulty(boardCards);
+
     if (selectedCardId == null && boardCards != null) {
       // カード未選択 → カード選択＋年代選択を一括実行
       final availableCards = boardCards
           .where((card) =>
               card['isAvailable'] == null || card['isAvailable'] == true)
           .toList();
-      final bestCardId = _cpuChooseBestCard(
-          availableCards, cpuScore, targetScore, remainingTurns);
+      final bestCardId = _cpuChooseBestCard(availableCards, cpuScore,
+          targetScore, remainingTurns, _cpuKnownCardIds);
       if (bestCardId != null) {
         final cardData = availableCards
             .firstWhere((c) => _extractStringValue(c['cardId']) == bestCardId);
@@ -562,7 +621,8 @@ class _TrendWordBlackJackPlayingPageState
             availableCards,
             cpuScore,
             targetScore,
-            remainingTurns);
+            remainingTurns,
+            _cpuKnownCardIds);
         _runCpuFullTurn(roomId, cpuUid, bestCardId, valueType);
       } else {
         _isCpuActing = false;
@@ -576,8 +636,8 @@ class _TrendWordBlackJackPlayingPageState
         final availableCards = boardCards
             .where((c) => c['isAvailable'] == null || c['isAvailable'] == true)
             .toList();
-        final valueType = _cpuChooseBestValueType(
-            card, availableCards, cpuScore, targetScore, remainingTurns);
+        final valueType = _cpuChooseBestValueType(card, availableCards,
+            cpuScore, targetScore, remainingTurns, _cpuKnownCardIds);
         _runCpuYearSelection(roomId, cpuUid, valueType);
       } else {
         _isCpuActing = false;
@@ -676,6 +736,8 @@ class _TrendWordBlackJackPlayingPageState
         _isResultDialogOpen = false;
         _cpuActionGeneration++;
         _isCpuActing = false;
+        _cpuDifficultyLevel = null;
+        _cpuKnownCardIds = {};
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) Navigator.of(context).pop(); // 結果ダイアログを閉じる
         });
