@@ -12,7 +12,7 @@ import '/components/custom_widgets.dart';
 import '/components/app_theme.dart';
 import 'exit_room_dialog.dart';
 import 'package:bodogehub/models/game_enums.dart';
-import '/Pages/0000_HubMain/game_detail_page.dart';
+import '/pages/0000_HubMain/game_detail_page.dart';
 import '/utils/game_service.dart';
 import '/providers/user_provider.dart';
 import '/providers/room_provider.dart';

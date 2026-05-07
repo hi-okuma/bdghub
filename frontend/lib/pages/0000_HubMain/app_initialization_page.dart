@@ -11,8 +11,8 @@ import '/providers/game_state_provider.dart';
 import '/providers/analytics_provider.dart';
 import '/services/auth_service.dart';
 import '/services/navigation_service.dart';
-import '/Pages/0000_HubMain/select_game_page.dart';
-import '/Pages/0000_HubMain/top_page.dart';
+import '/pages/0000_HubMain/select_game_page.dart';
+import '/pages/0000_HubMain/top_page.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:universal_html/html.dart' as html;
 
