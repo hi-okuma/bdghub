@@ -26,6 +26,7 @@ jobs:
         run: |
           mkdir -p assets
           echo "${{ secrets.ENV_FILE_DEV }}" > assets/.env.dev
+          touch assets/.env.stg assets/.env.prd
 
       - name: Make build script executable
         run: chmod +x ./build_scripts/build_web.sh
