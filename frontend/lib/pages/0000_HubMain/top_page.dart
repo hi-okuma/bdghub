@@ -6,7 +6,7 @@ import '../../components/custom_widgets.dart';
 import '../../components/app_theme.dart';
 import 'package:bodogehub/utils/game_service.dart';
 import 'package:flutter/material.dart';
-import 'package:bodogehub/Pages/0000_HubMain/game_detail_page.dart';
+import 'package:bodogehub/pages/0000_HubMain/game_detail_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

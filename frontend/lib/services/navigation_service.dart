@@ -1,9 +1,9 @@
-import 'package:bodogehub/Pages/0001_NgWord/ngword_playing_page.dart';
-import 'package:bodogehub/Pages/0002_NoForeignWord/no_foregin_word_playing_page.dart';
+import 'package:bodogehub/pages/0001_NgWord/ngword_playing_page.dart';
+import 'package:bodogehub/pages/0002_NoForeignWord/no_foregin_word_playing_page.dart';
 import 'package:bodogehub/pages/0006_TrendWordBlackJack/trend_word_blackjack_playing_page.dart';
-import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
-import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
-import 'package:bodogehub/Pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
+import 'package:bodogehub/pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
+import 'package:bodogehub/pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
+import 'package:bodogehub/pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_check_answer_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_result_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_select_picture_page.dart';
@@ -14,9 +14,9 @@ import 'package:bodogehub/models/game_enums.dart';
 import '../providers/game_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/game_state_provider.dart';
-import '../Pages/0000_HubMain/game_title_page.dart';
-import '../Pages/0000_HubMain/select_game_page.dart';
-import '../Pages/0000_HubMain/game_result_page.dart';
+import '../pages/0000_HubMain/game_title_page.dart';
+import '../pages/0000_HubMain/select_game_page.dart';
+import '../pages/0000_HubMain/game_result_page.dart';
 
 class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey =
