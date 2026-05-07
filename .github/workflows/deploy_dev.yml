@@ -22,6 +22,11 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Create env files
+        run: |
+          mkdir -p assets
+          echo "${{ secrets.ENV_FILE_DEV }}" > assets/.env.dev
+
       - name: Make build script executable
         run: chmod +x ./build_scripts/build_web.sh
 
