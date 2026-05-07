@@ -41,3 +41,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BDGHUB_STG }}'
           projectId: bdghub-stg
           channelId: live
+          entryPoint: ./frontend
