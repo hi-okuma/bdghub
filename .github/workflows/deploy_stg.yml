@@ -1,0 +1,44 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - 'release/*'
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Create env files
+        run: |
+          mkdir -p assets
+          echo "${{ secrets.ENV_FILE_STG }}" > assets/.env.stg
+          touch assets/.env.dev assets/.env.prd
+
+      - name: Make build script executable
+        run: chmod +x ./build_scripts/build_web.sh
+
+      - name: Build for Staging
+        run: ./build_scripts/build_web.sh stg
+
+      - name: Deploy to Firebase Hosting (Staging)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BDGHUB_STG }}'
+          projectId: bdghub-stg
+          channelId: live
+          entryPoint: ./frontend

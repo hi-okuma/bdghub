@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 運用ルール
+
+- **git コマンドは明示的な指示がない限り実行しない。** コミット・ステージング・プッシュ等は、ユーザーから「コミットして」などの明示的な指示があった場合のみ行う。
+
 ## Project Overview
 
 BodogeHub (ボドゲハブ) — a web-based board game platform built with Flutter. Players create/join rooms and play various board games in real-time via Firebase. The app is Japanese-language.
@@ -316,3 +320,20 @@ class _XxxxPlayingPageState extends ConsumerState<XxxxPlayingPage>
 | `PopScope(canPop: false)` | ブラウザバック防止 |
 | `roomStreamProvider` + `gameData` 結合 | UID をキーに `roomPlayersMap` と `playersGameData` を結合 |
 | `ElevatedLoadingButton` + `_isLoading` | API コール中のローディング状態管理 |
+
+## Flutter スキル集
+
+`.agents/skills/` 配下に Flutter の実装ガイドラインが定義されています。該当タスクを依頼する際は、対応するスキルファイルを参照して実装してください。
+
+| スキル名 | 用途 | パス |
+|---|---|---|
+| `flutter-implement-json-serialization` | `fromJson`/`toJson` を使った手動 JSON シリアライズ | `.agents/skills/flutter-implement-json-serialization/SKILL.md` |
+| `flutter-use-http-package` | `http` パッケージで REST API (GET/POST/PUT/DELETE) を呼ぶ | `.agents/skills/flutter-use-http-package/SKILL.md` |
+| `flutter-build-responsive-layout` | `LayoutBuilder`/`MediaQuery` でレスポンシブレイアウトを構築する | `.agents/skills/flutter-build-responsive-layout/SKILL.md` |
+| `flutter-fix-layout-issues` | RenderFlex overflow など Flutter レイアウトエラーを修正する | `.agents/skills/flutter-fix-layout-issues/SKILL.md` |
+| `flutter-apply-architecture-best-practices` | UI/Logic/Data の3層アーキテクチャを適用する | `.agents/skills/flutter-apply-architecture-best-practices/SKILL.md` |
+| `flutter-setup-declarative-routing` | `go_router` を使った宣言的ルーティングを設定する | `.agents/skills/flutter-setup-declarative-routing/SKILL.md` |
+| `flutter-setup-localization` | `flutter_localizations` + `intl` でローカライズを初期化する | `.agents/skills/flutter-setup-localization/SKILL.md` |
+| `flutter-add-widget-test` | `WidgetTester` でウィジェットの描画・操作を検証するテストを書く | `.agents/skills/flutter-add-widget-test/SKILL.md` |
+| `flutter-add-widget-preview` | `previews.dart` を使ったインタラクティブなウィジェットプレビューを追加する | `.agents/skills/flutter-add-widget-preview/SKILL.md` |
+| `flutter-add-integration-test` | `integration_test` パッケージでインテグレーションテストを追加する | `.agents/skills/flutter-add-integration-test/SKILL.md` |

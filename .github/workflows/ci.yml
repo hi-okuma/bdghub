@@ -1,0 +1,36 @@
+name: Flutter CI
+
+on:
+  pull_request:
+    branches:
+      - main-front
+      - 'release/*'
+      - develop-front
+
+jobs:
+  test:
+    name: Analyze and Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Create placeholder env files
+        run: mkdir -p assets && touch assets/.env.dev assets/.env.stg assets/.env.prd
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-warnings
+        continue-on-error: true
