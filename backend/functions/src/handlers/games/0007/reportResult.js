@@ -1,6 +1,6 @@
 const {logger} = require("firebase-functions");
 const {db} = require("../../../config/firebase");
-const {loadTopics, loadRoleCardIds} = require("./init");
+const {loadTopics, loadRoleCardUrls} = require("./init");
 const {
   throwValidationError,
   throwGameStatusError,
@@ -29,7 +29,7 @@ async function reportResult0007Handler(request) {
 
   try {
     const topicsList = await loadTopics();
-    const roleCardIds = await loadRoleCardIds();
+    const roleCardUrls = await loadRoleCardUrls();
 
     await db.runTransaction(async (transaction) => {
       const roomRef = db.collection("rooms").doc(roomId);
@@ -79,14 +79,14 @@ async function reportResult0007Handler(request) {
             updatedPlayers,
             currentGameData,
             topicsList,
-            roleCardIds,
+            roleCardUrls,
         ) :
         buildNextRoundUpdate(
             updatedPlayers,
             nextPresenter,
             currentGameData,
             topicsList,
-            roleCardIds,
+            roleCardUrls,
         );
 
       transaction.update(currentGameRef, updateData);
@@ -194,7 +194,7 @@ function pickRandomUnused(allItems, usedItems) {
  * @param {string} nextPresenter - 次の出題者UID
  * @param {Object} currentGameData - 現在のゲームデータ
  * @param {Array<string>} topicsList - 全お題リスト
- * @param {Array<string>} roleCardIds - 全おじさんカードIDリスト
+ * @param {Array<string>} roleCardUrls - 全おじさんカードURLリスト
  * @return {Object} Firestore更新データ
  */
 function buildNextRoundUpdate(
@@ -202,10 +202,10 @@ function buildNextRoundUpdate(
     nextPresenter,
     currentGameData,
     topicsList,
-    roleCardIds,
+    roleCardUrls,
 ) {
   const nextTopic = pickRandomUnused(topicsList, currentGameData.usedTopic);
-  const nextRoleCard = pickRandomUnused(roleCardIds, currentGameData.usedRoleCard);
+  const nextRoleCard = pickRandomUnused(roleCardUrls, currentGameData.usedRoleCard);
 
   const newPlayers = Object.fromEntries(
       Object.entries(updatedPlayers).map(([uid, player]) => [
@@ -218,6 +218,7 @@ function buildNextRoundUpdate(
     players: newPlayers,
     currentPresenter: nextPresenter,
     currentTopic: nextTopic,
+    currentRoleCard: nextRoleCard,
     usedTopic: [...currentGameData.usedTopic, nextTopic],
     usedRoleCard: [...currentGameData.usedRoleCard, nextRoleCard],
     endsAt: null,
@@ -231,20 +232,20 @@ function buildNextRoundUpdate(
  * @param {Object} updatedPlayers - 得点反映後のプレイヤーデータ
  * @param {Object} currentGameData - 現在のゲームデータ
  * @param {Array<string>} topicsList - 全お題リスト
- * @param {Array<string>} roleCardIds - 全おじさんカードIDリスト
+ * @param {Array<string>} roleCardUrls - 全おじさんカードURLリスト
  * @return {Object} Firestore更新データ
  */
 function buildOneRoundCompletedUpdate(
     updatedPlayers,
     currentGameData,
     topicsList,
-    roleCardIds,
+    roleCardUrls,
 ) {
   const playerUids = Object.keys(updatedPlayers);
   const nextFirstPresenter = playerUids[Math.floor(Math.random() * playerUids.length)];
 
   const nextTopic = pickRandomUnused(topicsList, currentGameData.usedTopic);
-  const nextRoleCard = pickRandomUnused(roleCardIds, currentGameData.usedRoleCard);
+  const nextRoleCard = pickRandomUnused(roleCardUrls, currentGameData.usedRoleCard);
 
   const newPlayers = Object.fromEntries(
       Object.entries(updatedPlayers).map(([uid, player]) => [
@@ -262,6 +263,7 @@ function buildOneRoundCompletedUpdate(
     players: newPlayers,
     currentPresenter: nextFirstPresenter,
     currentTopic: nextTopic,
+    currentRoleCard: nextRoleCard,
     usedTopic: [...currentGameData.usedTopic, nextTopic],
     usedRoleCard: [...currentGameData.usedRoleCard, nextRoleCard],
     endsAt: null,

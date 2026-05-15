@@ -9,18 +9,18 @@ async function createCurrentGame(players) {
   const playerUids = Object.keys(players);
 
   const topicsList = await loadTopics();
-  const roleCardIds = await loadRoleCardIds();
+  const roleCardUrls = await loadRoleCardUrls();
 
   if (topicsList.length === 0) {
     throw new Error("お題が登録されていません");
   }
-  if (roleCardIds.length === 0) {
+  if (roleCardUrls.length === 0) {
     throw new Error("おじさんカードが登録されていません");
   }
 
   const firstPresenter = playerUids[Math.floor(Math.random() * playerUids.length)];
   const firstTopic = topicsList[Math.floor(Math.random() * topicsList.length)];
-  const firstRoleCard = roleCardIds[Math.floor(Math.random() * roleCardIds.length)];
+  const firstRoleCard = roleCardUrls[Math.floor(Math.random() * roleCardUrls.length)];
 
   const playersData = {};
   playerUids.forEach((uid) => {
@@ -36,6 +36,7 @@ async function createCurrentGame(players) {
     players: playersData,
     currentPresenter: firstPresenter,
     currentTopic: firstTopic,
+    currentRoleCard: firstRoleCard,
     usedTopic: [firstTopic],
     usedRoleCard: [firstRoleCard],
     endsAt: null,
@@ -60,11 +61,11 @@ async function loadTopics() {
 }
 
 /**
- * おじさんカードのIDリストをFirestoreから取得する
+ * おじさんカードのURLリストをFirestoreから取得する
  * games/0007/assets/roleCards はマップ形式で、キーがカードID、値が { url: string }
- * @return {Promise<Array<string>>} カードIDの配列
+ * @return {Promise<Array<string>>} カードURLの配列
  */
-async function loadRoleCardIds() {
+async function loadRoleCardUrls() {
   const roleCardsDoc = await db.collection("games").doc("0007")
       .collection("assets")
       .doc("roleCards")
@@ -74,11 +75,14 @@ async function loadRoleCardIds() {
     throw new Error("おじさんカードが見つかりません");
   }
 
-  return Object.keys(roleCardsDoc.data() || {});
+  const data = roleCardsDoc.data() || {};
+  return Object.values(data)
+      .map((card) => card && card.url)
+      .filter((url) => typeof url === "string" && url.length > 0);
 }
 
 module.exports = {
   createCurrentGame,
   loadTopics,
-  loadRoleCardIds,
+  loadRoleCardUrls,
 };
