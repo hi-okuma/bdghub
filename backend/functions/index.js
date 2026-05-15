@@ -16,6 +16,8 @@ const {proceedToNext0004Handler} = require("./src/handlers/games/0004/proceedToN
 const {proceedToNext0005Handler} = require("./src/handlers/games/0005/proceedToNext");
 const {confirmCard0006Handler} = require("./src/handlers/games/0006/confirmCard");
 const {adoptValue0006Handler} = require("./src/handlers/games/0006/adoptValue");
+const {startTimer0007Handler} = require("./src/handlers/games/0007/startTimer");
+const {reportResult0007Handler} = require("./src/handlers/games/0007/reportResult");
 
 const {cleanupAnonymousUsers} = require("./src/handlers/maintenance/cleanupAnonymousUsers");
 const {cleanupInactiveRooms} = require("./src/handlers/maintenance/cleanupInactiveRooms");
@@ -101,6 +103,16 @@ exports.confirmCard0006 = onCall(commonOptions, async (request) => {
 exports.adoptValue0006 = onCall(commonOptions, async (request) => {
   await checkMaintenance(request);
   return await adoptValue0006Handler(request);
+});
+
+exports.startTimer0007 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await startTimer0007Handler(request);
+});
+
+exports.reportResult0007 = onCall(commonOptions, async (request) => {
+  await checkMaintenance(request);
+  return await reportResult0007Handler(request);
 });
 
 exports.cleanupAnonymousUsers = cleanupAnonymousUsers;

@@ -7,6 +7,7 @@ const READY_TRANSITION_MAP = {
   "0003": "playing", // 水平思考
   "0004": "childTurn", // 偏見プロフィール
   "0006": "playing", // 流行語ゲーム
+  "0007": "playing", // サンタ苦労ス
 };
 
 /**
