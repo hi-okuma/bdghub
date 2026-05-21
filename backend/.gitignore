@@ -69,3 +69,4 @@ node_modules/
 .dataconnect
 
 performance-tests/
+scripts/

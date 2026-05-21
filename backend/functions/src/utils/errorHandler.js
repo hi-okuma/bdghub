@@ -10,12 +10,17 @@ const ERROR_CODE_MAPPING = {
   "InvalidArgument": "invalid-argument",
   "InvalidBestHintPlayer": "invalid-argument",
   "BestHintPlayerRequired": "invalid-argument",
+  "InvalidAnswerer": "invalid-argument",
 
   // 400系エラー（権限）
   "ParentCannotsubmitHint": "permission-denied",
   "OnlyParentCandetermineAnswer": "permission-denied",
+  "NotPresenter": "permission-denied",
   "Unpublished": "permission-denied",
   "NotReleased": "permission-denied",
+
+  // 400系エラー（状態の前提違反）
+  "AlreadyStarted": "failed-precondition",
 
   // 404系エラー（リソース未発見）
   "NotFound": "not-found",
@@ -71,8 +76,11 @@ const HTTP_STATUS_MAPPING = {
   "InvalidArgument": 400,
   "InvalidBestHintPlayer": 400,
   "BestHintPlayerRequired": 400,
+  "InvalidAnswerer": 400,
   "ParentCannotsubmitHint": 400,
   "OnlyParentCandetermineAnswer": 400,
+  "NotPresenter": 400,
+  "AlreadyStarted": 400,
   "PlayerDidNotSubmitHint": 400,
 
   // 権限エラー（403）
