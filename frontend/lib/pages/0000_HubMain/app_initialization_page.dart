@@ -235,6 +235,20 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
       return;
     }
 
+    if (gameId == '0007') {
+      if (savedGamePhase == GamePhase.started) {
+        // ゲーム進行中 → プレイ画面に復帰
+        navigationService.navigateToPlayingPage();
+      } else {
+        // ゲーム未開始（またはended） → タイトル画面に戻す
+        navigationService.navigateToGameTitle();
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(roomGameStateProvider(roomId));
+      });
+      return;
+    }
+
     if (gameStatus == GameStatus.waiting) {
       if (savedGamePhase == GamePhase.ended) {
         navigationService.navigateToResult(gameData);
