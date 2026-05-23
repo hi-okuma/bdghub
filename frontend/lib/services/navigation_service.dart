@@ -1,12 +1,14 @@
 import 'package:bodogehub/pages/0001_NgWord/ngword_playing_page.dart';
 import 'package:bodogehub/pages/0002_NoForeignWord/no_foregin_word_playing_page.dart';
 import 'package:bodogehub/pages/0006_TrendWordBlackJack/trend_word_blackjack_playing_page.dart';
+import 'package:bodogehub/pages/0007_SantaKurousu/santa_kurousu_playing_page.dart';
 import 'package:bodogehub/pages/0004_BiasProfile/bias_profile_child_turn_page.dart';
 import 'package:bodogehub/pages/0004_BiasProfile/bias_profile_parent_turn_page.dart';
 import 'package:bodogehub/pages/0004_BiasProfile/bias_profile_check_answer_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_check_answer_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_result_page.dart';
 import 'package:bodogehub/pages/0005_SoloBiasProfile/solo_bias_profile_select_picture_page.dart';
+import 'package:bodogehub/components/custom_widgets.dart';
 import 'package:bodogehub/utils/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -138,6 +140,13 @@ class NavigationService {
         _navigator!.pushReplacement(
           MaterialPageRoute(
             builder: (context) => const TrendWordBlackJackPlayingPage(),
+          ),
+        );
+        break;
+      case '0007': // サンタ苦労ス
+        _navigator!.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const SantaKurousuPlayingPage(),
           ),
         );
         break;
@@ -380,9 +389,9 @@ class NavigationService {
               ),
             ),
             const SizedBox(height: 40),
-            ElevatedButton(
+            ElevatedLoadingButton(
+              text: 'ゲーム選択に戻る',
               onPressed: () => navigateToSelectGame(),
-              child: const Text('ゲーム選択に戻る'),
             ),
           ],
         ),

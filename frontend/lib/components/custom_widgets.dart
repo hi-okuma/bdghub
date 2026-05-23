@@ -120,23 +120,25 @@ class GameThumbnail extends StatelessWidget {
 }
 
 // 内部利用向けのベースウィジェット
+// activeShadows を渡すと DecoratedBox で影を制御する（elevation: 0 前提）
 class _BaseLoadingButton extends StatelessWidget {
-  final Widget child; // 通常時の表示
+  final Widget child;
   final bool isLoading;
   final VoidCallback? onPressed;
-  final Widget Function(BuildContext, VoidCallback?, Widget)
-      buttonBuilder; // ボタンの形状を定義
+  final Widget Function(BuildContext, VoidCallback?, Widget) buttonBuilder;
+  final List<BoxShadow>? activeShadows; // アクティブ時のみ表示する影
 
   const _BaseLoadingButton({
     required this.child,
     required this.isLoading,
     this.onPressed,
     required this.buttonBuilder,
+    this.activeShadows,
   });
 
   @override
   Widget build(BuildContext context) {
-    // ローディング中かどうかに応じて子要素を切り替える共通ロジック
+    final isActive = !isLoading && onPressed != null;
     final effectiveChild = isLoading
         ? const SizedBox(
             width: AppIconSizes.small,
@@ -148,23 +150,45 @@ class _BaseLoadingButton extends StatelessWidget {
           )
         : child;
 
-    // 各スタイルのボタンウィジェットでラップして返す
-    return buttonBuilder(context, isLoading ? null : onPressed, effectiveChild);
+    final button =
+        buttonBuilder(context, isLoading ? null : onPressed, effectiveChild);
+
+    if (activeShadows == null) return button;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppBorderRadius.pill),
+        boxShadow: isActive ? activeShadows : null,
+      ),
+      child: button,
+    );
   }
 }
 
-// Elevatedローディングボタン
+// Figma準拠のElevatedButton（影付き）。isLoading省略で普通のボタンとして使用可。
 class ElevatedLoadingButton extends StatelessWidget {
   final String? text;
   final Widget? child;
   final bool isLoading;
   final VoidCallback? onPressed;
 
+  static const List<BoxShadow> _shadows = [
+    BoxShadow(
+      color: AppTheme.elevatedButtonShadowDark,
+      blurRadius: 0,
+      offset: Offset(0, 4),
+    ),
+    BoxShadow(
+      color: AppTheme.elevatedButtonShadowGlow,
+      blurRadius: 18,
+      offset: Offset(0, 8),
+    ),
+  ];
+
   const ElevatedLoadingButton({
     super.key,
     this.text,
     this.child,
-    required this.isLoading,
+    this.isLoading = false,
     this.onPressed,
   }) : assert(text != null || child != null, 'textかchildのどちらかは必須です');
 
@@ -173,13 +197,12 @@ class ElevatedLoadingButton extends StatelessWidget {
     return _BaseLoadingButton(
       isLoading: isLoading,
       onPressed: onPressed,
-      // 通常時の見た目を定義
+      activeShadows: _shadows,
       child: child ??
           Text(
             text!,
             style: AppTextStyles.subtitle2.copyWith(color: Colors.white),
           ),
-      // ボタンの「型」を定義
       buttonBuilder: (context, onBtnPressed, btnChild) => ElevatedButton(
         onPressed: onBtnPressed,
         child: btnChild,
@@ -188,18 +211,31 @@ class ElevatedLoadingButton extends StatelessWidget {
   }
 }
 
-// Outlinedローディングボタン
+// Figma準拠のOutlinedButton（影付き）。isLoading省略で普通のボタンとして使用可。
 class OutlinedLoadingButton extends StatelessWidget {
   final String? text;
   final Widget? child;
   final bool isLoading;
   final VoidCallback? onPressed;
 
+  static const List<BoxShadow> _shadows = [
+    BoxShadow(
+      color: AppTheme.outlinedButtonShadowLight,
+      blurRadius: 0,
+      offset: Offset(0, 2),
+    ),
+    BoxShadow(
+      color: AppTheme.outlinedButtonShadowMedium,
+      blurRadius: 14,
+      offset: Offset(0, 6),
+    ),
+  ];
+
   const OutlinedLoadingButton({
     super.key,
     this.text,
     this.child,
-    required this.isLoading,
+    this.isLoading = false,
     this.onPressed,
   }) : assert(text != null || child != null);
 
@@ -208,11 +244,12 @@ class OutlinedLoadingButton extends StatelessWidget {
     return _BaseLoadingButton(
       isLoading: isLoading,
       onPressed: onPressed,
+      activeShadows: _shadows,
       child: child ??
           Text(
             text!,
-            style:
-                AppTextStyles.subtitle2.copyWith(color: AppTheme.primaryColor),
+            style: AppTextStyles.subtitle2
+                .copyWith(color: AppTheme.outlinedButtonBorderColor),
           ),
       buttonBuilder: (context, onBtnPressed, btnChild) => OutlinedButton(
         onPressed: onBtnPressed,

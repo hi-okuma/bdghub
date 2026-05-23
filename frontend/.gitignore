@@ -171,3 +171,4 @@ web/index.html
 web/index.html.backup
 
 /.claude/
+/.agents/tasks/
