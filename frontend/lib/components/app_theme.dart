@@ -56,8 +56,10 @@ class AppTheme {
   // 0007 サンタ苦労ス
   static const Color santaKurousuNavyDark =
       Color(0xFF15324A); // スタートエリア・カードボーダー濃紺
-  static const Color santaKurousuNavyBadge = Color(0xFF1F4A6A); // 役割バッジ・タイマー濃紺
-  static const Color santaKurousuCardBg = Color(0xFFFFFCF4); // カード背景クリーム白
+  static const Color santaKurousuNavyBadge = Color(0xFF1F4A6A); // 役割バッジ・タイマー濃紺 / Ink-700
+  static const Color santaKurousuCardBg = Color(0xFFFFFCF4); // カード背景クリーム白 / Surface-Cream-Paper
+  static const Color santaKurousuCream200 =
+      Color(0xFFFBE8C7); // スタートカード枠 / Surface-Cream-200
   static const Color santaKurousuOrangePill = Color(0xFFFEE1D3); // お約束pillオレンジ
   static const Color santaKurousuTopicArea = Color(0xFFFEF6E6); // お題エリア / 背景下
   static const Color santaKurousuBgTop = Color(0xFFFCF8ED); // 背景グラデーション上
@@ -120,6 +122,8 @@ class AppTheme {
           backgroundColor: elevatedButtonBackground,
           foregroundColor: Colors.white,
           disabledBackgroundColor: disabledBackgroundColor,
+          // 非活性時は文字色もグレーにして「押せない」ことを明示する
+          disabledForegroundColor: disabledTextColor,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.large,
             vertical: AppSpacing.xLarge,
@@ -144,10 +148,9 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: outlinedButtonBackground,
           foregroundColor: outlinedButtonBorderColor,
-          side: const BorderSide(
-            color: outlinedButtonBorderColor,
-            width: AppBorderStroke.medium,
-          ),
+          // 非活性時は背景・文字をグレーにして「押せない」ことを明示する
+          disabledBackgroundColor: disabledBackgroundColor,
+          disabledForegroundColor: disabledTextColor,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.small,
             vertical: AppSpacing.xLarge,
@@ -163,6 +166,22 @@ class AppTheme {
             letterSpacing: 0.76,
             height: 1.30,
           ),
+        ).copyWith(
+          // 枠線も状態に応じて切り替える。styleFrom の side は状態非対応で
+          // 非活性時もオレンジ枠のままになり「押せそう」に見えてしまうため、
+          // WidgetStateProperty で disabled のときはグレー枠にする。
+          side: WidgetStateProperty.resolveWith<BorderSide>((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const BorderSide(
+                color: disabledTextColor,
+                width: AppBorderStroke.medium,
+              );
+            }
+            return const BorderSide(
+              color: outlinedButtonBorderColor,
+              width: AppBorderStroke.medium,
+            );
+          }),
         ),
       ),
 
@@ -308,6 +327,8 @@ class AppTextStyles {
   static const double bdghubTitleFontSize = 40.0;
   static const double bdghubHeaderFontSize = 28.0;
   static const double trendWordCardFontSize = 12.0;
+  static const double santaKurousuRulesFrontSize = 15.0;
+  static const double santakurousuTimerFontSize = 22.0;
   // static const double smallFontSize = 10.0;
 
   // タイトルスタイル

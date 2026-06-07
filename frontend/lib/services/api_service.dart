@@ -302,7 +302,6 @@ class ApiService {
         'uid': uid,
       },
       handleError: handleError,
-      ignoredErrorCodes: ['AlreadyStarted'],
     );
   }
 

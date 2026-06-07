@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:bodogehub/utils/logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,6 +13,7 @@ import 'package:bodogehub/providers/game_provider.dart';
 import 'package:bodogehub/providers/analytics_provider.dart';
 import 'package:bodogehub/services/api_service.dart';
 import 'package:bodogehub/utils/game_exit_handler.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// サンタ苦労スのダイアログ種別
 enum _ResultType { success, failure }
@@ -404,123 +406,46 @@ class _SantaKurousuPlayingPageState
                   const SizedBox(height: AppSpacing.medium),
 
                   // おじさん専用UI
-                  // Stack 構造: 白カード（下地）の上にスタートカード（濃紺）を重ね、
-                  // スワイプで濃紺カードが剥がれると白カードが現れるカード・リビール演出
+                  // カードめくり演出: 濃紺の「お題をめくってスタート」カード（表面）を
+                  // タップ → startTimer0007 → Firestore で endsAt が立つ（isTimerStarted）と
+                  // rotateY でめくれて、お題＋結果報告ボタンの白カード（裏面）が現れる。
                   if (isPresenter) ...[
-                    Stack(
-                      children: [
-                        // 下地: TopicCard エリアと同じ白いカード（常時表示）
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (child, animation) =>
-                              FadeTransition(opacity: animation, child: child),
-                          child: isTimerStarted
-                              ? Container(
-                                  key: const ValueKey('topic'),
-                                  constraints:
-                                      const BoxConstraints(minHeight: 140),
-                                  decoration: ShapeDecoration(
-                                    color: AppTheme.santaKurousuCardBg,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          AppBorderRadius.card),
-                                    ),
-                                    shadows: const [
-                                      BoxShadow(
-                                        color: AppTheme
-                                            .santaKurousuCardShadowLight,
-                                        blurRadius: 0,
-                                        offset: Offset(0, 6),
-                                        spreadRadius: 0,
-                                      ),
-                                      BoxShadow(
-                                        color: AppTheme
-                                            .santaKurousuCardShadowMedium,
-                                        blurRadius: 24,
-                                        offset: Offset(0, 12),
-                                        spreadRadius: 0,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.large,
-                                      vertical: AppSpacing.medium,
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        _TopicCard(topic: currentTopic),
-                                        const SizedBox(
-                                            height: AppSpacing.medium),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              flex: 2,
-                                              child: ElevatedLoadingButton(
-                                                text: 'サンタが当てた！',
-                                                isLoading: false,
-                                                onPressed: () {
-                                                  ref
-                                                      .read(
-                                                          analyticsServiceProvider)
-                                                      .logClick(
-                                                          button:
-                                                              '0007_santa_correct');
-                                                  _showResultDialog(
-                                                    context,
-                                                    _ResultType.success,
-                                                    roomId,
-                                                    uid ?? '',
-                                                    players,
-                                                    currentPresenterUid,
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                                width: AppSpacing.medium),
-                                            Expanded(
-                                              flex: 1,
-                                              child: OutlinedLoadingButton(
-                                                text: 'スキップ',
-                                                isLoading: false,
-                                                onPressed: () {
-                                                  ref
-                                                      .read(
-                                                          analyticsServiceProvider)
-                                                      .logClick(
-                                                          button: '0007_skip');
-                                                  _showResultDialog(
-                                                    context,
-                                                    _ResultType.failure,
-                                                    roomId,
-                                                    uid ?? '',
-                                                    players,
-                                                    currentPresenterUid,
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : const _SkeletonCard(key: ValueKey('bg')),
-                        ),
-
-                        // 前面: スタートカード（上スワイプで飛んで白カードを露出）
-                        if (!isTimerStarted)
-                          _StartArea(
-                            isLoading: _isLoading,
-                            onPressed: () {
-                              if (uid != null) _onStartTimer(roomId, uid);
-                            },
-                          ),
-                      ],
+                    _FlipStartCard(
+                      isFlipped: isTimerStarted,
+                      isLoading: _isLoading,
+                      onTap: () {
+                        if (uid != null) _onStartTimer(roomId, uid);
+                      },
+                      front: _StartCardFront(isLoading: _isLoading),
+                      back: _TopicResultCard(
+                        topic: currentTopic,
+                        onSantaCorrect: () {
+                          ref
+                              .read(analyticsServiceProvider)
+                              .logClick(button: '0007_santa_correct');
+                          _showResultDialog(
+                            context,
+                            _ResultType.success,
+                            roomId,
+                            uid ?? '',
+                            players,
+                            currentPresenterUid,
+                          );
+                        },
+                        onSkip: () {
+                          ref
+                              .read(analyticsServiceProvider)
+                              .logClick(button: '0007_skip');
+                          _showResultDialog(
+                            context,
+                            _ResultType.failure,
+                            roomId,
+                            uid ?? '',
+                            players,
+                            currentPresenterUid,
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ],
@@ -564,8 +489,8 @@ class _RoleBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.medium,
-        vertical: AppSpacing.small,
+        horizontal: AppSpacing.xLarge,
+        vertical: AppSpacing.medium,
       ),
       decoration: BoxDecoration(
         color: AppTheme.santaKurousuNavyBadge,
@@ -619,19 +544,28 @@ class _TimerCompact extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              Icons.access_time,
-              size: AppTextStyles.h5FontSize,
-              color: timerColor,
-            ),
-            const SizedBox(width: AppSpacing.xxSmall),
-            Text(
-              timeText,
-              style: TextStyle(
-                fontSize: AppTextStyles.h5FontSize,
-                fontWeight: FontWeight.bold,
+            Baseline(
+              baseline: 20.0,
+              baselineType: TextBaseline.alphabetic,
+              child: Icon(
+                Icons.alarm,
+                size: AppTextStyles.h5FontSize,
                 color: timerColor,
-                height: 1.0,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xSmall),
+            Baseline(
+              baseline: 22.0,
+              baselineType: TextBaseline.alphabetic,
+              child: Text(
+                timeText,
+                style: TextStyle(
+                  fontSize: AppTextStyles.santakurousuTimerFontSize,
+                  fontFamily: GoogleFonts.nunito().fontFamily,
+                  fontWeight: FontWeight.bold,
+                  color: timerColor,
+                  // height: 1.0,
+                ),
               ),
             ),
           ],
@@ -701,7 +635,7 @@ class _MainCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.medium,
-                  vertical: AppSpacing.xxSmall,
+                  vertical: AppSpacing.small,
                 ),
                 decoration: BoxDecoration(
                   color: AppTheme.santaKurousuOrangePill,
@@ -711,14 +645,14 @@ class _MainCard extends StatelessWidget {
                 child: const Text(
                   'お約束 と 今回のおじさん',
                   style: TextStyle(
-                    fontSize: AppTextStyles.bodyFontSize,
-                    fontWeight: FontWeight.w500,
+                    fontSize: AppTextStyles.captionFontSize,
+                    fontWeight: FontWeight.w600,
                     color: AppTheme.santaKurousuNavyBadge,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.small),
+            const SizedBox(height: AppSpacing.medium),
 
             // お約束テキスト
             ...rules.map(
@@ -727,11 +661,12 @@ class _MainCard extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.xSmall),
                   child: Text(
-                    '・$rule',
+                    '･$rule',
                     style: const TextStyle(
-                      fontSize: AppTextStyles.bodyFontSize,
-                      fontWeight: FontWeight.w500,
+                      fontSize: AppTextStyles.santaKurousuRulesFrontSize,
+                      fontWeight: FontWeight.w600,
                       color: AppTheme.santaKurousuNavyBadge,
+                      letterSpacing: -0.05,
                     ),
                   ),
                 ),
@@ -793,109 +728,153 @@ class _MainCard extends StatelessWidget {
   }
 }
 
-// --- スタートエリア（Figma: 濃紺 #15324a、角丸20px） ---
-// 「お題をめくってスタート！」テキスト + 右下キャラ小画像風
-// 上スワイプでタイマー開始。スワイプ量60px超 or 速度500px/s超で発火し上方へ飛ぶ。
-class _StartArea extends StatefulWidget {
-  final bool isLoading;
-  final VoidCallback onPressed;
+// --- カードめくりスタートカード ---
+// 表面（濃紺「お題をめくってスタート！」）をタップ → onTap で startTimer0007 を実行。
+// Firestore で endsAt が立つと親から isFlipped=true が渡り、rotateY でめくれて裏面（お題＋
+// 結果報告ボタン）が現れる。trend_word_blackjack の _CardSelectionDialogContent と同じ
+// Matrix4.rotateY によるフリップ演出。
+class _FlipStartCard extends StatefulWidget {
+  // めくり済み（=タイマー開始済み）かどうか。Firestore の endsAt 有無に対応。
+  final bool isFlipped;
 
-  const _StartArea({
+  // API 送信中（タップ直後〜Firestore 反映まで）。表面にスピナーを表示する。
+  final bool isLoading;
+
+  // 表面タップ時のコールバック（startTimer0007 を実行）。
+  final VoidCallback onTap;
+
+  final Widget front;
+  final Widget back;
+
+  const _FlipStartCard({
+    required this.isFlipped,
     required this.isLoading,
-    required this.onPressed,
+    required this.onTap,
+    required this.front,
+    required this.back,
   });
 
   @override
-  State<_StartArea> createState() => _StartAreaState();
+  State<_FlipStartCard> createState() => _FlipStartCardState();
 }
 
-class _StartAreaState extends State<_StartArea>
+class _FlipStartCardState extends State<_FlipStartCard>
     with SingleTickerProviderStateMixin {
-  double _dragDy = 0.0;
-  late final AnimationController _animController;
-  Animation<double>? _animation;
-  bool _triggered = false;
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  // タップ済みフラグ。API 送信〜Firestore で endsAt が反映されるまでの間、
+  // _isLoading が一瞬 false に戻っても再タップ（二重送信）させないためのガード。
+  bool _tapped = false;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(vsync: this);
-    _animController.addListener(_onAnimTick);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+
+    // 復帰時（リロードで既にタイマー開始済み）はアニメーションなしでめくれた状態にする。
+    if (widget.isFlipped) {
+      _controller.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _FlipStartCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 未めくり → めくり（タイマー開始）でフリップ再生。
+    if (!oldWidget.isFlipped && widget.isFlipped) {
+      _controller.forward();
+    } else if (oldWidget.isFlipped && !widget.isFlipped) {
+      // 次ラウンドなどでリセットされた場合は表面へ戻し、再タップを許可する。
+      _tapped = false;
+      _controller.reverse();
+    }
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _onAnimTick() {
-    if (mounted) setState(() => _dragDy = _animation?.value ?? _dragDy);
-  }
-
-  void _onDragUpdate(DragUpdateDetails details) {
-    if (_triggered) return;
-    _animController.stop();
-    setState(() {
-      _dragDy = (_dragDy + details.delta.dy).clamp(-300.0, 0.0);
-    });
-  }
-
-  void _onDragEnd(DragEndDetails details) {
-    if (_triggered) return;
-    final velocity = details.primaryVelocity ?? 0;
-    if (_dragDy < -60 || velocity < -500) {
-      _flyOff();
-    } else {
-      _snapBack();
-    }
-  }
-
-  void _flyOff() {
-    _triggered = true;
-    widget.onPressed();
-    _animation = Tween<double>(begin: _dragDy, end: -300.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeIn),
-    );
-    _animController
-      ..duration = const Duration(milliseconds: 200)
-      ..reset()
-      ..forward();
-  }
-
-  void _snapBack() {
-    _animation = Tween<double>(begin: _dragDy, end: 0.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.elasticOut),
-    );
-    _animController
-      ..duration = const Duration(milliseconds: 500)
-      ..reset()
-      ..forward();
+  void _handleTap() {
+    if (_tapped) return;
+    setState(() => _tapped = true);
+    widget.onTap();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.isLoading || _triggered ? null : widget.onPressed,
-      onVerticalDragUpdate:
-          widget.isLoading || _triggered ? null : _onDragUpdate,
-      onVerticalDragEnd: widget.isLoading || _triggered ? null : _onDragEnd,
-      child: Transform.translate(
-        offset: Offset(0, _dragDy),
-        child: Container(
-          height: 140,
-          decoration: BoxDecoration(
-            color: AppTheme.santaKurousuNavyDark,
-            borderRadius: BorderRadius.circular(AppBorderRadius.card),
+    // めくり済み・送信中・タップ済みはタップ無効。
+    final canTap = !widget.isFlipped && !widget.isLoading && !_tapped;
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (_, __) {
+        final value = _animation.value;
+        final isShowingBack = value >= 0.5;
+        // 表面: 0 → π/2、裏面: -π/2 → 0
+        final angle = isShowingBack ? (value - 1) * pi : value * pi;
+        return GestureDetector(
+          onTap: canTap ? _handleTap : null,
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..setEntry(3, 2, 0.001) // パース設定
+              ..rotateY(angle),
+            child: isShowingBack ? widget.back : widget.front,
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xLarge,
-            vertical: AppSpacing.xLarge,
+        );
+      },
+    );
+  }
+}
+
+// --- フリップ表面 ---
+// 2層構造: 背景に濃紺(#15324A / Ink-900)のベースコンテナ、その上に Ink-700(#1F4A6A) +
+// クリーム枠(#FBE8C7 / Surface-Cream-200)のカードを重ねて、中央に「お題をめくってスタート！」を表示。
+class _StartCardFront extends StatelessWidget {
+  final bool isLoading;
+
+  const _StartCardFront({required this.isLoading});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 140,
+      // 背景: 今ある濃紺ベース。padding 分だけ外周にフチとして見える。
+      padding: const EdgeInsets.all(AppSpacing.xSmall),
+      decoration: BoxDecoration(
+        color: AppTheme.santaKurousuNavyDark,
+        borderRadius: BorderRadius.circular(AppBorderRadius.card),
+      ),
+      // 前面: Ink-700 + クリーム点線枠カード（枠は CustomPaint で点線描画）
+      child: CustomPaint(
+        foregroundPainter: const _DashedRoundedBorderPainter(
+          color: AppTheme.santaKurousuCream200,
+          strokeWidth: 1,
+          radius: 14,
+          dashLength: 4,
+          gapLength: 2,
+        ),
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          decoration: BoxDecoration(
+            color: AppTheme.santaKurousuNavyBadge,
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
             children: [
               Expanded(
-                child: widget.isLoading
+                child: isLoading
                     ? const Center(
                         child: SizedBox(
                           width: AppIconSizes.small,
@@ -906,17 +885,20 @@ class _StartAreaState extends State<_StartArea>
                           ),
                         ),
                       )
-                    : const Text(
+                    : Text(
                         'お題をめくってスタート！',
-                        style: TextStyle(
-                          fontSize: AppTextStyles.titleFontSize,
-                          fontWeight: FontWeight.w500,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.zenMaruGothic(
                           color: AppTheme.santaKurousuCardBg,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          height: 1.30,
+                          letterSpacing: 0.36,
                         ),
                       ),
               ),
               const SizedBox(width: AppSpacing.medium),
-              // 右下キャラ小画像（タップ促進アイコン）
+              // タップ促進アイコン
               Container(
                 width: 48,
                 height: 48,
@@ -938,37 +920,79 @@ class _StartAreaState extends State<_StartArea>
   }
 }
 
-// --- スケルトンカード（_StartArea 背後の下地。スワイプで剥がれると露出） ---
+// --- 点線の角丸ボーダー描画 ---
+// Flutter には点線ボーダーが無いため、Path.computeMetrics で輪郭を辿り
+// dashLength / gapLength の周期で破線を描く。
+class _DashedRoundedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double radius;
+  final double dashLength;
+  final double gapLength;
 
-class _SkeletonCard extends StatefulWidget {
-  const _SkeletonCard({super.key});
+  const _DashedRoundedBorderPainter({
+    required this.color,
+    required this.strokeWidth,
+    required this.radius,
+    required this.dashLength,
+    required this.gapLength,
+  });
 
   @override
-  State<_SkeletonCard> createState() => _SkeletonCardState();
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    // strokeWidth/2 内側に寄せて、線がカード内に収まるようにする
+    final inset = strokeWidth / 2;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        inset,
+        inset,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final next = distance + dashLength;
+        canvas.drawPath(
+          metric.extractPath(distance, next.clamp(0.0, metric.length)),
+          paint,
+        );
+        distance = next + gapLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRoundedBorderPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.radius != radius ||
+        oldDelegate.dashLength != dashLength ||
+        oldDelegate.gapLength != gapLength;
+  }
 }
 
-class _SkeletonCardState extends State<_SkeletonCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
+// --- フリップ裏面（お題＋結果報告ボタンの白カード） ---
+// フリップで表面の濃紺カードがめくれると現れる。お題と「サンタが当てた！」「スキップ」ボタンを表示。
+class _TopicResultCard extends StatelessWidget {
+  final String topic;
+  final VoidCallback onSantaCorrect;
+  final VoidCallback onSkip;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.35, end: 0.8).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const _TopicResultCard({
+    required this.topic,
+    required this.onSantaCorrect,
+    required this.onSkip,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -999,79 +1023,33 @@ class _SkeletonCardState extends State<_SkeletonCard>
           horizontal: AppSpacing.large,
           vertical: AppSpacing.medium,
         ),
-        child: FadeTransition(
-          opacity: _opacity,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // お題エリア スケルトン
-              Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.santaKurousuTopicArea,
-                  borderRadius: BorderRadius.circular(AppBorderRadius.card),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xxLarge,
-                  vertical: AppSpacing.medium,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'お題：',
-                      style: TextStyle(
-                        fontSize: AppTextStyles.captionFontSize,
-                        color: AppTheme.santaKurousuNavyBadge
-                            .withValues(alpha: 0.4),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.large),
-                    Container(
-                      width: 100,
-                      height: AppTextStyles.titleFontSize + 4,
-                      decoration: BoxDecoration(
-                        color: AppTheme.santaKurousuNavyBadge
-                            .withValues(alpha: 0.15),
-                        borderRadius:
-                            BorderRadius.circular(AppBorderRadius.small),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppSpacing.medium),
-              // ボタン スケルトン
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _TopicCard(topic: topic),
+            const SizedBox(height: AppSpacing.medium),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: ElevatedLoadingButton(
+                    text: 'サンタが当てた！',
+                    isLoading: false,
+                    onPressed: onSantaCorrect,
                   ),
-                  const SizedBox(width: AppSpacing.medium),
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppTheme.santaKurousuNavyBadge
-                              .withValues(alpha: 0.2),
-                        ),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
+                ),
+                const SizedBox(width: AppSpacing.medium),
+                Expanded(
+                  flex: 1,
+                  child: OutlinedLoadingButton(
+                    text: 'スキップ',
+                    isLoading: false,
+                    onPressed: onSkip,
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -1241,7 +1219,7 @@ class _ResultDialogContentState extends ConsumerState<_ResultDialogContent> {
             child: DropdownButton<String>(
               value: _selectedAnswererUid,
               hint: const Text(
-                'タップして選択...',
+                'タップして選択…',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -1329,6 +1307,8 @@ class _ResultDialogContentState extends ConsumerState<_ResultDialogContent> {
         ],
 
         // 次に進むボタン
+        // 非活性時の見た目は OutlinedLoadingButton / app_theme のグレーアウトで表現される
+        // （正解者未選択のあいだは選択を促すため非活性）。
         OutlinedLoadingButton(
           text: '次に進む',
           isLoading: _isLoading,

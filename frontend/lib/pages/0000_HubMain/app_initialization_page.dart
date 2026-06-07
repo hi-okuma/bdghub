@@ -237,10 +237,13 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
 
     if (gameId == '0007') {
       if (savedGamePhase == GamePhase.started) {
-        // ゲーム進行中 → プレイ画面に復帰
+        // ゲーム進行中・ラウンド終了後 → プレイ画面に復帰
         navigationService.navigateToPlayingPage();
+      } else if (savedGamePhase == GamePhase.ended) {
+        // ゲーム完全終了（全員がおじさんを担った後） → 汎用結果画面に復帰
+        navigationService.navigateToResult(gameData);
       } else {
-        // ゲーム未開始（またはended） → タイトル画面に戻す
+        // ゲーム未開始（initial） → タイトル画面に戻す
         navigationService.navigateToGameTitle();
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
