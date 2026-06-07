@@ -441,6 +441,17 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       final userState = ref.read(userProvider);
       if (userState.isRestoring) {
         Logger.log('🔍 復帰中のため自動遷移なし');
+        // ★修正: 復帰時に保存済みgamePhaseを_currentGamePhaseへ復元する。
+        // _resetNavigationFlagsで_currentGamePhaseはinitialに戻るため、
+        // これを復元しないとリロード後にラウンドが終了(waiting)しても
+        // 結果画面遷移条件(_currentGamePhase == GamePhase.started)を満たさず、
+        // 結果発表画面に遷移せず次のお題が表示される不具合が発生する。
+        // 永続化済みの値を読むだけなので_updateAndSaveGamePhaseは使わない。
+        final savedPhase = userState.gamePhase;
+        if (savedPhase != null) {
+          _currentGamePhase = savedPhase;
+          Logger.log('🔍 復帰時にgamePhaseを復元: $savedPhase');
+        }
         // ★修正: 復帰時も現在の画面に対応するナビゲーションフラグを設定
         // これにより、復帰後にFirestoreが更新されても重複遷移を防ぐ
         _setNavigationFlagsForCurrentStatus(gameStatus);

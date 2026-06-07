@@ -106,14 +106,16 @@ Material 3 design system. Primary color: `#E07000`. Font: Google Fonts Noto Sans
 
 `_restoreCurrentGameLogic` に `if (gameId == 'XXXX')` ブロックを追加する場合、以下の点を必ず考慮する：
 
-1. **`gamePhase` で分岐する** — `gameStatus` だけでは「ゲーム未開始の waiting」と「ラウンド終了後の waiting」を区別できない。`gameStatus == 'waiting'` が ゲーム開始前・終了後いずれでも現れる場合、必ず `savedGamePhase` で絞り込む。
+1. **`gamePhase` で分岐する。早期 `return` するので `ended` を汎用コードに委譲できない** — `gameStatus` だけでは「ゲーム未開始の waiting」と「ラウンド終了後の waiting」を区別できない。さらにゲーム固有ブロックは末尾で `return` するため、`ended`（結果発表画面）を下部の汎用 result 処理に委譲できない。`started / ended / initial` の **3分岐をブロック内で自己完結** させること。2分岐（started → Playing、else → Title）にすると `ended` でリロードした際に誤ってタイトル画面へ遷移する。
 
    ```dart
    if (gameId == 'XXXX') {
      if (savedGamePhase == GamePhase.started) {
-       navigationService.navigateToPlayingPage(); // ゲーム進行中・ラウンド終了後
+       navigationService.navigateToPlayingPage();    // ゲーム進行中・ラウンド終了後
+     } else if (savedGamePhase == GamePhase.ended) {
+       navigationService.navigateToResult(gameData); // ゲーム完全終了 → 結果発表画面
      } else {
-       navigationService.navigateToGameTitle(); // ゲーム未開始
+       navigationService.navigateToGameTitle();       // ゲーム未開始(initial)
      }
      ...
      return;
@@ -122,13 +124,27 @@ Material 3 design system. Primary color: `#E07000`. Font: Google Fonts Noto Sans
 
 2. **`gamePhase` を適切に更新する** — `game_state_provider._handleGameStateChange` でゲーム固有の `break` を使う場合、`_updateAndSaveGamePhase` が呼ばれないケースが生じる。復帰ルーティングが正しく機能するか、フェーズ更新のタイミングを確認する。
 
-3. **ページ側の `_checkAndRestoreDialogs` でも `gamePhase` を使う** — プレイ画面内でダイアログ復帰を行う場合、`gameStatus` だけで判定すると前のゲームの Firestore 残存データ（例: `winnerId`）を誤検知する。追加の条件（`winnerId != null` など）か `user.gamePhase` で絞り込む。
+3. **`waiting → result` を使うゲームは復帰時に `_currentGamePhase` を復元する** — 汎用 GameResultPage への遷移は `_handleGameStateChange` の waiting case にある `if (_currentGamePhase == GamePhase.started)` が発火条件。`_currentGamePhase` は game_state_provider のメモリ上の値で、リロード時に `_resetNavigationFlags()` で `initial` に戻る。`_handleGameDetailUpdate` の復帰ブランチ（`userState.isRestoring`）で **保存済み `userState.gamePhase` を `_currentGamePhase` に復元しないと**、リロード後にラウンドが終了（waiting）しても結果遷移条件を満たさず、結果発表画面に遷移せず次のゲームデータ（次のお題など）が表示される。永続値の読み戻しなので `_updateAndSaveGamePhase` ではなく `_currentGamePhase` への直接代入で行う。
+
+4. **ページ側の `_checkAndRestoreDialogs` でも `gamePhase` を使う** — プレイ画面内でダイアログ復帰を行う場合、`gameStatus` だけで判定すると前のゲームの Firestore 残存データ（例: `winnerId`）を誤検知する。追加の条件（`winnerId != null` など）か `user.gamePhase` で絞り込む。
 
 ### よくあるバグパターン
 
 - **症状**: リロード後、ゲームタイトル画面に戻るはずがプレイ画面の結果ダイアログが出る
 - **原因**: 復帰ルーティングが `gamePhase` を無視して常に PlayingPage に飛ばしている、かつ前ゲームの `winnerId` 等が Firestore に残存している
 - **対処**: 上記 1 の通り `savedGamePhase == GamePhase.started` のときだけ PlayingPage に遷移するよう分岐する
+
+---
+
+- **症状**: 結果発表画面（ended）でリロードすると、結果画面に戻らずゲーム開始画面（タイトル）に遷移する
+- **原因**: ゲーム固有の復帰ブロックが2分岐（started → Playing、else → Title）で、早期 `return` のため `ended` が下部の汎用 result 処理に届かず else に吸われている
+- **対処**: 上記 1 の通り `started / ended / initial` の3分岐にし、`ended` は `navigateToResult` をブロック内で呼ぶ
+
+---
+
+- **症状**: ゲーム中にリロードして復帰した後、最後の親番が終わり waiting になっても結果発表画面に遷移せず、次のお題（次ラウンドのデータ）が表示されたままになる
+- **原因**: リロードで `_currentGamePhase` が `_resetNavigationFlags()` により `initial` に戻り、復帰ブランチで復元していないため、waiting 検知時の result 遷移条件 `_currentGamePhase == GamePhase.started` を満たさない
+- **対処**: 上記 3 の通り `_handleGameDetailUpdate` の復帰ブランチで `userState.gamePhase` を `_currentGamePhase` に復元する（`waiting → result` を使う全ゲーム共通）
 
 ## Conventions
 

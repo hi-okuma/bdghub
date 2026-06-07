@@ -194,6 +194,9 @@ class ElevatedLoadingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 非活性時はテキスト色もグレーにする（明示色を渡すと theme の
+    // disabledForegroundColor が効かないため、ここで状態に応じて切り替える）
+    final isDisabled = !isLoading && onPressed == null;
     return _BaseLoadingButton(
       isLoading: isLoading,
       onPressed: onPressed,
@@ -201,7 +204,9 @@ class ElevatedLoadingButton extends StatelessWidget {
       child: child ??
           Text(
             text!,
-            style: AppTextStyles.subtitle2.copyWith(color: Colors.white),
+            style: AppTextStyles.subtitle2.copyWith(
+              color: isDisabled ? AppTheme.disabledTextColor : Colors.white,
+            ),
           ),
       buttonBuilder: (context, onBtnPressed, btnChild) => ElevatedButton(
         onPressed: onBtnPressed,
@@ -241,6 +246,9 @@ class OutlinedLoadingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 非活性時はテキスト色もグレーにする（明示色を渡すと theme の
+    // disabledForegroundColor が効かないため、ここで状態に応じて切り替える）
+    final isDisabled = !isLoading && onPressed == null;
     return _BaseLoadingButton(
       isLoading: isLoading,
       onPressed: onPressed,
@@ -248,8 +256,11 @@ class OutlinedLoadingButton extends StatelessWidget {
       child: child ??
           Text(
             text!,
-            style: AppTextStyles.subtitle2
-                .copyWith(color: AppTheme.outlinedButtonBorderColor),
+            style: AppTextStyles.subtitle2.copyWith(
+              color: isDisabled
+                  ? AppTheme.disabledTextColor
+                  : AppTheme.outlinedButtonBorderColor,
+            ),
           ),
       buttonBuilder: (context, onBtnPressed, btnChild) => OutlinedButton(
         onPressed: onBtnPressed,
