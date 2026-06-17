@@ -20,6 +20,9 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
   // 重複遷移防止のためのフラグ
   GameStatus? _previousGameStatus;
   GamePhase _currentGamePhase = GamePhase.initial;
+  // ★追加(A): 復帰直後に最初に観測したgameStatus。復帰ウィンドウ中に状態が
+  // これと変化した場合（例: ゲーム終了 playing→waiting）は取りこぼさず通常遷移させる。
+  GameStatus? _restoredStatus;
   bool _hasNavigatedToPlaying = false; // Playingページに遷移済みかどうか
   bool _hasNavigatedToChildTurn = false; // ChildTurnページに遷移済みかどうか
   bool _hasNavigatedToParentTurn = false; // ParentTurnページに遷移済みかどうか
@@ -440,7 +443,6 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       // 復帰処理か通常処理かで分岐
       final userState = ref.read(userProvider);
       if (userState.isRestoring) {
-        Logger.log('🔍 復帰中のため自動遷移なし');
         // ★修正: 復帰時に保存済みgamePhaseを_currentGamePhaseへ復元する。
         // _resetNavigationFlagsで_currentGamePhaseはinitialに戻るため、
         // これを復元しないとリロード後にラウンドが終了(waiting)しても
@@ -452,14 +454,47 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
           _currentGamePhase = savedPhase;
           Logger.log('🔍 復帰時にgamePhaseを復元: $savedPhase');
         }
-        // ★修正: 復帰時も現在の画面に対応するナビゲーションフラグを設定
-        // これにより、復帰後にFirestoreが更新されても重複遷移を防ぐ
-        _setNavigationFlagsForCurrentStatus(gameStatus);
-        Logger.log('🔍 復帰時のナビゲーションフラグ設定完了: $gameStatus');
 
-        // ★追加: 復帰処理が完了したことをUserProviderに通知
-        // これにより、固定時間ではなくイベント駆動で復帰モードを解除できる
-        _completeRestoration();
+        // ★修正(A): 復帰ウィンドウ中の状態変化の取りこぼし対策。
+        // ・初回スナップショット = 復帰した時点の画面状態 → 遷移せずフラグ設定のみ。
+        // ・復帰ウィンドウ中に状態が"変化"（例: 最後の親番終了による playing→waiting の
+        //   ゲーム終了）した場合は、復帰モードを即時終了して通常遷移として処理する。
+        //   ここで取りこぼすと、waiting はゲーム終了時の終端書き込みのため後続再通知が無く、
+        //   結果発表画面へ遷移できないまま「次のお題」表示で固定されてしまう。
+        if (_restoredStatus == null) {
+          _restoredStatus = gameStatus;
+
+          // ★修正(A-2): ルーティング判定(app側)とnotifier開始の僅かな隙間に
+          // ゲームが終了(playing→waiting)した場合、app側はプレイ画面に復帰させてしまう。
+          // 初回スナップショットが「ゲーム終了(waiting)かつ進行中だった(started)」を示し、
+          // 汎用結果画面を使うゲームなら、ここで結果画面へ遷移して取りこぼしを防ぐ。
+          // ※app側が既に結果画面へ復帰済みのケースはphase=endedに揃えているため発火しない。
+          final activeGameId = ref.read(currentGameProvider).gameId;
+          final usesGenericResult =
+              activeGameId != '0005' && activeGameId != '0006';
+          if (gameStatus == GameStatus.waiting &&
+              _currentGamePhase == GamePhase.started &&
+              usesGenericResult) {
+            Logger.log('🔍 復帰初回スナップショットがゲーム終了(waiting)を示すため結果画面へ');
+            _finishRestorationImmediately();
+            _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
+          } else {
+            Logger.log('🔍 復帰中のため自動遷移なし（初回スナップショット: $gameStatus）');
+            // 復帰時も現在の画面に対応するナビゲーションフラグを設定し、
+            // 復帰後にFirestoreが更新されても重複遷移を防ぐ
+            _setNavigationFlagsForCurrentStatus(gameStatus);
+            Logger.log('🔍 復帰時のナビゲーションフラグ設定完了: $gameStatus');
+            // 復帰処理が完了したことをUserProviderに通知（イベント駆動で復帰モード解除）
+            _completeRestoration();
+          }
+        } else if (gameStatus != _restoredStatus) {
+          Logger.log(
+              '🔍 復帰ウィンドウ中に状態変化を検知: $_restoredStatus → $gameStatus（通常処理へ）');
+          _finishRestorationImmediately();
+          _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
+        } else {
+          Logger.log('🔍 復帰中の同一status再通知のためスキップ: $gameStatus');
+        }
       } else {
         _handleGameStateChangeWithDuplicationCheck(gameStatus, gameData);
       }
@@ -524,6 +559,7 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     _hasNavigatedToGameTitle = false;
     _previousGameStatus = null;
     _currentGamePhase = GamePhase.initial;
+    _restoredStatus = null; // ★追加(A): リセット時は初回スナップショット判定を再アーム
     _hasNavigatedToPlaying = false;
     _hasNavigatedToChildTurn = false;
     _hasNavigatedToParentTurn = false;
@@ -590,6 +626,19 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
     }
   }
 
+  // ★追加(A): 復帰ウィンドウ中に状態変化を検知した際、復帰モードを即時終了する。
+  // _completeRestorationは500ms遅延だが、こちらは遅延なしで即座にfalseにすることで、
+  // 検知した状態変化（およびそれ以降の更新）を通常遷移として確実に処理させる。
+  // completeRestorationはisRestoring判定で冪等なので二重呼び出しは無害。
+  void _finishRestorationImmediately() {
+    try {
+      ref.read(userProvider.notifier).completeRestoration();
+      Logger.log('✅ 復帰モードを即時終了（復帰ウィンドウ中の状態変化を検知）');
+    } catch (e) {
+      Logger.log('⚠️ 復帰即時終了エラー: $e');
+    }
+  }
+
   // ★修正: 遷移ロジックの一元化（gamePhase更新処理を追加）
   void _handleGameStateChange(
       GameStatus status, Map<String, dynamic> currentGame) {
@@ -604,43 +653,47 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
       case GameStatus.playing:
         Logger.log(
             '🎮 Navigating to PlayingPage with currentGame: $currentGame');
+        // ★修正(B): phase更新は_executeNavigationのスキップ(デバウンス)に巻き込まれ
+        // ないようコールバック外で必ず行う。これによりゲーム終了(waiting)時の遷移ゲート
+        // (_currentGamePhase == started)が確実に成立する。遷移自体の再試行ゲートは
+        // _hasNavigatedToPlayingなので、phaseを先に立てても再試行は妨げない。
+        _updateAndSaveGamePhase(GamePhase.started);
         _executeNavigation('playing', () {
           navigationService.navigateToPlayingPage();
           _hasNavigatedToPlaying = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
         });
         break;
 
       case GameStatus.childTurn:
         Logger.log('🎮 Navigating to ChildTurn');
+        _updateAndSaveGamePhase(GamePhase.started); // ★修正(B): コールバック外で更新
         _executeNavigation('childTurn', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
           navigationService.navigateToChildTurn(currentGame);
           _hasNavigatedToChildTurn = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
         });
         break;
 
       case GameStatus.parentTurn:
         Logger.log('🎮 Navigating to ParentTurn');
+        _updateAndSaveGamePhase(GamePhase.started); // ★修正(B): コールバック外で更新
         _executeNavigation('parentTurn', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
           navigationService.navigateToParentTurn(currentGame);
           _hasNavigatedToParentTurn = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
         });
         break;
 
       case GameStatus.result:
         Logger.log('🎮 Navigating to Result(currentGame)');
+        _updateAndSaveGamePhase(GamePhase.started); // ★修正(B): コールバック外で更新
         _executeNavigation('checkAnswer', () {
           // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
           ref.read(currentGameProvider.notifier).updateGameData(currentGame);
           navigationService.navigateToCheckAnswer(currentGame);
           _hasNavigatedToResult = true;
-          _updateAndSaveGamePhase(GamePhase.started); // ★追加: gamePhase更新
         });
         break;
 
@@ -672,6 +725,10 @@ class RoomGameStateNotifier extends FamilyAsyncNotifier<GameStatus, String> {
 
         if (_currentGamePhase == GamePhase.started) {
           Logger.log('🎮 Game ended - navigating to result page');
+          // ★注(B): ここだけ phase=ended は意図的に_executeNavigationのコールバック内に残す。
+          // このwaiting→resultの遷移ゲート自体が _currentGamePhase == started のため、
+          // endedを先に確定させるとnavがスキップされた際に再通知での再遷移ができなくなる。
+          // 実際に結果画面へ遷移できたときにのみendedへ進める。
           _executeNavigation('result', () {
             // 結果画面へ遷移する直前に、最新のゲーム結果でProviderを更新する
             ref.read(currentGameProvider.notifier).updateGameData(currentGame);

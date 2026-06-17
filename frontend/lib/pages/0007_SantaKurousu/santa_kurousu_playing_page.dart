@@ -407,16 +407,17 @@ class _SantaKurousuPlayingPageState
 
                   // おじさん専用UI
                   // カードめくり演出: 濃紺の「お題をめくってスタート」カード（表面）を
-                  // タップ → startTimer0007 → Firestore で endsAt が立つ（isTimerStarted）と
-                  // rotateY でめくれて、お題＋結果報告ボタンの白カード（裏面）が現れる。
+                  // タップした瞬間に rotateY でめくれ始める（startTimer0007 のレスポンスは待たない）。
+                  // めくり切るまで裏面は見えず、めくり完了時に Firestore の endsAt/お題が
+                  // まだ反映されていなければ裏面でローディングを表示し、反映後にお題＋結果報告
+                  // ボタンへ差し替わる。
                   if (isPresenter) ...[
                     _FlipStartCard(
                       isFlipped: isTimerStarted,
-                      isLoading: _isLoading,
                       onTap: () {
                         if (uid != null) _onStartTimer(roomId, uid);
                       },
-                      front: _StartCardFront(isLoading: _isLoading),
+                      front: const _StartCardFront(),
                       back: _TopicResultCard(
                         topic: currentTopic,
                         onSantaCorrect: () {
@@ -446,6 +447,7 @@ class _SantaKurousuPlayingPageState
                           );
                         },
                       ),
+                      backLoading: const _TopicResultCardLoading(),
                     ),
                   ],
                 ],
@@ -729,16 +731,16 @@ class _MainCard extends StatelessWidget {
 }
 
 // --- カードめくりスタートカード ---
-// 表面（濃紺「お題をめくってスタート！」）をタップ → onTap で startTimer0007 を実行。
-// Firestore で endsAt が立つと親から isFlipped=true が渡り、rotateY でめくれて裏面（お題＋
-// 結果報告ボタン）が現れる。trend_word_blackjack の _CardSelectionDialogContent と同じ
-// Matrix4.rotateY によるフリップ演出。
+// 表面（濃紺「お題をめくってスタート！」）をタップした瞬間に rotateY でめくれ始める。
+// startTimer0007 のレスポンス（Firestore の endsAt 反映 = isFlipped）は待たず、
+// アニメーションを最後まで再生してから裏面を表示する。めくり完了時点で endsAt/お題が
+// まだ反映されていなければ backLoading（裏面ローディング）を表示し、反映後に back
+// （お題＋結果報告ボタン）へ差し替える。trend_word_blackjack の
+// _CardSelectionDialogContent と同じ Matrix4.rotateY によるフリップ演出。
 class _FlipStartCard extends StatefulWidget {
-  // めくり済み（=タイマー開始済み）かどうか。Firestore の endsAt 有無に対応。
+  // API レスポンスが Firestore に反映済み（endsAt 有り = 裏面データ準備完了）かどうか。
+  // false の間はめくり完了後も裏面で backLoading を表示する。
   final bool isFlipped;
-
-  // API 送信中（タップ直後〜Firestore 反映まで）。表面にスピナーを表示する。
-  final bool isLoading;
 
   // 表面タップ時のコールバック（startTimer0007 を実行）。
   final VoidCallback onTap;
@@ -746,12 +748,15 @@ class _FlipStartCard extends StatefulWidget {
   final Widget front;
   final Widget back;
 
+  // 裏面データ未準備（API レスポンス待ち）時に表示するローディング裏面。
+  final Widget backLoading;
+
   const _FlipStartCard({
     required this.isFlipped,
-    required this.isLoading,
     required this.onTap,
     required this.front,
     required this.back,
+    required this.backLoading,
   });
 
   @override
@@ -763,9 +768,8 @@ class _FlipStartCardState extends State<_FlipStartCard>
   late final AnimationController _controller;
   late final Animation<double> _animation;
 
-  // タップ済みフラグ。API 送信〜Firestore で endsAt が反映されるまでの間、
-  // _isLoading が一瞬 false に戻っても再タップ（二重送信）させないためのガード。
-  bool _tapped = false;
+  // めくりを開始したか。タップ即フリップ開始するためのフラグ兼二重タップガード。
+  bool _flipTriggered = false;
 
   @override
   void initState() {
@@ -781,6 +785,7 @@ class _FlipStartCardState extends State<_FlipStartCard>
 
     // 復帰時（リロードで既にタイマー開始済み）はアニメーションなしでめくれた状態にする。
     if (widget.isFlipped) {
+      _flipTriggered = true;
       _controller.value = 1.0;
     }
   }
@@ -788,13 +793,14 @@ class _FlipStartCardState extends State<_FlipStartCard>
   @override
   void didUpdateWidget(covariant _FlipStartCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 未めくり → めくり（タイマー開始）でフリップ再生。
-    if (!oldWidget.isFlipped && widget.isFlipped) {
-      _controller.forward();
-    } else if (oldWidget.isFlipped && !widget.isFlipped) {
+    if (oldWidget.isFlipped && !widget.isFlipped) {
       // 次ラウンドなどでリセットされた場合は表面へ戻し、再タップを許可する。
-      _tapped = false;
+      _flipTriggered = false;
       _controller.reverse();
+    } else if (!oldWidget.isFlipped && widget.isFlipped && !_flipTriggered) {
+      // タップ以外（復帰など）でフリップ状態になった場合もめくる。
+      _flipTriggered = true;
+      _controller.forward();
     }
   }
 
@@ -805,15 +811,17 @@ class _FlipStartCardState extends State<_FlipStartCard>
   }
 
   void _handleTap() {
-    if (_tapped) return;
-    setState(() => _tapped = true);
+    if (_flipTriggered) return;
+    // API レスポンスを待たず、タップ即めくり開始。
+    setState(() => _flipTriggered = true);
+    _controller.forward();
     widget.onTap();
   }
 
   @override
   Widget build(BuildContext context) {
-    // めくり済み・送信中・タップ済みはタップ無効。
-    final canTap = !widget.isFlipped && !widget.isLoading && !_tapped;
+    // めくり開始後はタップ無効。
+    final canTap = !_flipTriggered;
     return AnimatedBuilder(
       animation: _animation,
       builder: (_, __) {
@@ -821,6 +829,9 @@ class _FlipStartCardState extends State<_FlipStartCard>
         final isShowingBack = value >= 0.5;
         // 表面: 0 → π/2、裏面: -π/2 → 0
         final angle = isShowingBack ? (value - 1) * pi : value * pi;
+        // めくり完了側を表示する際、API レスポンス（isFlipped）が未到達なら
+        // ローディング裏面を表示する。
+        final backChild = widget.isFlipped ? widget.back : widget.backLoading;
         return GestureDetector(
           onTap: canTap ? _handleTap : null,
           child: Transform(
@@ -828,7 +839,7 @@ class _FlipStartCardState extends State<_FlipStartCard>
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001) // パース設定
               ..rotateY(angle),
-            child: isShowingBack ? widget.back : widget.front,
+            child: isShowingBack ? backChild : widget.front,
           ),
         );
       },
@@ -840,9 +851,7 @@ class _FlipStartCardState extends State<_FlipStartCard>
 // 2層構造: 背景に濃紺(#15324A / Ink-900)のベースコンテナ、その上に Ink-700(#1F4A6A) +
 // クリーム枠(#FBE8C7 / Surface-Cream-200)のカードを重ねて、中央に「お題をめくってスタート！」を表示。
 class _StartCardFront extends StatelessWidget {
-  final bool isLoading;
-
-  const _StartCardFront({required this.isLoading});
+  const _StartCardFront();
 
   @override
   Widget build(BuildContext context) {
@@ -874,28 +883,17 @@ class _StartCardFront extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: SizedBox(
-                          width: AppIconSizes.small,
-                          height: AppIconSizes.small,
-                          child: CircularProgressIndicator(
-                            strokeWidth: AppLayout.circleIndicatorStroke,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        'お題をめくってスタート！',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.zenMaruGothic(
-                          color: AppTheme.santaKurousuCardBg,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                          height: 1.30,
-                          letterSpacing: 0.36,
-                        ),
-                      ),
+                child: Text(
+                  'お題をめくってスタート！',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.zenMaruGothic(
+                    color: AppTheme.santaKurousuCardBg,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    height: 1.30,
+                    letterSpacing: 0.36,
+                  ),
+                ),
               ),
               const SizedBox(width: AppSpacing.medium),
               // タップ促進アイコン
@@ -1056,6 +1054,54 @@ class _TopicResultCard extends StatelessWidget {
   }
 }
 
+// --- フリップ裏面ローディング（APIレスポンス待ち） ---
+// タップ即フリップ開始後、Firestore に endsAt/お題が反映されるまで（API レスポンス待ち）
+// 表示する裏面。_TopicResultCard と同じ白カードの外観で中央にスピナーを表示する。
+class _TopicResultCardLoading extends StatelessWidget {
+  const _TopicResultCardLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 140),
+      decoration: ShapeDecoration(
+        color: AppTheme.santaKurousuCardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppBorderRadius.card),
+        ),
+        shadows: const [
+          BoxShadow(
+            color: AppTheme.santaKurousuCardShadowLight,
+            blurRadius: 0,
+            offset: Offset(0, 6),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: AppTheme.santaKurousuCardShadowMedium,
+            blurRadius: 24,
+            offset: Offset(0, 12),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.large,
+          vertical: AppSpacing.medium,
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.large),
+            child: CircularProgressIndicator(
+              color: AppTheme.santaKurousuNavyBadge,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // --- お題カード ---
 
 class _TopicCard extends StatelessWidget {
@@ -1136,6 +1182,17 @@ class _ResultDialogContentState extends ConsumerState<_ResultDialogContent> {
   Future<void> _onProceed() async {
     if (!_canProceed || _isLoading) return;
     setState(() => _isLoading = true);
+
+    // ダイアログの navigator とルートを await 前に確保しておく。
+    // 最終ラウンドで reportResult を送るとゲームが終了(playing→waiting)し、
+    // game_state_provider がルート navigator 上で結果発表画面へ pushReplacement する。
+    // これは「最前面のルート = このダイアログ」を置き換えるため、await 後に無条件で
+    // pop すると結果発表画面の方を pop してしまい、出題者だけプレイ画面（次のお題）に
+    // 戻ってしまう（結果発表に遷移できない）。ダイアログがまだ最前面に残っているとき
+    // だけ閉じることで、この競合を防ぐ。
+    final navigator = Navigator.of(context);
+    final dialogRoute = ModalRoute.of(context);
+
     try {
       ref.read(analyticsServiceProvider).logClick(
         button: '0007_report_result',
@@ -1150,8 +1207,11 @@ class _ResultDialogContentState extends ConsumerState<_ResultDialogContent> {
         bonus: _isBonus,
       );
       Logger.log('reportResult0007を送信しました: result=$_isSuccess');
-      if (mounted) {
-        Navigator.of(context).pop();
+      // ダイアログがまだ最前面のとき（非最終ラウンド、または結果発表への自動遷移が
+      // まだ起きていないとき）のみ閉じる。既に結果発表画面へ置き換わっている場合は
+      // 何もしない（pop すると結果発表画面を閉じてしまうため）。
+      if (dialogRoute != null && dialogRoute.isCurrent) {
+        navigator.pop();
       }
     } catch (e) {
       Logger.log('reportResult0007の送信に失敗: $e');
