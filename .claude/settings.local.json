@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze *)",
+      "mcp__claude_ai_Atlassian__getConfluencePage"
+    ]
+  }
+}

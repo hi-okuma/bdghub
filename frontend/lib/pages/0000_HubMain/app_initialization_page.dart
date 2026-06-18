@@ -236,12 +236,21 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     }
 
     if (gameId == '0007') {
-      if (savedGamePhase == GamePhase.started) {
-        // ゲーム進行中・ラウンド終了後 → プレイ画面に復帰
-        navigationService.navigateToPlayingPage();
-      } else if (savedGamePhase == GamePhase.ended) {
-        // ゲーム完全終了（全員がおじさんを担った後） → 汎用結果画面に復帰
+      // 復帰先の決定。savedGamePhaseだけでなく、離脱中にゲームが終了している可能性を
+      // 考慮して、ダイアログ確認後に取得した最新のgameStatusも見る。
+      // （復帰確認ダイアログ表示中に最後の親番が終わり playing→waiting になると、
+      //   savedGamePhaseはstartedのままだが実際はゲーム終了済み、というズレが起きる。
+      //   gameStatusを見ないと誤ってプレイ画面＝次のお題表示に復帰してしまう。）
+      if (savedGamePhase == GamePhase.ended ||
+          (savedGamePhase == GamePhase.started &&
+              gameStatus == GameStatus.waiting)) {
+        // ゲーム完全終了（既に終了済み、または離脱中に全員がおじさんを担い終えた）
+        // → 汎用結果画面。フェーズもendedへ揃える（再リロード時の判定の一貫性のため）。
+        ref.read(userProvider.notifier).updateGamePhase(GamePhase.ended);
         navigationService.navigateToResult(gameData);
+      } else if (savedGamePhase == GamePhase.started) {
+        // まだ playing = ラウンド進行中 → プレイ画面に復帰
+        navigationService.navigateToPlayingPage();
       } else {
         // ゲーム未開始（initial） → タイトル画面に戻す
         navigationService.navigateToGameTitle();
@@ -253,7 +262,11 @@ class _AppInitializationPageState extends ConsumerState<AppInitializationPage> {
     }
 
     if (gameStatus == GameStatus.waiting) {
-      if (savedGamePhase == GamePhase.ended) {
+      // ended（結果画面到達済み）と started（離脱中にゲーム終了 playing→waiting）は
+      // いずれも結果画面へ。initial（ゲーム未開始のwaiting）のみタイトルへ。
+      if (savedGamePhase == GamePhase.ended ||
+          savedGamePhase == GamePhase.started) {
+        ref.read(userProvider.notifier).updateGamePhase(GamePhase.ended);
         navigationService.navigateToResult(gameData);
       } else {
         navigationService.navigateToGameTitle();
