@@ -195,15 +195,14 @@ class _SoloBiasProfileResultPageState
                     child: Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
+                          child: ElevatedLoadingButton(
+                            text: 'もう一度遊ぶ',
                             onPressed: () async {
                               ref
                                   .read(analyticsServiceProvider)
                                   .logClick(button: '${gameId}_game_replay');
-
                               _onReplayGame();
                             },
-                            child: const Text('もう一度遊ぶ'),
                           ),
                         ),
                       ],

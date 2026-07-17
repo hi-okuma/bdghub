@@ -410,14 +410,14 @@ class _SoloBiasProfileSelectPicturePageState
               child: Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedLoadingButton(
+                      text: 'この人物に決定する',
                       onPressed: () async {
                         ref
                             .read(analyticsServiceProvider)
                             .logClick(button: '0005_determine_answer');
                         _onPictureSelected(_selectedImageIndex);
                       },
-                      child: const Text('この人物に決定する'),
                     ),
                   ),
                 ],

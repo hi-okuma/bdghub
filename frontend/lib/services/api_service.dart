@@ -287,4 +287,44 @@ class ApiService {
       ignoredErrorCodes: ['InvalidArgument'],
     );
   }
+
+  static Future<dynamic> startTimer0007(
+    BuildContext context,
+    String roomId,
+    String uid, {
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'startTimer0007',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+      },
+      handleError: handleError,
+    );
+  }
+
+  static Future<dynamic> reportResult0007(
+    BuildContext context,
+    String roomId,
+    String uid,
+    bool result, {
+    String? answererUid,
+    bool bonus = false,
+    bool handleError = true,
+  }) async {
+    return _callFunction(
+      'reportResult0007',
+      context,
+      {
+        'roomId': roomId,
+        'uid': uid,
+        'result': result,
+        'answererUid': answererUid,
+        'bonus': bonus,
+      },
+      handleError: handleError,
+    );
+  }
 }

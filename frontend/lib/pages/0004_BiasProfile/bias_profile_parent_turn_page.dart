@@ -441,7 +441,8 @@ class _BiasProfileParentTurnPageState
                     child: Row(
                       children: [
                         Expanded(
-                          child: ElevatedButton(
+                          child: ElevatedLoadingButton(
+                            text: 'この人物に決定する',
                             onPressed: () async {
                               ref
                                   .read(analyticsServiceProvider)
@@ -474,7 +475,6 @@ class _BiasProfileParentTurnPageState
                                 // エラーダイアログはErrorHandlerで表示される
                               }
                             },
-                            child: const Text('この人物に決定する'),
                           ),
                         ),
                       ],

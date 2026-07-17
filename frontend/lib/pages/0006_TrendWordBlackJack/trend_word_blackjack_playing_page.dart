@@ -1852,7 +1852,7 @@ class _CardSelectionDialogContentState
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Expanded(
-                      child: OutlinedButton(
+                      child: OutlinedLoadingButton(
                         onPressed: () => Navigator.of(context).pop(),
                         child: Text(
                           'キャンセル',
@@ -2456,14 +2456,14 @@ class _TrendWordResultDialogContentState
               if (isHost) ...[
                 const SizedBox(height: AppSpacing.small),
                 // ゲーム終了ボタン（ホストのみ表示）
-                OutlinedButton(
+                OutlinedLoadingButton(
                   onPressed: () {
                     ref
                         .read(analyticsServiceProvider)
                         .logClick(button: 'game_quit');
                     widget.onExitPressed();
                   },
-                  child: const Text('ゲームを終了する'),
+                  text: 'ゲームを終了する',
                 ),
               ],
             ],

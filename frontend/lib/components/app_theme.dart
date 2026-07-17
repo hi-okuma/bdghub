@@ -35,6 +35,37 @@ class AppTheme {
   static const Color trendWordGameDisabledColor = Color(0xFF252A2E);
   static const Color trendWordGameResultPlayerCardColor = Color(0xFFF1F5F9);
 
+  // ElevatedButton
+  static const Color elevatedButtonBackground =
+      Color(0xFFF95D08); // Brand-Orange-500（Figmaデザイン準拠）
+  static const Color elevatedButtonShadowDark =
+      Color(0x2DBE3C00); // 硬い落ち影（blurRadius: 0, offset: (0, 4)）
+  static const Color elevatedButtonShadowGlow =
+      Color(0x47F95D08); // オレンジglow（blurRadius: 18, offset: (0, 8)）
+
+  // OutlinedButton
+  static const Color outlinedButtonBackground =
+      Color(0xFFFFFCF4); // Surface-Cream-Paper
+  static const Color outlinedButtonBorderColor =
+      Color(0xFF15324A); // Ink-900（ボーダー・テキスト色）
+  static const Color outlinedButtonShadowLight =
+      Color(0x0FA5693C); // 硬い落ち影（blurRadius: 0, offset: (0, 2)）
+  static const Color outlinedButtonShadowMedium =
+      Color(0x14A5693C); // 中影（blurRadius: 14, offset: (0, 6)）
+
+  // 0007 サンタ苦労ス
+  static const Color santaKurousuNavyDark =
+      Color(0xFF15324A); // スタートエリア・カードボーダー濃紺
+  static const Color santaKurousuNavyBadge = Color(0xFF1F4A6A); // 役割バッジ・タイマー濃紺 / Ink-700
+  static const Color santaKurousuCardBg = Color(0xFFFFFCF4); // カード背景クリーム白 / Surface-Cream-Paper
+  static const Color santaKurousuCream200 =
+      Color(0xFFFBE8C7); // スタートカード枠 / Surface-Cream-200
+  static const Color santaKurousuOrangePill = Color(0xFFFEE1D3); // お約束pillオレンジ
+  static const Color santaKurousuTopicArea = Color(0xFFFEF6E6); // お題エリア / 背景下
+  static const Color santaKurousuBgTop = Color(0xFFFCF8ED); // 背景グラデーション上
+  static const Color santaKurousuCardShadowLight = Color(0x14A5693C); // カード軽影
+  static const Color santaKurousuCardShadowMedium = Color(0x19A5693C); // カード中影
+
   // テキストカラー - グレースケール階調
   static const Color primaryTextColor = Color(0xFF111827);
   static const Color secondaryTextColor = Color(0xFF6B7280);
@@ -50,7 +81,8 @@ class AppTheme {
   // ThemeDataの作成
   static ThemeData get lightTheme {
     // Google Fontsを使用してNoto Sans JPのTextThemeを取得
-    final textTheme = GoogleFonts.notoSansJpTextTheme();
+    // final textTheme = GoogleFonts.notoSansJpTextTheme();
+    final textTheme = GoogleFonts.zenMaruGothicTextTheme();
 
     return ThemeData(
       useMaterial3: true,
@@ -83,36 +115,73 @@ class AppTheme {
       ),
 
       // ElevatedButtonテーマ
+      // ⚠️ 影は ElevatedLoadingButton の DecoratedBox ラッパーで管理（elevation: 0）
+      // padding縦20 + buttonFontSize(19) * height(1.30) ≈ 64px の高さに対応
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: elevatedButtonBackground,
           foregroundColor: Colors.white,
           disabledBackgroundColor: disabledBackgroundColor,
+          // 非活性時は文字色もグレーにして「押せない」ことを明示する
+          disabledForegroundColor: disabledTextColor,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.large,
-            vertical: AppSpacing.large,
+            vertical: AppSpacing.xLarge,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.elevatedButton),
+            borderRadius: BorderRadius.circular(AppBorderRadius.pill),
           ),
-          elevation: AppElevation.low,
+          elevation: 0,
+          textStyle: TextStyle(
+            fontFamily: GoogleFonts.zenMaruGothic().fontFamily,
+            fontSize: AppTextStyles.buttonFontSize,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.76,
+            height: 1.30,
+          ),
         ),
       ),
 
       // OutlinedButtonテーマ
+      // ⚠️ 影は OutlinedLoadingButton の DecoratedBox ラッパーで管理（elevation: 0）
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: primaryColor,
-          side: const BorderSide(color: primaryColor),
+          backgroundColor: outlinedButtonBackground,
+          foregroundColor: outlinedButtonBorderColor,
+          // 非活性時は背景・文字をグレーにして「押せない」ことを明示する
+          disabledBackgroundColor: disabledBackgroundColor,
+          disabledForegroundColor: disabledTextColor,
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.large,
-            vertical: AppSpacing.large,
+            horizontal: AppSpacing.small,
+            vertical: AppSpacing.xLarge,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppBorderRadius.elevatedButton),
+            borderRadius: BorderRadius.circular(AppBorderRadius.pill),
           ),
-          elevation: AppElevation.low,
+          elevation: 0,
+          textStyle: TextStyle(
+            fontFamily: GoogleFonts.zenMaruGothic().fontFamily,
+            fontSize: AppTextStyles.buttonFontSize,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.76,
+            height: 1.30,
+          ),
+        ).copyWith(
+          // 枠線も状態に応じて切り替える。styleFrom の side は状態非対応で
+          // 非活性時もオレンジ枠のままになり「押せそう」に見えてしまうため、
+          // WidgetStateProperty で disabled のときはグレー枠にする。
+          side: WidgetStateProperty.resolveWith<BorderSide>((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return const BorderSide(
+                color: disabledTextColor,
+                width: AppBorderStroke.medium,
+              );
+            }
+            return const BorderSide(
+              color: outlinedButtonBorderColor,
+              width: AppBorderStroke.medium,
+            );
+          }),
         ),
       ),
 
@@ -216,6 +285,7 @@ class AppBorderRadius {
   static const double large = 12.0;
   static const double xLarge = 16.0;
   static const double elevatedButton = 20.0;
+  static const double pill = 999.0;
   static const double card = 20.0;
   static const double brandLogo = 6.0;
   static const double tabBar = 22.0;
@@ -248,13 +318,17 @@ class AppTextStyles {
   static const double h2FontSize = 60.0;
   static const double titleMediumFontSize = 20.0;
   static const double titleFontSize = 18.0;
+  static const double buttonFontSize = 19.0;
   static const double subtitleFontSize = 16.0;
   static const double subtitle2FontSize = 14.0;
   static const double bodyFontSize = 14.0;
+  static const double labelFontSize = 13.0;
   static const double captionFontSize = 11.0;
   static const double bdghubTitleFontSize = 40.0;
   static const double bdghubHeaderFontSize = 28.0;
   static const double trendWordCardFontSize = 12.0;
+  static const double santaKurousuRulesFrontSize = 15.0;
+  static const double santakurousuTimerFontSize = 22.0;
   // static const double smallFontSize = 10.0;
 
   // タイトルスタイル

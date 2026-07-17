@@ -106,29 +106,67 @@ Material 3 design system. Primary color: `#E07000`. Font: Google Fonts Noto Sans
 
 `_restoreCurrentGameLogic` に `if (gameId == 'XXXX')` ブロックを追加する場合、以下の点を必ず考慮する：
 
-1. **`gamePhase` で分岐する** — `gameStatus` だけでは「ゲーム未開始の waiting」と「ラウンド終了後の waiting」を区別できない。`gameStatus == 'waiting'` が ゲーム開始前・終了後いずれでも現れる場合、必ず `savedGamePhase` で絞り込む。
+1. **`gamePhase` + 最新 `gameStatus` で分岐する。早期 `return` するので `ended` を汎用コードに委譲できない** — `gameStatus` だけでは「ゲーム未開始の waiting」と「ラウンド終了後の waiting」を区別できず、逆に `gamePhase` だけでは「復帰確認ダイアログ表示中に、離脱したままゲームが終了した」ケースを取りこぼす（リロードした本人の永続 `gamePhase` は `started` のままだが、Firestore はすでに `waiting`）。`gameData` はダイアログ確定後に `.get()` で読むため `gameStatus` は最新・確定値。**両方を併用**して `started / ended / initial` を判定し、ブロック内で自己完結（末尾 `return`）させること。2分岐（started → Playing、else → Title）や `gamePhase` 単独判定にすると、`ended` でのリロードでタイトルに飛ぶ／離脱中終了で次のお題画面に飛ぶ、といった不具合になる。
 
    ```dart
    if (gameId == 'XXXX') {
-     if (savedGamePhase == GamePhase.started) {
-       navigationService.navigateToPlayingPage(); // ゲーム進行中・ラウンド終了後
+     // ended、または「進行中(started)だが離脱中にゲーム終了して waiting になった」→ 結果発表画面
+     if (savedGamePhase == GamePhase.ended ||
+         (savedGamePhase == GamePhase.started &&
+             gameStatus == GameStatus.waiting)) {
+       ref.read(userProvider.notifier).updateGamePhase(GamePhase.ended); // 再リロード一貫性のため揃える
+       navigationService.navigateToResult(gameData);   // ゲーム完全終了 → 結果発表画面
+     } else if (savedGamePhase == GamePhase.started) {
+       navigationService.navigateToPlayingPage();       // まだ playing = ラウンド進行中
      } else {
-       navigationService.navigateToGameTitle(); // ゲーム未開始
+       navigationService.navigateToGameTitle();         // ゲーム未開始(initial)
      }
      ...
      return;
    }
    ```
 
-2. **`gamePhase` を適切に更新する** — `game_state_provider._handleGameStateChange` でゲーム固有の `break` を使う場合、`_updateAndSaveGamePhase` が呼ばれないケースが生じる。復帰ルーティングが正しく機能するか、フェーズ更新のタイミングを確認する。
+   ゲーム固有ブロックを持たない `waiting → result` ゲーム（汎用パス）も同様に、`gameStatus == waiting` かつ `savedGamePhase` が `ended` または `started` なら結果画面へ遷移させる。
 
-3. **ページ側の `_checkAndRestoreDialogs` でも `gamePhase` を使う** — プレイ画面内でダイアログ復帰を行う場合、`gameStatus` だけで判定すると前のゲームの Firestore 残存データ（例: `winnerId`）を誤検知する。追加の条件（`winnerId != null` など）か `user.gamePhase` で絞り込む。
+2. **`gamePhase` を適切に更新する** — `game_state_provider._handleGameStateChange` でゲーム固有の `break` を使う場合、`_updateAndSaveGamePhase` が呼ばれないケースが生じる。復帰ルーティングが正しく機能するか、フェーズ更新のタイミングを確認する。なお前進系（playing/childTurn/parentTurn/result）の `_updateAndSaveGamePhase(started)` は `_executeNavigation` のコールバック**外**に置く。遷移がデバウンス（`_navigationInProgress` / 同一画面 `_lastNavigatedScreen`）でスキップされても `started` ゲートが確実に立つようにするため。逆に `waiting → result` の `ended` はコールバック**内**に残す（このゲート自体が `phase == started` 依存で、先に `ended` にすると nav スキップ時に再通知での再遷移ができなくなる）。
+
+3. **`waiting → result` を使うゲームは復帰時に `_currentGamePhase` を復元する** — 汎用 GameResultPage への遷移は `_handleGameStateChange` の waiting case にある `if (_currentGamePhase == GamePhase.started)` が発火条件。`_currentGamePhase` は game_state_provider のメモリ上の値で、リロード時に `_resetNavigationFlags()` で `initial` に戻る。`_handleGameDetailUpdate` の復帰ブランチ（`userState.isRestoring`）で **保存済み `userState.gamePhase` を `_currentGamePhase` に復元しないと**、リロード後にラウンドが終了（waiting）しても結果遷移条件を満たさず、結果発表画面に遷移せず次のゲームデータ（次のお題など）が表示される。永続値の読み戻しなので `_updateAndSaveGamePhase` ではなく `_currentGamePhase` への直接代入で行う。
+
+4. **ページ側の `_checkAndRestoreDialogs` でも `gamePhase` を使う** — プレイ画面内でダイアログ復帰を行う場合、`gameStatus` だけで判定すると前のゲームの Firestore 残存データ（例: `winnerId`）を誤検知する。追加の条件（`winnerId != null` など）か `user.gamePhase` で絞り込む。
+
+5. **復帰ウィンドウ中の状態変化を取りこぼさない（`waiting → result` 全ゲーム共通）** — `isRestoring` の間（リロード直後〜`_completeRestoration` まで、最長10秒）、`_handleGameDetailUpdate` の復帰ブランチは画面遷移を行わない。このウィンドウ中にゲームが終了（`playing → waiting`）すると、`waiting` は終端書き込みで後続再通知が無いため、結果発表画面に遷移できず「次のお題」表示で固定される。復帰ブランチは次の2点で取りこぼしを防ぐ：
+   - **初回スナップショット vs 実遷移を区別** — 最初に観測した status（`_restoredStatus`）と異なる status が届いたら離脱中の実遷移とみなし、`_finishRestorationImmediately()` で復帰モードを即時終了して通常処理（`_handleGameStateChangeWithDuplicationCheck`）へ流す。
+   - **初回スナップショットが既にゲーム終了を示す場合の救済（A-2）** — ルーティング判定（`_restoreCurrentGameLogic`）と notifier 開始の僅かな隙間に終了した場合、初回スナップショットが `waiting` かつ `_currentGamePhase == started`（`0005`/`0006` 以外の汎用結果ゲーム）なら結果画面へ遷移する。app 側が既に結果画面へ復帰済みのケースは `gamePhase` を `ended` に揃えてあるため発火しない。
 
 ### よくあるバグパターン
 
 - **症状**: リロード後、ゲームタイトル画面に戻るはずがプレイ画面の結果ダイアログが出る
 - **原因**: 復帰ルーティングが `gamePhase` を無視して常に PlayingPage に飛ばしている、かつ前ゲームの `winnerId` 等が Firestore に残存している
 - **対処**: 上記 1 の通り `savedGamePhase == GamePhase.started` のときだけ PlayingPage に遷移するよう分岐する
+
+---
+
+- **症状**: 結果発表画面（ended）でリロードすると、結果画面に戻らずゲーム開始画面（タイトル）に遷移する
+- **原因**: ゲーム固有の復帰ブロックが2分岐（started → Playing、else → Title）で、早期 `return` のため `ended` が下部の汎用 result 処理に届かず else に吸われている
+- **対処**: 上記 1 の通り `started / ended / initial` の3分岐にし、`ended` は `navigateToResult` をブロック内で呼ぶ
+
+---
+
+- **症状**: ゲーム中にリロードして復帰した後、最後の親番が終わり waiting になっても結果発表画面に遷移せず、次のお題（次ラウンドのデータ）が表示されたままになる
+- **原因**: リロードで `_currentGamePhase` が `_resetNavigationFlags()` により `initial` に戻り、復帰ブランチで復元していないため、waiting 検知時の result 遷移条件 `_currentGamePhase == GamePhase.started` を満たさない
+- **対処**: 上記 3 の通り `_handleGameDetailUpdate` の復帰ブランチで `userState.gamePhase` を `_currentGamePhase` に復元する（`waiting → result` を使う全ゲーム共通）
+
+---
+
+- **症状**: 最終ラウンドで出題者が「次へ進む」を押す前後にリロードし、復帰確認ダイアログ表示中にゲームが終了すると、結果発表画面ではなく次のゲーム（次のお題＝プレイ画面）に復帰してしまう
+- **原因**: `_restoreCurrentGameLogic` が `savedGamePhase` だけで分岐していた。リロードした本人の `gamePhase` は離脱前の `started` のまま（本人の notifier が `ended` に更新する前に落ちている）で、ダイアログ確定後に読んだ最新 `gameStatus == waiting`（＝終了済み）を無視していた
+- **対処**: 上記 1・5 の通り、ルーティングは `savedGamePhase` と最新 `gameStatus` を併用して終了を検知し（`started + waiting → result`）、notifier 側も初回スナップショットの game-end を救済する（A-2）
+
+---
+
+- **症状**: 出題者（結果報告ダイアログを開いているプレイヤー）だけ、最終アクション後に結果発表画面へ遷移せずプレイ画面（次のお題）に戻る。リロードしていない他プレイヤーは正常に結果発表へ遷移する
+- **原因**: ゲーム終了時の自動遷移 `navigateToResult` はルート navigator への `pushReplacement` で「最前面ルート」を置き換える。ダイアログを開いているプレイヤーでは最前面＝ダイアログが結果発表画面に置き換わり、その直後にダイアログ側ハンドラの `Navigator.pop()` が走って結果発表画面を pop してしまう（ダイアログを持たない他プレイヤーは置き換えがそのまま効くため正常）。`game_state_provider` 側のロジックは正しく、出題者側のダイアログ × 自動遷移の競合が原因
+- **対処**: ダイアログ内アクションのハンドラで、`await` 前に `navigator`（`Navigator.of(context)`）と `dialogRoute`（`ModalRoute.of(context)`）を確保し、送信後は **ダイアログがまだ最前面のとき（`dialogRoute.isCurrent`）だけ閉じる**。既に結果発表画面へ置き換わっている場合は pop しない。どの順序でも結果発表画面に着地する。`waiting → result` の自動遷移とダイアログ内アクションを併用するゲーム共通の注意点（例: `0007` の `_ResultDialogContent._onProceed`）
 
 ## Conventions
 
